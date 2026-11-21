@@ -1,48 +1,32 @@
-# MCC-VIP-Lab → HookLab M5 mapping and acceptance
+# HookLab M6 — MCC diamond-only, manual port
 
-Upstream repository: `Mikeyphw/MCC-VIP-Lab`, pinned `main` source `59d02beede7335acc13db6adc9f6a96ebf1d63ee` (2026-11-13). Target app `br.art.code.meucronogramacapilar`. Last manually tested app version **20.2609.3009** (version **name**, not version code). Any newer app version is unverified.
+Exact sources reviewed:
+- HookLab merged `main`: `f28ee90faef138734c2b6a27e0d08e784b401c97`
+- MCC-VIP-Lab `main`: `59d02beede7335acc13db6adc9f6a96ebf1d63ee`
+- Original P06 file evidence: `databases/<account>-DiamondBalance`, one ASCII byte, from MCC `20.2609.3009`.
 
-## Files and conversion
+## Production behavior
 
-| Original | HookLab M5 | Notes |
-| --- | --- | --- |
-| `VipPayload` | `MccVipPayload` | Shape checks, preserved original maps, synthetic RevenueCat fixture fields and offline fixture |
-| `HookEntry` RevenueCat mapper/callback | `MccVipHooks` | API 82 `XposedBridge` replaced with API 102 `hook(Executable).intercept(chain)`, `chain.proceed()`, and `chain.proceed(Object[])`; no purchases or billing callbacks are forged |
-| `InAppRefillButton`, `DiamondButtonPlacement` | `MccDiamondUi` | Flutter Activity button, semantic anchor with bounded traversal and on-screen fallback, explicit module Activity handoff |
-| `RootRefillCommand`, `AutoRefillWorker`, `RefillControlActivity` | `MccRefillCommand`, `MccRefillWorker`, `MccControlActivity` | Root only in HookLab UID, Android 14+ verified source UID/package for auto, module framework opt-in check, accurate write vs. relaunch status |
-| `AutoRefillPolicy`, `AutoRefillWatcher` | `MccAutoPolicy`, `MccAutoWatcher` | Single account, one-byte zero, 15s bounded cooldown, host observation only |
-| `NativeBannerProbe` | `MccBannerHooks` | Explicit user toggle replaces old Settings.Global flag; class-specific banner view hiding |
-| `AdEventProbe`, `PurchaseCallProbe`, etc. | **Deferred** | Legacy diagnostic probes could expose app data; need separate opt-in redesign |
+- The **only** HookLab MCC catalog registration is `mcc.diamond.control`, disabled by default and limited to the target package/main process. Existing manual-toggle preference is retained. The former VIP, banner and automatic-refill implementations remain as unregistered legacy source only because the current native Devtool overlay contract permits adding/modifying but not deleting files. No runtime dispatcher can install those legacy hooks. `MccDiamondUi.requestAutomatic()` is a hard-disabled compatibility stub.
+- The in-app `♦ 9` control is added to MCC's Flutter Activity decor view after resume/window focus. A bounded accessibility search anchors near the diamond counter; a top-right fallback works without Flutter semantics. Position retries are bounded (initial + 450 ms + 1400 ms). There is no poller and no launch during Activity creation.
+- A user **taps the button** to open HookLab's visible manual control. Opening this Activity does **not** request root. It has a read-only balance storage inspection button and an explicitly confirmed `Set local diamonds to 9` action.
+- `MccRefillWorker` obtains the package-manager-reported installed data directory, validates an exact package-owned path under `/data/data` or `/data/user/<id>`, and starts root only inside HookLab. The amount and directory cannot come from an Intent.
+- The bounded root script checks only the direct `databases/`, `files/`, and `app_flutter/` directories of that exact MCC installation. It refuses symlinks, ambiguous accounts, unexpected account file names, missing files and non-single-digit balances. It never creates a file or modifies sync markers. The stop/write/reverify sequence happens only after successful preflight. A verified write and an attempted MCC relaunch are reported separately.
+- The control does not assume that local currency changes have any server-side legitimacy. A new MCC storage layout may still be incompatible: in that case it refuses without attempting a guessed modification.
 
-## Review requirements
+## Required device acceptance (not claimed by hosted CI)
 
-- Existing HookLab core M4 tests must continue to pass. The two pre-M5 tests expecting an empty production registry are updated for exactly 4 entries.
-- New hosted tests cover synthetic CustomerInfo shape/immutability, exact one-byte zero, safe account filename, root script generation and no unrelated-package or secondary-process eligibility.
-- Host libxposed API 102 preferences remain read-only. Local installer failures trigger the M4 in-process latch; manual persistent safety locks stay supported.
-- A successful Android build **does not** establish that Flutter class names, Activity controls, root grants, or RevenueCat callbacks work on the target device. Real LSPosed device acceptance is still needed.
-- Test manual root actions in a controlled MCC account only. Never describe balance changes as backend currency creation or real premium verification.
-- Check source-pinned CI artifact and signature, then install manually only after conscious review. An installed old MCC-VIP-Lab module should be disabled in LSPosed/Vector to prevent duplicate hooks.
+1. Disable original MCC-VIP-Lab and any other modules for MCC. Install the **stable signed** HookLab after checking that the certificate matches the previous stable-signed APK; `versionCode 6` must advance code 5.
+2. Enable HookLab in LSPosed, scope it only to `br.art.code.meucronogramacapilar`, and toggle **MCC · Manual diamond button** ON. Force-stop/reopen MCC to remove old process hooks.
+3. Verify MCC opens and stays in the foreground indefinitely without automatically launching HookLab. Confirm exactly one visible `♦ 9` button in MCC Flutter UI in both light and dark modes, portrait, on navigation and after rotation.
+4. Tap `♦ 9`. Verify HookLab opens but **does not request root, stop MCC or mutate the balance** on open. Back returns to MCC.
+5. Use **Check local balance storage**. Observe `BALANCE_FILE_READY`, or a sanitized refusal explaining why the layout isn't recognized. No app data should change.
+6. Only in a backed-up test account, confirm **Set local diamonds to 9**, approve HookLab's root request, and verify write evidence and relaunch separately. Do not keep retrying on refusal.
+7. Disable manual tweak and restart MCC. Verify no button and no HookLab redirect. Inspect LSPosed framework diagnostics for unexpected errors.
 
-## M5.1 safety repair (error 51 and auto control loop)
+### Limitations
 
-- `MccAutoWatcher` performs at most one successful automatic control handoff per
-  MCC process. It does **not** repeatedly interrupt the app while the zero balance
-  remains unchanged. A missing foreground Activity does not consume the gate.
-- HookLab's own control Activity writes `enabled.mcc.diamond.auto=false` through
-  the framework service after an unsuccessful manual or automatic refill. Host-side
-  remote preferences remain read-only. The user must restart MCC to remove hooks
-  already installed in its process.
-- The root script derives the per-user MCC `dataDir` from Android PackageManager,
-  then enforces an exact allowlist and refuses unknown directories. It does not
-  create a new database, guess alternate balance formats, or clear existing data.
-- `MCC_DATABASES_DIRECTORY_NOT_FOUND` is a storage-layout/profile issue, not a
-  confirmed root permission failure. Root-code-51 acceptance requires a read-only
-  device inspection; CI cannot prove device storage matches the old source.
-- Never use this repair as evidence of backend reward authorization, physical
-  device acceptance, or release qualification.
-- An automatic request with stale/disabled opt-in now closes its module Activity
-  without executing root, instead of stranding the user in a control screen.
-
-## M5.1 stable release signing
-
-See `docs/signing.md`. The existing debug CI remains unsigned by stable certificate; the manual main-only signed workflow is the install/update source. Certificate mismatches require an explicitly backed-up migration, never an automatic uninstall.
+- SDK 37 / libxposed API 102 hosted build, JUnit, lint, APK signature and source-provenance checks are necessary but do not substitute for Android device testing.
+- No automatic refill, VIP state simulation, Google Mobile Ads intervention or backend update is delivered.
+- The previously tested MCC app version is `20.2609.3009`; newer versions may store the balance differently. Do not create `databases/` or account files manually.
+- Root runs only in HookLab's own authorized UID. The older MCC-VIP-Lab root grant does not authorize HookLab. No installation, uninstall, root write, or merge occurs from the native overlay itself.
