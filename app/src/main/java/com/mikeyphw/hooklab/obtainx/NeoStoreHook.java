@@ -6,6 +6,7 @@ import android.os.Looper;
 import android.util.Log;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakDiagnostics;
+import com.mikeyphw.hooklab.core.VerboseLogs;
 import io.github.libxposed.api.XposedInterface;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
@@ -123,8 +124,11 @@ public final class NeoStoreHook {
             try {
                 Object top=route(a);
                 SourcePolicy.Snapshot snap=top==null?null:sample(top);
+                VerboseLogs.emit(snap==null?VerboseLogs.Event.NEO_PAGE_WAITING:
+                    VerboseLogs.Event.NEO_PAGE_READY);
                 action.render(a,top,snap,(displayedRoute,displayed)->tap(token,displayedRoute,displayed));
             } catch (ReflectiveOperationException | RuntimeException | LinkageError ex) {
+                VerboseLogs.emit(VerboseLogs.Event.NEO_POLL_REFUSED);
                 Log.w("HookLabObtainX","Neo Store source unavailable category="+ex.getClass().getSimpleName());
                 stop();return;
             }
@@ -134,14 +138,20 @@ public final class NeoStoreHook {
         void tap(int token,Object shownRoute,SourcePolicy.Snapshot shown) {
             Activity a=active.get();
             if(token!=epoch||!NeoStoreAction.visible(a))return;
+            VerboseLogs.emit(VerboseLogs.Event.NEO_TAP);
             try {
                 Object actualRoute=route(a);
                 SourcePolicy.Snapshot fresh=actualRoute==null?null:sample(actualRoute);
                 if(actualRoute!=shownRoute||!SourcePolicy.same(shown,fresh)) {
+                    VerboseLogs.emit(VerboseLogs.Event.NEO_TAP_REFUSED);
                     action.result(a,ObtainXBridge.Outcome.UNSAFE_SOURCE);return;
                 }
-                action.result(a,ObtainXBridge.launch(a,fresh,fresh.packageName));
+                ObtainXBridge.Outcome result=ObtainXBridge.launch(a,fresh,fresh.packageName);
+                VerboseLogs.emit(result==ObtainXBridge.Outcome.DISPATCHED_FOR_PREVIEW
+                    ?VerboseLogs.Event.NEO_PREVIEW_REQUESTED:VerboseLogs.Event.NEO_PREVIEW_REFUSED);
+                action.result(a,result);
             } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
+                VerboseLogs.emit(VerboseLogs.Event.NEO_TAP_REFUSED);
                 action.result(a,ObtainXBridge.Outcome.UNSAFE_SOURCE);
             }
         }
@@ -192,6 +202,7 @@ public final class NeoStoreHook {
                     return chain.proceed();
                 });
             xposed.log(Log.INFO,"HookLabObtainX","Neo Store source-pinned API102 hooks installed");
+            VerboseLogs.emit(VerboseLogs.Event.NEO_HOOK_INSTALLED);
         } catch (Throwable failure) {
             INSTALLED.set(false);
             TweakDiagnostics.rethrowFatal(failure);

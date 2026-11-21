@@ -65,7 +65,9 @@ check("compileOnly 'io.github.libxposed:api:102.0.0'" in build
       'published modern libxposed artifacts')
 meta = r/'app/src/main/resources/META-INF/xposed'
 check((meta/'java_init.list').read_text().strip()=='com.mikeyphw.hooklab.hook.HookLabModule'
-      and not (meta/'scope.list').exists(), 'entry identity and no default app scope')
+      and (meta/'scope.list').read_text(encoding='utf-8').splitlines()==[
+          'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid','com.looker.droidify'],
+      'modern entry identity and exact recommended host scope')
 check((meta/'module.prop').read_text().splitlines()==[
       'minApiVersion=102','targetApiVersion=102','staticScope=false',
       'exceptionMode=protective','autoHotReload=false'], 'modern API 102 contract')
@@ -172,12 +174,13 @@ check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in ca
       'legacy automatic process cannot install or navigate')
 check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
       'module companion control and unverified-version notice')
-check('versionCode 7' in build and "versionName '0.6.0'" in build,
+check('versionCode 8' in build and "versionName '0.6.1'" in build,
       'bump versionCode for stable signing updates')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.java').is_file()
       and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccRefillCommandTest.java').is_file(),
       'hosted placement, storage and root contract tests')
 
+subprocess.run(['python3','-B',str(r/'scripts/check_verbose_contract.py')],check=True)
 print('HOOKLAB_M5_MCC_SOURCE_CONTRACT_PASS', flush=True)
 print('HOOKLAB_M4_SOURCE_CONTRACT_PASS', flush=True)
 

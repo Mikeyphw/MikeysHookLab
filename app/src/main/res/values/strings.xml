@@ -28,10 +28,14 @@
     <string name="tweak_saved">Tweak setting saved in framework preferences.</string>
     <string name="tweak_version">%1$s | Supported versions: %2$d–%3$d</string>
     <string name="appearance">Appearance</string>
+    <string name="verbose_lsposed_heading">Runtime logging</string>
+    <string name="verbose_lsposed_logs">Verbose LSPosed logging</string>
+    <string name="verbose_lsposed_description">Off by default. When enabled, HookLab sends rate-limited event codes for MCC, Neo Store and Droid-ify to LSPosed logs via libxposed. No account details, app-page data, repository URLs, credentials or exception messages. Restart the target apps after changing this setting to reliably refresh framework preferences.</string>
+    <string name="verbose_lsposed_saved">Verbose logging setting saved. Restart target apps to apply.</string>
     <string name="system_theme">Follow system</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
-    <string name="about_detail">Version 0.5.0 • Modern Xposed API 102\nMCC manual diamond button only. No automatic refill or VIP/ad hooks.</string>
+    <string name="about_detail">Version 0.6.1 • Modern Xposed API 102\nMCC manual diamonds, Neo Store and Droid-ify ObtainX actions. No auto refill or VIP/ad hooks.</string>
     <string name="registered_count">%1$d registered tweaks</string>
     <string name="diagnostics">Diagnostics</string>
     <string name="diagnostics_disconnected">Framework diagnostics are unavailable until the API 102 service connects.</string>
