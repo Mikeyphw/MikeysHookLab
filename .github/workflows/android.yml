@@ -32,7 +32,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           sdkmanager --version
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+          sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'
+          test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
       - name: Validate source contract
         run: python3 -B scripts/check_contract.py
       - name: Assemble, test and lint

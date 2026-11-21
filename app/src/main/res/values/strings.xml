@@ -1,14 +1,36 @@
 <resources>
     <string name="app_name">Mikey\'s HookLab</string>
-    <string name="module_description">A modular laboratory for app-specific runtime tweaks.</string>
-    <string name="home">Home</string><string name="tweaks">Tweaks</string>
-    <string name="settings">Settings</string><string name="about">About</string>
+    <string name="module_description">Modular, opt-in LSPosed application tweaks.</string>
+    <string name="home">Home</string>
+    <string name="tweaks">Tweaks</string>
+    <string name="scope">Scope</string>
+    <string name="settings">Settings</string>
+    <string name="about">About</string>
     <string name="tagline">Small hooks. Better apps.</string>
-    <string name="status">Foundation ready</string>
-    <string name="status_detail">No hooks are registered. No apps are modified. Module activation and scope are managed in LSPosed.</string>
-    <string name="catalog_empty">No tweaks yet. Reviewed app-specific tweaks will appear here.</string>
-    <string name="appearance">Appearance</string><string name="system_theme">Follow system</string>
-    <string name="light_theme">Light</string><string name="dark_theme">Dark</string>
-    <string name="about_detail">Version 0.1.0 • Modern Xposed API 102\nRepository: Mikeyphw/MikeysHookLab\nThis foundation does not detect framework activation or change third-party apps.</string>
+    <string name="status">Framework connection</string>
+    <string name="status_disconnected">Not connected to the Xposed service. This is not proof that the framework is uninstalled.</string>
+    <string name="status_connected">Framework service connected: %1$s (%2$s), API %3$d. Hook execution still requires a configured scope and an enabled compatible tweak.</string>
+    <string name="status_unsupported">Framework API %1$d is below the required API 102.</string>
+    <string name="scope_unavailable">Scope is unavailable until the framework service connects.</string>
+    <string name="scope_empty">No packages are currently in the module scope.</string>
+    <string name="scope_entry">Scoped package: %1$s</string>
+    <string name="scope_add">Request scope</string>
+    <string name="scope_remove">Remove scope</string>
+    <string name="scope_approval">Scope approval is handled by the framework. Nothing is applied automatically.</string>
+    <string name="scope_request_failed">Scope request failed: %1$s</string>
+    <string name="scope_change_failed">Cannot change scope: %1$s</string>
+    <string name="scope_added">Scope request processed. Check framework status.</string>
+    <string name="scope_removed">Scope removal requested.</string>
+    <string name="catalog_empty">No app-specific tweaks registered. This infrastructure will remain inert until reviewed tweaks are added.</string>
+    <string name="catalog_note">Each tweak requires an exact package, main process, supported version and explicit opt-in.</string>
+    <string name="settings_unavailable">Tweak settings require a connected framework with remote-preferences support.</string>
+    <string name="tweak_failed">Could not save tweak setting; the switch was restored.</string>
+    <string name="tweak_saved">Tweak setting saved in framework preferences.</string>
+    <string name="tweak_version">%1$s | Supported versions: %2$d–%3$d</string>
+    <string name="appearance">Appearance</string>
+    <string name="system_theme">Follow system</string>
+    <string name="light_theme">Light</string>
+    <string name="dark_theme">Dark</string>
+    <string name="about_detail">Version 0.2.0 • Modern Xposed API 102\nFramework-managed settings and scoped, opt-in dispatcher. No third-party tweaks registered yet.</string>
     <string name="registered_count">%1$d registered tweaks</string>
 </resources>

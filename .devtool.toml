@@ -15,19 +15,19 @@ execution_environment = "auto"
 runner = "android"
 gradle_tasks = [":app:assembleDebug"]
 outputs = ["app/build/outputs/apk/debug/app-debug.apk"]
-metadata = { ci_toolchain = "android-gradle", ci_android_java_version = "21", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_sdk_packages = ["platforms;android-36", "build-tools;36.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f", ci_android_expected_output = "app/build/outputs/apk/debug/app-debug.apk" }
+metadata = { ci_toolchain = "android-gradle", ci_android_java_version = "21", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_sdk_packages = ["platforms;android-37.0", "build-tools;36.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f", ci_android_expected_output = "app/build/outputs/apk/debug/app-debug.apk" }
 
 [targets.hooklab.jobs.unit_debug]
 runner = "android"
 gradle_tasks = [":app:testDebugUnitTest"]
 outputs = []
-metadata = { ci_toolchain = "android-gradle", ci_android_java_version = "21", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_sdk_packages = ["platforms;android-36", "build-tools;36.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f" }
+metadata = { ci_toolchain = "android-gradle", ci_android_java_version = "21", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_sdk_packages = ["platforms;android-37.0", "build-tools;36.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f" }
 
 [targets.hooklab.jobs.lint_debug]
 runner = "android"
 gradle_tasks = [":app:lintDebug"]
 outputs = []
-metadata = { ci_toolchain = "android-gradle", ci_android_java_version = "21", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_sdk_packages = ["platforms;android-36", "build-tools;36.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f" }
+metadata = { ci_toolchain = "android-gradle", ci_android_java_version = "21", ci_android_project_dir = "", ci_android_debug_variant = "debug", ci_android_sdk_packages = ["platforms;android-37.0", "build-tools;36.0.0", "platform-tools"], ci_android_wrapper_jar_sha256 = "81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f" }
 
 [targets.hooklab.workflows]
 ci = [
