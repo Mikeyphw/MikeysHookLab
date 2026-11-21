@@ -17,11 +17,19 @@ check(True, 'Android XML syntax')
 root = ET.parse(r/'app/src/main/AndroidManifest.xml').getroot()
 ns = '{http://schemas.android.com/apk/res/android}'
 app = root.find('application')
-check(not root.findall('uses-permission') and not root.findall('queries'), 'no app permissions or broad queries')
+check(not root.findall('uses-permission'), 'no dangerous app permissions')
+query_list = root.findall('queries')
+check(len(query_list)==1 and len(query_list[0])==1 and query_list[0][0].tag=='package'
+      and query_list[0][0].get(ns+'name')=='br.art.code.meucronogramacapilar',
+      'only exact MCC package visibility')
 check(app.get(ns+'allowBackup')=='false' and app.get(ns+'name')=='.HookLabApp', 'lifecycle application')
 act = app.findall('activity')
-check(len(act)==1 and act[0].get(ns+'name')=='.ui.MainActivity'
-      and act[0].get(ns+'exported')=='true', 'single launcher')
+check(len(act)==2 and
+      {a.get(ns+'name') for a in act}=={'.ui.MainActivity','.mcc.MccControlActivity'}
+      and all(a.get(ns+'exported')=='true' for a in act)
+      and len(act[0].findall('intent-filter'))==1
+      and len(act[1].findall('intent-filter'))==0,
+      'one launcher and one explicit-only MCC activity')
 providers = app.findall('provider')
 check(len(providers)==1 and providers[0].get(ns+'name')=='io.github.libxposed.service.XposedProvider'
       and providers[0].get(ns+'authorities')=='${applicationId}.XposedService'
@@ -65,8 +73,11 @@ check(all(term in module for term in ('extends XposedModule', 'onModuleLoaded(',
       'getPackageInfo(pkg, 0).getLongVersionCode()',
       'getRemotePreferences(TweakKeys.GROUP)', 'settings.getBoolean(TweakKeys.enabled(id), false)')),
       'late verified process/version/opt-in dispatcher')
-check('Collections.<TweakEngine.Entry<HookContext>>emptyList()' in read(
-      'app/src/main/java/com/mikeyphw/hooklab/core/TweakCatalog.java'), 'empty shipping registry')
+catalog = read('app/src/main/java/com/mikeyphw/hooklab/core/TweakCatalog.java')
+check(all(x in catalog for x in ('MccIds.VIP', 'MccIds.DIAMOND_MANUAL',
+      'MccIds.DIAMOND_AUTO', 'MccIds.BANNER_HIDE')) and
+      'Long.MAX_VALUE' in catalog and 'MccIds.PACKAGE' in catalog,
+      'four reviewed MCC entries; no default opt-in')
 ui = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 check(all(term in ui for term in ('requestScope(', 'removeScope(', 'getRemotePreferences(TweakKeys.GROUP)',
                                   '.commit()', 'runOnUiThread(', 'TweakCatalog.knowsPackage(')),
@@ -115,8 +126,7 @@ check(all(t in ui for t in ('diagnosticsPage()', 'confirmSafetyLock(s, id, nextL
       's == service()', '.putBoolean(TweakDiagnostics.quarantineKey(id), locked).commit()',
       'runOnUiThread(')),
       'framework-backed manual locks and explicit confirmation-gated diagnostics UI')
-check('versionCode 3' in build and "versionName '0.3.0'" in build,
-      'M4 version bump and unchanged targetSdk 36')
+check('targetSdk 36' in build, 'preserve Android target SDK 36')
 tests = read('app/src/test/java/com/mikeyphw/hooklab/core/TweakEngineM4Test.java')
 check(tests.count('@Test') >= 12 and all(t in tests for t in (
       'failedQuarantineReadFailsClosed', 'linkageErrorIsQuarantinedAndIndependentTweakRuns',
@@ -124,7 +134,30 @@ check(tests.count('@Test') >= 12 and all(t in tests for t in (
       'inProcessFailureLatchSkipsSecondAttempt',
       'compatibilityNeverAssumesCurrentVersion')),
       'M4 hosted fault-isolation and compatibility regression coverage')
-check('Collections.<TweakEngine.Entry<HookContext>>emptyList()' in read(
-      'app/src/main/java/com/mikeyphw/hooklab/core/TweakCatalog.java'),
-      'no experimental app hooks registered')
+mcc = r/'app/src/main/java/com/mikeyphw/hooklab/mcc'
+for name in ('MccIds', 'MccVipPayload', 'MccVipHooks', 'MccDiamondUi', 'MccAutoPolicy',
+             'MccAutoWatcher', 'MccRefillCommand', 'MccRefillWorker', 'MccControlActivity',
+             'MccBannerHooks'):
+    check((mcc/(name+'.java')).is_file(), 'MCC adapter '+name)
+check('chain.proceed(new Object[]{wrapped})' in read(mcc.relative_to(r)/'MccVipHooks.java')
+      and 'MccVipPayload.patch(raw)' in read(mcc.relative_to(r)/'MccVipHooks.java')
+      and 'TEST_STORE' in read(mcc.relative_to(r)/'MccVipPayload.java'),
+      'API102 RevenueCat adapters and non-authentic local fixture')
+check('getLaunchedFromUid()' in read(mcc.relative_to(r)/'MccControlActivity.java')
+      and 'autoEnabledInFramework()' in read(mcc.relative_to(r)/'MccControlActivity.java')
+      and 'ProcessBuilder("su", "-c"' in read(mcc.relative_to(r)/'MccRefillWorker.java')
+      and 'MccRefillCommand.script(onlyWhenZero)' in read(mcc.relative_to(r)/'MccRefillWorker.java'),
+      'root writes restricted to module Activity and identity-verified auto flow')
+check('MccAutoPolicy.exactZero' in read(mcc.relative_to(r)/'MccAutoWatcher.java')
+      and 'MccDiamondUi.requestAutomatic()' in read(mcc.relative_to(r)/'MccAutoWatcher.java')
+      and 'MCC_REFILL_AUTO_SKIP_NONZERO' in read(mcc.relative_to(r)/'MccRefillCommand.java'),
+      'zero-only auto watcher and root script')
+check('hooklab.mcc.banner.platform' in read(mcc.relative_to(r)/'MccBannerHooks.java')
+      and 'View.GONE' in read(mcc.relative_to(r)/'MccBannerHooks.java'),
+      'opt-in scoped banner hook')
+check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
+      'companion control and visible unverified-version warning')
+check('versionCode 4' in build and "versionName '0.4.0'" in build,
+      'MCC module version bump')
+print('HOOKLAB_M5_MCC_SOURCE_CONTRACT_PASS', flush=True)
 print('HOOKLAB_M4_SOURCE_CONTRACT_PASS', flush=True)

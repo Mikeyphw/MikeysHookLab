@@ -13,8 +13,8 @@ android {
         applicationId 'com.mikeyphw.hooklab'
         minSdk 29
         targetSdk 36
-        versionCode 3
-        versionName '0.3.0'
+        versionCode 4
+        versionName '0.4.0'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -29,5 +29,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'io.github.libxposed:service:102.0.0'
     compileOnly 'io.github.libxposed:api:102.0.0'
+    // Only the hosted JVM test classpath includes API stubs; not bundled in the APK.
+    testImplementation 'io.github.libxposed:api:102.0.0'
     testImplementation 'junit:junit:4.13.2'
 }

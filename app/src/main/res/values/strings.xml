@@ -50,4 +50,7 @@
     <string name="diagnostics_reset_confirm">Allow this tweak on the next host process start if enabled and compatible? This does not enable the tweak or restart the host app.</string>
     <string name="diagnostics_reset_success">Safety lock updated. Restart the target app to apply.</string>
     <string name="diagnostics_reset_failed">Could not update the framework safety lock.</string>
+    <string name="mcc_target_package">Package: %1$s | Version compatibility not yet verified</string>
+    <string name="mcc_open_control">Open MCC diamond control</string>
+    <string name="mcc_version_warning">Last manually tested MCC version: 20.2609.3009. Newer versions are unverified. Restart MCC after enabling or disabling any tweak.</string>
 </resources>

@@ -28,6 +28,9 @@ import com.mikeyphw.hooklab.core.TweakKeys;
 import com.mikeyphw.hooklab.core.TweakDiagnostics;
 import com.mikeyphw.hooklab.core.TweakCompatibility;
 import com.mikeyphw.hooklab.core.TweakSpec;
+import com.mikeyphw.hooklab.mcc.MccIds;
+import com.mikeyphw.hooklab.mcc.MccControlActivity;
+import android.content.Intent;
 import io.github.libxposed.service.XposedService;
 import java.util.Collections;
 import java.util.HashSet;
@@ -159,8 +162,10 @@ public final class MainActivity extends AppCompatActivity {
         XposedService s = service(); Set<String> scope = scopedPackages(s);
         for (TweakEngine.Entry<HookContext> entry : entries) {
             TweakSpec spec = entry.spec;
-            LinearLayout inner = card(entry.title, entry.description + "\n" +
-                    getString(R.string.tweak_version, spec.packageName, spec.minVersion, spec.maxVersion));
+            String compatibility = MccIds.PACKAGE.equals(spec.packageName)
+                    ? getString(R.string.mcc_target_package, spec.packageName)
+                    : getString(R.string.tweak_version, spec.packageName, spec.minVersion, spec.maxVersion);
+            LinearLayout inner = card(entry.title, entry.description + "\n" + compatibility);
             MaterialSwitch sw = new MaterialSwitch(this); sw.setText(spec.id);
             boolean available = ready(s); boolean checked = false;
             if (available) {
@@ -173,6 +178,13 @@ public final class MainActivity extends AppCompatActivity {
                 sw.setEnabled(false); saveTweak(s, spec.id, wanted);
             });
             inner.addView(sw, new ViewGroup.LayoutParams(-1, -2));
+            if (MccIds.DIAMOND_MANUAL.equals(spec.id)) {
+                button(inner, R.string.mcc_open_control, v ->
+                    startActivity(new Intent(this, MccControlActivity.class)));
+            }
+            if (MccIds.PACKAGE.equals(spec.packageName)) {
+                inner.addView(text(getString(R.string.mcc_version_warning), 14));
+            }
             if (!available) inner.addView(text(getString(R.string.settings_unavailable), 14));
             if (scope == null || !scope.contains(spec.packageName))
                 inner.addView(text(getString(R.string.scope_approval), 14));
@@ -211,7 +223,9 @@ public final class MainActivity extends AppCompatActivity {
         if (current == null) { card(getString(R.string.scope), getString(R.string.scope_unavailable)); return; }
         if (current.isEmpty()) card(getString(R.string.scope), getString(R.string.scope_empty));
         for (String pkg : current) card(getString(R.string.scope_entry, pkg), getString(R.string.scope_approval));
+        Set<String> listedPackages = new HashSet<>();
         for (TweakSpec spec : TweakCatalog.all()) {
+            if (!listedPackages.add(spec.packageName)) continue;
             boolean present = current.contains(spec.packageName);
             LinearLayout inner = card(spec.packageName, getString(R.string.scope_approval));
             button(inner, present ? R.string.scope_remove : R.string.scope_add,
