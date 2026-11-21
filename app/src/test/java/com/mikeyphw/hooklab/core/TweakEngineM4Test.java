@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -16,24 +18,24 @@ public class TweakEngineM4Test {
         return new TweakEngine.Entry<>(new TweakSpec(id, HOST, 10, 20), "Test", "Test fixture", install);
     }
     private static final class Policy implements TweakEngine.FaultPolicy {
-        boolean blocked;
+        final Set<String> blocked = new HashSet<>();
         boolean cannotRead;
         boolean cannotWrite;
         int reads, writes;
         @Override public boolean quarantined(String id) {
             reads++;
             if (cannotRead) throw new IllegalStateException("unavailable");
-            return blocked;
+            return blocked.contains(id);
         }
         @Override public void quarantine(String id) {
             writes++;
             if (cannotWrite) throw new IllegalStateException("cannot persist");
-            blocked = true;
+            blocked.add(id);
         }
     }
 
     @Test public void quarantinedInstallerNeverRunsAndDoesNotReadOptIn() {
-        Policy p = new Policy(); p.blocked = true;
+        Policy p = new Policy(); p.blocked.add("example.safe");
         AtomicInteger reads = new AtomicInteger(), calls = new AtomicInteger();
         List<TweakDiagnostics.Outcome> events = new ArrayList<>();
         int count = TweakEngine.dispatch(Collections.singletonList(entry("example.safe", ctx -> calls.incrementAndGet())),
@@ -60,9 +62,25 @@ public class TweakEngineM4Test {
                 entry("example.second", ctx -> outcomes.add("second"))),
                 HOST, HOST, 15, id -> true, "ctx", (id, e) -> outcomes.add(id), p,
                 (id, result, category) -> events.add(id + ":" + result + ":" + category));
-        assertEquals(1, count); assertEquals(1, p.writes); assertTrue(p.blocked);
+        assertEquals(1, count); assertEquals(1, p.writes); assertTrue(p.blocked.contains("example.safe"));
         assertEquals(Arrays.asList("example.safe", "second"), outcomes);
         assertEquals(Arrays.asList("example.safe:INSTALL_FAILED:LINKAGE", "example.second:INSTALLED:NONE"), events);
+    }
+
+    @Test public void quarantineIsScopedToEachTweakId() {
+        Policy p = new Policy();
+        p.blocked.add("example.safe");
+        AtomicInteger safe = new AtomicInteger(), other = new AtomicInteger();
+        int installed = TweakEngine.dispatch(Arrays.asList(
+                entry("example.safe", ctx -> safe.incrementAndGet()),
+                entry("example.second", ctx -> other.incrementAndGet())),
+                HOST, HOST, 15, id -> true, "ctx", (id, failure) -> fail(),
+                p, (id, status, category) -> {});
+        assertEquals(1, installed);
+        assertEquals(0, safe.get());
+        assertEquals(1, other.get());
+        assertTrue(p.blocked.contains("example.safe"));
+        assertFalse(p.blocked.contains("example.second"));
     }
 
     @Test public void preferenceReadFailureDoesNotQuarantine() {
@@ -128,7 +146,7 @@ public class TweakEngineM4Test {
             TweakEngine.dispatch(Collections.singletonList(unstable), HOST, HOST, 15,
                     id -> true, "ctx", (id, e) -> {}, p, (id, outcome, category) -> {});
         }
-        assertEquals(1, tries.get()); assertTrue(p.blocked); assertEquals(1, p.writes);
+        assertEquals(1, tries.get()); assertTrue(p.blocked.contains("example.safe")); assertEquals(1, p.writes);
     }
 
     @Test public void compatibilityNeverAssumesCurrentVersion() {
