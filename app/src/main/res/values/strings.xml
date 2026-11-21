@@ -31,6 +31,23 @@
     <string name="system_theme">Follow system</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
-    <string name="about_detail">Version 0.2.0 • Modern Xposed API 102\nFramework-managed settings and scoped, opt-in dispatcher. No third-party tweaks registered yet.</string>
+    <string name="about_detail">Version 0.3.0 • Modern Xposed API 102\nFramework-managed settings and scoped, opt-in dispatcher. No third-party tweaks registered yet.</string>
     <string name="registered_count">%1$d registered tweaks</string>
+    <string name="diagnostics">Diagnostics</string>
+    <string name="diagnostics_disconnected">Framework diagnostics are unavailable until the API 102 service connects.</string>
+    <string name="diagnostics_empty">No registered tweaks to diagnose</string>
+    <string name="diagnostics_inert">No reviewed tweaks are registered. No third-party host hooks are installed by this release.</string>
+    <string name="diagnostics_unavailable">Framework preferences cannot be read. Tweak status is unknown.</string>
+    <string name="diagnostics_compatibility">Eligibility: %1$s (host version checked only inside target process)</string>
+    <string name="diagnostics_safety_state">Persistent manual safety lock: %1$s</string>
+    <string name="diagnostics_locked">Enabled</string>
+    <string name="diagnostics_unlocked">Disabled</string>
+    <string name="diagnostics_note_title">Where are runtime failures?</string>
+    <string name="diagnostics_note">Hooked processes cannot write libxposed remote preferences. Runtime outcomes are reported as sanitized events in LSPosed logs, not stored here. An installer failure prevents another attempt in the same host process, but cannot automatically lock future processes. The module app can set persistent manual safety locks. No app content or exception messages are logged. Restart the host app after changing a lock.</string>
+    <string name="diagnostics_enable_lock">Enable safety lock</string>
+    <string name="diagnostics_reset_quarantine">Clear safety lock</string>
+    <string name="diagnostics_lock_confirm">Block this tweak on the next host process start? This does not change the opt-in preference or restart the host app.</string>
+    <string name="diagnostics_reset_confirm">Allow this tweak on the next host process start if enabled and compatible? This does not enable the tweak or restart the host app.</string>
+    <string name="diagnostics_reset_success">Safety lock updated. Restart the target app to apply.</string>
+    <string name="diagnostics_reset_failed">Could not update the framework safety lock.</string>
 </resources>

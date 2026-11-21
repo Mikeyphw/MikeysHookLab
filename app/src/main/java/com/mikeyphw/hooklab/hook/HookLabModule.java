@@ -9,15 +9,19 @@ import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.TweakEngine;
 import com.mikeyphw.hooklab.core.TweakKeys;
+import com.mikeyphw.hooklab.core.TweakDiagnostics;
 import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedModuleInterface;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
-/** API 102: one guarded, late version-verified dispatcher; zero app hooks in M1-M3. */
+/** API 102: guarded host dispatcher with per-tweak quarantine and advisory diagnostics. */
 public final class HookLabModule extends XposedModule {
     private String process;
     private final AtomicBoolean bootstrapInstalled = new AtomicBoolean();
     private final AtomicBoolean dispatched = new AtomicBoolean();
+    private final Set<String> failedInProcess = ConcurrentHashMap.newKeySet();
 
     @Override public void onModuleLoaded(XposedModuleInterface.ModuleLoadedParam param) {
         process = param.getProcessName();
@@ -44,14 +48,16 @@ public final class HookLabModule extends XposedModule {
                         try {
                             Context ctx = (Context) chain.getArg(0);
                             dispatchForHost(ctx, pkg, param.getDefaultClassLoader());
-                        } catch (Exception ex) {
-                            log(Log.ERROR, "HookLab", "Host bootstrap failed closed", ex);
+                        } catch (Throwable ex) {
+                            TweakDiagnostics.rethrowFatal(ex);
+                            log(Log.ERROR, "HookLab", "Host bootstrap failed closed category=" + TweakDiagnostics.failureCategory(ex));
                         }
                     }
                     return result;
                 });
-        } catch (ReflectiveOperationException | RuntimeException ex) {
-            log(Log.ERROR, "HookLab", "Unable to register safe host bootstrap", ex);
+        } catch (Throwable ex) {
+            TweakDiagnostics.rethrowFatal(ex);
+            log(Log.ERROR, "HookLab", "Unable to register safe host bootstrap category=" + TweakDiagnostics.failureCategory(ex));
         }
     }
 
@@ -60,21 +66,45 @@ public final class HookLabModule extends XposedModule {
         final long version;
         try {
             version = ctx.getPackageManager().getPackageInfo(pkg, 0).getLongVersionCode();
-        } catch (PackageManager.NameNotFoundException | RuntimeException ex) {
-            log(Log.WARN, "HookLab", "Unverified host version; skipping tweaks", ex);
+        } catch (Throwable ex) {
+            TweakDiagnostics.rethrowFatal(ex);
+            log(Log.WARN, "HookLab", "Unverified host version; skipping tweaks category=" + TweakDiagnostics.failureCategory(ex));
             return;
         }
         if (version < 1) return;
         final SharedPreferences settings;
         try {
             settings = getRemotePreferences(TweakKeys.GROUP);
-        } catch (RuntimeException ex) {
-            log(Log.WARN, "HookLab", "Framework preferences unavailable; skipping tweaks", ex);
+        } catch (Throwable ex) {
+            TweakDiagnostics.rethrowFatal(ex);
+            log(Log.WARN, "HookLab", "Framework preferences unavailable; skipping tweaks category=" + TweakDiagnostics.failureCategory(ex));
+            return;
+        }
+        final SharedPreferences safety;
+        try {
+            safety = getRemotePreferences(TweakDiagnostics.GROUP); // read-only in the host process
+        } catch (Throwable ex) {
+            TweakDiagnostics.rethrowFatal(ex);
+            log(Log.WARN, "HookLab", "Framework safety-lock state unavailable; skipping tweaks category=" + TweakDiagnostics.failureCategory(ex));
             return;
         }
         HookContext context = new HookContext(pkg, process, version, loader, this, ctx);
         TweakEngine.dispatch(TweakCatalog.entries(), pkg, process, version,
                 id -> settings.getBoolean(TweakKeys.enabled(id), false), context,
-                (id, exception) -> log(Log.ERROR, "HookLab", "Tweak failed: " + id, exception));
+                (id, failure) -> log(Log.ERROR, "HookLab",
+                        "Tweak failure id=" + id + " category=" + TweakDiagnostics.failureCategory(failure)),
+                new TweakEngine.FaultPolicy() {
+                    @Override public boolean quarantined(String id) {
+                        return failedInProcess.contains(id)
+                                || safety.getBoolean(TweakDiagnostics.quarantineKey(id), false);
+                    }
+                    @Override public void quarantine(String id) {
+                        // Host remote preferences cannot be written; latch in this process only.
+                        failedInProcess.add(id);
+                    }
+                },
+                (id, outcome, category) -> log(Log.INFO, "HookLab",
+                        "Tweak outcome id=" + id + " status=" + outcome.name()
+                        + " category=" + category));
     }
 }
