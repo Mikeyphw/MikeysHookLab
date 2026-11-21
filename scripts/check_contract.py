@@ -4,6 +4,7 @@ import hashlib
 import pathlib
 import subprocess
 import xml.etree.ElementTree as ET
+import tomllib
 
 r = pathlib.Path(__file__).resolve().parents[1]
 def read(p): return (r/p).read_text(encoding='utf-8')
@@ -32,6 +33,19 @@ check('setup-android@v4.0.4' in wf and "packages: 'platform-tools'" in wf
 check(all(term in wf for term in (':app:assembleDebug',':app:testDebugUnitTest',':app:lintDebug',
                                   'apksigner','sha256sum','source-commit.txt')),
       'hosted build/test/lint/provenance stages')
+# AAR metadata for libxposed API 102 requires compileSdk 37. Do not upgrade targetSdk here.
+check("version '9.1.1'" in read('build.gradle') and 'compileSdk 37' in read('app/build.gradle')
+      and 'targetSdk 36' in read('app/build.gradle'), 'supported AGP/API37 while preserving targetSdk36')
+check("sdkmanager 'platforms;android-37' 'build-tools;36.0.0' 'platform-tools'" in wf
+      and 'sdkmanager tools' not in wf, 'CI installs API37 with no deprecated tools package')
+with (r/'.devtool.toml').open('rb') as fp:
+    config = tomllib.load(fp)
+for task in ('assemble_debug', 'unit_debug', 'lint_debug'):
+    md = config['targets']['hooklab']['jobs'][task]['metadata']
+    check('platforms;android-37' in md['ci_android_sdk_packages']
+          and md['ci_android_wrapper_jar_sha256'] ==
+          '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f',
+          'native Devtool Android environment '+task)
 build = read('app/build.gradle')
 check("compileOnly 'io.github.libxposed:api:102.0.0'" in build
       and "implementation 'io.github.libxposed:service:102.0.0'" in build,
@@ -63,7 +77,7 @@ jar = r/'gradle/wrapper/gradle-wrapper.jar'
 check(jar.is_file() and hashlib.sha256(jar.read_bytes()).hexdigest()==
       '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f',
       'pinned Gradle wrapper jar')
-check('distributionSha256Sum=20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78'
-      in read('gradle/wrapper/gradle-wrapper.properties'), 'pinned Gradle distribution')
+check('distributionSha256Sum=b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06'
+      in read('gradle/wrapper/gradle-wrapper.properties') and 'gradle-9.3.1-bin.zip' in read('gradle/wrapper/gradle-wrapper.properties'), 'pinned Gradle distribution')
 subprocess.run(['bash','-n',str(r/'gradlew')],check=True)
 print('HOOKLAB_M123_SOURCE_CONTRACT_PASS', flush=True)
