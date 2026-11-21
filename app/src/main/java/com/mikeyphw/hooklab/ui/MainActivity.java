@@ -25,6 +25,8 @@ import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.TweakEngine;
 import com.mikeyphw.hooklab.core.TweakKeys;
+import com.mikeyphw.hooklab.core.TweakDiagnostics;
+import com.mikeyphw.hooklab.core.TweakCompatibility;
 import com.mikeyphw.hooklab.core.TweakSpec;
 import io.github.libxposed.service.XposedService;
 import java.util.Collections;
@@ -44,7 +46,7 @@ public final class MainActivity extends AppCompatActivity {
         appearance = getSharedPreferences("appearance", MODE_PRIVATE);
         getDelegate().setLocalNightMode(appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM));
         super.onCreate(state);
-        page = state == null ? 0 : Math.max(0, Math.min(4, state.getInt("page")));
+        page = state == null ? 0 : Math.max(0, Math.min(5, state.getInt("page")));
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurface));
@@ -57,7 +59,8 @@ public final class MainActivity extends AppCompatActivity {
         body.setPadding(dp(20), dp(16), dp(20), dp(24));
         scroll.addView(body); root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         LinearLayout nav = new LinearLayout(this); nav.setOrientation(LinearLayout.VERTICAL);
-        int[] names = {R.string.home, R.string.tweaks, R.string.scope, R.string.settings, R.string.about};
+        int[] names = {R.string.home, R.string.tweaks, R.string.scope,
+                R.string.diagnostics, R.string.settings, R.string.about};
         // Compact two-column navigation scales better on narrow portrait screens.
         for (int row = 0; row < 3; row++) {
             LinearLayout line = new LinearLayout(this);
@@ -68,7 +71,7 @@ public final class MainActivity extends AppCompatActivity {
                         com.google.android.material.R.attr.materialButtonOutlinedStyle);
                 b.setText(names[target]); b.setMinHeight(dp(48));
                 b.setOnClickListener(v -> { page = target; render(); scroll.scrollTo(0, 0); });
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, target == 4 ? 2 : 1);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
                 lp.setMargins(dp(4), 0, dp(4), 0); line.addView(b, lp);
             }
             nav.addView(line);
@@ -216,6 +219,74 @@ public final class MainActivity extends AppCompatActivity {
                            else requestScope(s, spec.packageName); });
         }
     }
+    /** Framework-truth diagnostics. Per-process events live only in Xposed logs. */
+    private void diagnosticsPage() {
+        heading(R.string.diagnostics);
+        XposedService s = service();
+        boolean connected = ready(s);
+        card(getString(R.string.status), connection(s));
+        if (!connected) {
+            card(getString(R.string.diagnostics), getString(R.string.diagnostics_disconnected));
+            return;
+        }
+        List<TweakEngine.Entry<HookContext>> entries = TweakCatalog.entries();
+        if (entries.isEmpty()) {
+            card(getString(R.string.diagnostics_empty), getString(R.string.diagnostics_inert));
+            return;
+        }
+        Set<String> scope = scopedPackages(s);
+        for (TweakEngine.Entry<HookContext> entry : entries) {
+            String id = entry.spec.id;
+            Boolean inScope = scope == null ? null : scope.contains(entry.spec.packageName);
+            boolean enabled = false, locked = false, readable = true;
+            try {
+                SharedPreferences flags = s.getRemotePreferences(TweakKeys.GROUP);
+                SharedPreferences safety = s.getRemotePreferences(TweakDiagnostics.GROUP);
+                enabled = flags.getBoolean(TweakKeys.enabled(id), false);
+                locked = safety.getBoolean(TweakDiagnostics.quarantineKey(id), false);
+            } catch (RuntimeException ex) { readable = false; }
+            if (!readable) {
+                card(entry.title, getString(R.string.diagnostics_unavailable));
+                continue;
+            }
+            // A package/version read in the UI would be subject to visibility limits;
+            // null means unverified, never infer compatibility from historical logs.
+            TweakCompatibility.State eligibility = TweakCompatibility.assess(entry.spec,
+                    connected, inScope, enabled, locked, null);
+            LinearLayout inner = card(entry.title,
+                    getString(R.string.diagnostics_compatibility, eligibility.name())
+                    + "\n" + getString(R.string.diagnostics_safety_state,
+                          getString(locked ? R.string.diagnostics_locked : R.string.diagnostics_unlocked)));
+            final boolean nextLock = !locked;
+            button(inner, nextLock ? R.string.diagnostics_enable_lock : R.string.diagnostics_reset_quarantine,
+                    v -> confirmSafetyLock(s, id, nextLock));
+        }
+        card(getString(R.string.diagnostics_note_title), getString(R.string.diagnostics_note));
+    }
+
+    private void confirmSafetyLock(XposedService s, String id, boolean locked) {
+        if (!ready(s)) return;
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(locked ? R.string.diagnostics_enable_lock : R.string.diagnostics_reset_quarantine)
+                .setMessage(locked ? R.string.diagnostics_lock_confirm : R.string.diagnostics_reset_confirm)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    new Thread(() -> {
+                        boolean success;
+                        try {
+                            // Only the module app's XposedService may WRITE remote preferences.
+                            success = s == service() && s.getRemotePreferences(TweakDiagnostics.GROUP)
+                                    .edit().putBoolean(TweakDiagnostics.quarantineKey(id), locked).commit();
+                        } catch (RuntimeException ex) { success = false; }
+                        final boolean result = success;
+                        runOnUiThread(() -> {
+                            toast(result ? R.string.diagnostics_reset_success : R.string.diagnostics_reset_failed);
+                            render();
+                        });
+                    }, "hooklab-update-safety-lock").start();
+                }).show();
+    }
+
     private void themeButton(int label, int mode) {
         MaterialButton b = new MaterialButton(this); b.setText(label); b.setMinHeight(dp(48));
         b.setEnabled(appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM) != mode);
@@ -237,8 +308,9 @@ public final class MainActivity extends AppCompatActivity {
         switch (page) {
             case 1: tweaks(); break;
             case 2: scopePage(); break;
-            case 3: settings(); break;
-            case 4: heading(R.string.about); card(getString(R.string.app_name), getString(R.string.about_detail)); break;
+            case 3: diagnosticsPage(); break;
+            case 4: settings(); break;
+            case 5: heading(R.string.about); card(getString(R.string.app_name), getString(R.string.about_detail)); break;
             default: home();
         }
     }

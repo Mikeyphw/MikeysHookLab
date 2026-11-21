@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M1-M3 source guard; hosted build, lint and APK inspection remain separate gates."""
+"""M4 source guard; hosted build, lint and APK inspection remain separate gates."""
 import hashlib
 import pathlib
 import subprocess
@@ -83,4 +83,48 @@ check(jar.is_file() and hashlib.sha256(jar.read_bytes()).hexdigest()==
 check('distributionSha256Sum=b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06'
       in read('gradle/wrapper/gradle-wrapper.properties') and 'gradle-9.3.1-bin.zip' in read('gradle/wrapper/gradle-wrapper.properties'), 'pinned Gradle distribution')
 subprocess.run(['bash','-n',str(r/'gradlew')],check=True)
-print('HOOKLAB_M123_SOURCE_CONTRACT_PASS', flush=True)
+# M4: fail-closed and diagnostic truth; do not rely solely on existence of classes.
+engine = read('app/src/main/java/com/mikeyphw/hooklab/core/TweakEngine.java')
+diag = read('app/src/main/java/com/mikeyphw/hooklab/core/TweakDiagnostics.java')
+compat = read('app/src/main/java/com/mikeyphw/hooklab/core/TweakCompatibility.java')
+check(all(t in engine for t in (
+      'TweakDiagnostics.rethrowFatal(failure)', 'policy.quarantined(id)',
+      'policy.quarantine(id)', 'continue; // fail closed',
+      'catch (Throwable failure)', 'record(statuses, id, TweakDiagnostics.Outcome.INSTALL_FAILED',
+      'TweakDiagnostics.Outcome.PREFERENCE_UNAVAILABLE',
+      'TweakDiagnostics.Outcome.QUARANTINE_UNAVAILABLE')),
+      'per-tweak fail-closed guarded dispatcher and fault isolation')
+check(all(t in module for t in ('getRemotePreferences(TweakDiagnostics.GROUP)',
+      'TweakDiagnostics.quarantineKey(id)', 'failedInProcess.add(id)',
+      'ConcurrentHashMap.newKeySet()', 'TweakDiagnostics.rethrowFatal(ex)',
+      'TweakDiagnostics.failureCategory(failure)', 'outcome.name()'))
+      and '.edit()' not in module,
+      'read-only host preferences, process-local fault latch and sanitized framework logs')
+check(all(t in diag for t in ('"hooklab.safety.v1"',
+      'public static void rethrowFatal(Throwable failure)',
+      'failure instanceof VirtualMachineError', 'failure instanceof ThreadDeath',
+      'return "LINKAGE";', 'TweakKeys.enabled(id);')),
+      'whitelisted diagnostic codes and preserved fatal JVM exceptions')
+check(all(t in compat for t in ('FRAMEWORK_UNAVAILABLE', 'SCOPE_UNKNOWN',
+      'OUT_OF_SCOPE', 'QUARANTINED', 'VERSION_UNVERIFIED',
+      'VERSION_UNSUPPORTED', 'ELIGIBLE', 'verifiedVersion == null')),
+      'honest three-valued compatibility model')
+check(all(t in ui for t in ('diagnosticsPage()', 'confirmSafetyLock(s, id, nextLock)',
+      'TweakDiagnostics.GROUP', 'TweakCompatibility.assess(',
+      'R.string.diagnostics_note', 'R.string.diagnostics_reset_confirm',
+      's == service()', '.putBoolean(TweakDiagnostics.quarantineKey(id), locked).commit()',
+      'runOnUiThread(')),
+      'framework-backed manual locks and explicit confirmation-gated diagnostics UI')
+check('versionCode 3' in build and "versionName '0.3.0'" in build,
+      'M4 version bump and unchanged targetSdk 36')
+tests = read('app/src/test/java/com/mikeyphw/hooklab/core/TweakEngineM4Test.java')
+check(tests.count('@Test') >= 12 and all(t in tests for t in (
+      'failedQuarantineReadFailsClosed', 'linkageErrorIsQuarantinedAndIndependentTweakRuns',
+      'preferenceReadFailureDoesNotQuarantine', 'fatalVmErrorIsRethrown',
+      'inProcessFailureLatchSkipsSecondAttempt',
+      'compatibilityNeverAssumesCurrentVersion')),
+      'M4 hosted fault-isolation and compatibility regression coverage')
+check('Collections.<TweakEngine.Entry<HookContext>>emptyList()' in read(
+      'app/src/main/java/com/mikeyphw/hooklab/core/TweakCatalog.java'),
+      'no experimental app hooks registered')
+print('HOOKLAB_M4_SOURCE_CONTRACT_PASS', flush=True)

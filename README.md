@@ -19,3 +19,17 @@ A modular Android app and modern Xposed API 102 module for **opt-in**, app-speci
 GitHub Actions runs `python3 -B scripts/check_contract.py`, `:app:assembleDebug`, `:app:testDebugUnitTest`, and `:app:lintDebug`, followed by APK metadata/signature and provenance verification. GitHub SDK setup remains `android-actions/setup-android@v4.0.4` with command-line tools `15859902`, explicit SDK 36 and no deprecated `tools` package. Java 17 source / JDK 21 hosted, Gradle 8.13, AGP 8.13.2, compileSdk 36. Remote service 102.0.0 is the known published artifact; API 102.0.0 is `compileOnly`.
 
 Native Devtool handles the source-bound transaction, clean worktree checks, commitment, PR delivery and session recovery. Hosted compile, unit, lint, APK metadata and device tests must be independently verified before considering the milestone accepted. Neither a successful source contract nor a PR by itself qualifies a release. No production signing, auto-merge, reboot, device writes, or root privileges are performed by this overlay.
+
+
+## M4 — Diagnostics, compatibility and fault isolation
+
+- The production catalog remains empty until app-specific hooks are reviewed. No host is hooked in this release.
+- A failed nonfatal installer (including `LinkageError`) is isolated from unrelated tweaks and put into an **in-process** failure latch. This latch is cleared when the host process ends.
+- Hooked processes receive **read-only** libxposed remote preferences. Runtime outcomes are emitted to the Xposed framework log using fixed status and failure categories; they are **not** written to remote preferences.
+- Persistent **manual** safety locks can be set/cleared only from the HookLab app via `XposedService`. Host processes read these locks before attempting a tweak. Changes take effect when a target process restarts.
+- Runtime compatibility requires an exact package, main process, verified version range, explicit opt-in, available safety-lock preferences, and no active lock. Unknown versions are never assumed compatible in the UI.
+- No host data, exceptions, argument values or stack traces are stored in HookLab diagnostics. The diagnostics screen cannot show historical host outcomes: consult LSPosed logs.
+- Failure containment is best effort. Already-installed hooks cannot be rolled back automatically; restart the host process after an incident. `ThreadDeath` and `VirtualMachineError` are rethrown.
+- CI (not Termux) owns Android Gradle compilation, lint, hosted JUnit, signed debug APK and provenance evidence.
+
+M4 does not constitute device testing or release qualification.
