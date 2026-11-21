@@ -181,6 +181,17 @@ check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.jav
       'hosted placement, storage and root contract tests')
 
 subprocess.run(['python3','-B',str(r/'scripts/check_verbose_contract.py')],check=True)
+apk_check = read('scripts/check_apk.py')
+check('EXPECTED_SCOPE' in apk_check and
+      'names.count(PREFIX + "scope.list") == 1' in apk_check and
+      'z.read(PREFIX + "scope.list") == EXPECTED_SCOPE' in apk_check and
+      'Unexpected recommended scope' in apk_check and
+      'assert path+\'scope.list\' not in z.namelist()' not in apk_check,
+      'APK metadata verifier requires exact M8 recommended scope')
+check((r/'scripts/test_apk_scope.py').is_file(),
+      'Synthetic positive and negative M8 packaged-scope tests available')
+subprocess.run(['python3','-B',str(r/'scripts/test_apk_scope.py')],check=True)
+
 print('HOOKLAB_M5_MCC_SOURCE_CONTRACT_PASS', flush=True)
 print('HOOKLAB_M4_SOURCE_CONTRACT_PASS', flush=True)
 
