@@ -1,0 +1,66 @@
+name: HookLab Android CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hooklab-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  android:
+    name: Android build, unit tests and lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          cmdline-tools-version: '15859902'
+          packages: 'platform-tools'
+      - name: Install exact SDK packages
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sdkmanager --version
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+      - name: Validate source contract
+        run: python3 -B scripts/check_contract.py
+      - name: Assemble, test and lint
+        shell: bash
+        run: bash gradlew --no-daemon --console=plain :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - name: Verify APK and record source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p evidence
+          cp app/build/outputs/apk/debug/app-debug.apk evidence/
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs evidence/app-debug.apk
+          python3 -B scripts/check_apk.py evidence/app-debug.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging evidence/app-debug.apk > evidence/apk-badging.txt
+          grep -F "package: name='com.mikeyphw.hooklab'" evidence/apk-badging.txt
+          git rev-parse HEAD > evidence/source-commit.txt
+          (cd evidence && sha256sum app-debug.apk > app-debug.apk.sha256)
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-debug-${{ github.run_attempt }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: hooklab-reports-${{ github.run_attempt }}
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: warn

@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Mikey\'s HookLab</string>
+    <string name="module_description">A modular laboratory for app-specific runtime tweaks.</string>
+    <string name="home">Home</string><string name="tweaks">Tweaks</string>
+    <string name="settings">Settings</string><string name="about">About</string>
+    <string name="tagline">Small hooks. Better apps.</string>
+    <string name="status">Foundation ready</string>
+    <string name="status_detail">No hooks are registered. No apps are modified. Module activation and scope are managed in LSPosed.</string>
+    <string name="catalog_empty">No tweaks yet. Reviewed app-specific tweaks will appear here.</string>
+    <string name="appearance">Appearance</string><string name="system_theme">Follow system</string>
+    <string name="light_theme">Light</string><string name="dark_theme">Dark</string>
+    <string name="about_detail">Version 0.1.0 • Modern Xposed API 102\nRepository: Mikeyphw/MikeysHookLab\nThis foundation does not detect framework activation or change third-party apps.</string>
+    <string name="registered_count">%1$d registered tweaks</string>
+</resources>
