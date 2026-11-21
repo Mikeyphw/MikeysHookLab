@@ -2,34 +2,44 @@
 
 Small hooks. Better apps.
 
-A modular Android app and modern Xposed API 102 module for **opt-in**, app-specific tweaks. M1–M3 adds an actual libxposed service-backed framework connection, managed scope, a read-only framework status page, a guarded runtime dispatcher, and remote per-tweak preferences. **There are still zero registered app hooks and no default scope.**
+Android Material UI + **modern libxposed API 102** module, with independent opt-in, source-controlled package allowlists, framework-managed scope, read-only host preferences, and M4 fail-closed process quarantine.
 
-## Architectural boundaries
+## M5 · First app: Meu Cronograma Capilar (MCC)
 
-- `HookLabApp` registers exactly one `XposedServiceHelper` listener. A live binder shows that framework service is connected; it is **not** proof that a host app is hooked.
-- `MainActivity` shows the framework name/version, actual module scope and registered tweaks. Scope changes require explicit user action and framework approval. Only packages registered in `TweakCatalog` can be requested or removed by the UI.
-- Per-tweak settings live in the **framework-owned** `hooklab.tweaks.v1` remote-preference group. The UI requires a connected framework, and writes show success only after a successful commit. No local mirror or world-readable settings.
-- The host `HookLabModule` uses modern API 102. It ignores system server, unscoped process names and unrelated loaded packages. When a matching package is registered it installs a single `Application.attach` interceptor, verifies its actual package version using the public `PackageInfo.getLongVersionCode()`, and dispatches only if the registry, process policy, version and explicit remote opt-in all agree.
-- `TweakEngine` is pure Java. Failures from settings or individual installers are isolated, while failures from the host's original methods are allowed to propagate normally. Framework-fatal errors are not swallowed.
-- `TweakCatalog` is deliberately empty. Adding a real tweak requires a separate reviewed registration, precise supported versions, tests and explicit scope consent. No sample hook is present in the shipping app.
-- The libxposed service provider is explicitly declared with `${applicationId}.XposedService`, and its pre-unlock binder callback does not open credential-protected preferences.
+M5 imports selected behaviors from **[Mikeyphw/MCC-VIP-Lab](https://github.com/Mikeyphw/MCC-VIP-Lab)** at exact source `59d02beede7335acc13db6adc9f6a96ebf1d63ee` into the HookLab registry (no dependency on the old API 82 module):
 
-## Build and verification
+| Tweak ID | Behavior | Default |
+| --- | --- | --- |
+| `mcc.vip.local` | Local RevenueCat `CustomerInfoMapperKt.map(CustomerInfo)` and `PurchasesFlutterPlugin.getCustomerInfo` proxy adapted to interceptor chains | **Off** |
+| `mcc.diamond.control` | In-app `♦ 9` Flutter diamond button opening HookLab's explicit diamond control Activity | **Off** |
+| `mcc.diamond.auto` | Wait for exactly one ASCII `0` in a single account balance file; only verified foreground handoff can trigger root refill | **Off** |
+| `mcc.banner.hide` | Hide specifically recognized native Flutter Google Mobile Ads banner views | **Off** |
 
-GitHub Actions runs `python3 -B scripts/check_contract.py`, `:app:assembleDebug`, `:app:testDebugUnitTest`, and `:app:lintDebug`, followed by APK metadata/signature and provenance verification. GitHub SDK setup remains `android-actions/setup-android@v4.0.4` with command-line tools `15859902`, explicit SDK 36 and no deprecated `tools` package. Java 17 source / JDK 21 hosted, Gradle 8.13, AGP 8.13.2, compileSdk 36. Remote service 102.0.0 is the known published artifact; API 102.0.0 is `compileOnly`.
+Exact target package: `br.art.code.meucronogramacapilar`; only its **main process** is eligible. No system or other-app scope. No app-specific hook runs until the user independently enables a tweak and receives framework scope approval. The old module's `xposed_init` and API 82 stubs are **not** imported.
 
-Native Devtool handles the source-bound transaction, clean worktree checks, commitment, PR delivery and session recovery. Hosted compile, unit, lint, APK metadata and device tests must be independently verified before considering the milestone accepted. Neither a successful source contract nor a PR by itself qualifies a release. No production signing, auto-merge, reboot, device writes, or root privileges are performed by this overlay.
+**Last manually tested MCC app version:** `20.2609.3009` in upstream. The upstream source does **not** include a reliable Android `versionCode` for that version. To preserve the upstream version-agnostic behavior, HookLab accepts any positive installed `versionCode` **but does not claim newer versions have been tested**. The UI displays that warning. Revisit the version gate once an exact device-tested version code is available.
 
+## Diamond safety contract
 
-## M4 — Diagnostics, compatibility and fault isolation
+- Root is requested only by the HookLab application UID after an explicit manual button tap, or an Android 14+ verified launch from MCC when `mcc.diamond.auto` is also enabled in the framework preferences and MCC has approved scope.
+- The target app process only adds UI and observes its own data; it **never** executes `su`, writes another app's data, or hosts a root IPC endpoint.
+- The root operation requires one non-symlink account-local `*-DiamondBalance` file, one digit in ASCII, and a valid ASCII account filename. It force-stops MCC, writes **9**, verifies the result and separately reports app relaunch dispatch. Auto mode refuses nonzero values.
+- Android below 14 can open manual control but **cannot automatically execute root from the target**. The module never silently accepts a caller-supplied auto intent.
+- Both local balance state and mock RevenueCat entitlements are **local changes only**, not real purchase authorization, backend approval or verified revenue. MCC might synchronize local data and later versions may change the behavior.
+- The overlay does **not** use blanket APK permissions, install anything on the device, remove an existing module, migrate its signing key, or grant root permission automatically.
 
-- The production catalog remains empty until app-specific hooks are reviewed. No host is hooked in this release.
-- A failed nonfatal installer (including `LinkageError`) is isolated from unrelated tweaks and put into an **in-process** failure latch. This latch is cleared when the host process ends.
-- Hooked processes receive **read-only** libxposed remote preferences. Runtime outcomes are emitted to the Xposed framework log using fixed status and failure categories; they are **not** written to remote preferences.
-- Persistent **manual** safety locks can be set/cleared only from the HookLab app via `XposedService`. Host processes read these locks before attempting a tweak. Changes take effect when a target process restarts.
-- Runtime compatibility requires an exact package, main process, verified version range, explicit opt-in, available safety-lock preferences, and no active lock. Unknown versions are never assumed compatible in the UI.
-- No host data, exceptions, argument values or stack traces are stored in HookLab diagnostics. The diagnostics screen cannot show historical host outcomes: consult LSPosed logs.
-- Failure containment is best effort. Already-installed hooks cannot be rolled back automatically; restart the host process after an incident. `ThreadDeath` and `VirtualMachineError` are rethrown.
-- CI (not Termux) owns Android Gradle compilation, lint, hosted JUnit, signed debug APK and provenance evidence.
+## Deliberate limitations
 
-M4 does not constitute device testing or release qualification.
+The diagnostic-only upstream probes (`P02`–`P07`, e.g. verbose ad callback, file I/O and purchase call tracing) are **not** imported into M5, because they capture more target data than HookLab's sanitized diagnostics policy permits. No claim of full source parity, real-device UX validation or compatibility with newer MCC releases is made. Legacy module settings and signing identity are not transferred; disable the old MCC-VIP-Lab module when validating HookLab to avoid double-hooking.
+
+## CI, native delivery and reviews
+
+Only GitHub Actions may execute Android Gradle build, `testDebugUnitTest`, lint and APK signature/provenance checks. GitHub SDK setup remains `android-actions/setup-android@v4.0.4` + the published `platforms;android-37.0` package, Gradle 9.3.1 and AGP 9.1.1; `targetSdk 36` is unchanged.
+
+Native Devtool performs source-pinned checks, a committed immutable overlay, and a durable delivery session, with a draft PR and independent exact-head CI verification. Device writes, signing, release qualification, automatic merge, force-push or any host Gradle execution are excluded.
+
+Details: [MCC port mapping and acceptance](docs/mcc_port.md).
+
+## Stable signing (M5.1)
+
+See [stable signing guide](docs/signing.md) for the protected GitHub Environment, local key bootstrap, exact-source manual release, and certificate continuity. PR/debug APK artifacts do not share the stable signing certificate.

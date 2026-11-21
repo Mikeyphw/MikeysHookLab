@@ -54,9 +54,10 @@ public class TweakEngineTest {
     @Test(expected=UnsupportedOperationException.class) public void catalogIsImmutable() {
         TweakEngine.immutableCatalog(Collections.singletonList(entry(spec, s -> {}))).clear();
     }
-    @Test public void productionContainsNoHooks() {
-        assertTrue(TweakCatalog.entries().isEmpty()); assertTrue(TweakCatalog.all().isEmpty());
+    @Test public void productionRegistersOnlyMccTargets() {
+        assertEquals(4, TweakCatalog.entries().size()); assertEquals(4, TweakCatalog.all().size());
         assertFalse(TweakCatalog.knowsPackage(HOST));
+        assertTrue(TweakCatalog.knowsPackage("br.art.code.meucronogramacapilar"));
     }
     @Test public void keyIsNamespaced() {
         assertEquals("enabled.example.safe", TweakKeys.enabled("example.safe"));

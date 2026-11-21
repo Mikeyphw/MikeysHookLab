@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Exact target visibility only; no broad installed-app query. -->
+    <queries>
+        <package android:name="br.art.code.meucronogramacapilar" />
+    </queries>
     <application android:name=".HookLabApp" android:allowBackup="false"
         android:label="@string/app_name" android:description="@string/module_description"
         android:icon="@drawable/ic_hooklab" android:theme="@style/Theme.HookLab"
@@ -9,6 +13,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Exported only for verified Activity launch identity sharing; never silent root. -->
+        <activity android:name=".mcc.MccControlActivity" android:exported="true" />
         <!-- Exact authority expected by libxposed service; no app-defined binder provider. -->
         <provider android:name="io.github.libxposed.service.XposedProvider"
             android:authorities="${applicationId}.XposedService"

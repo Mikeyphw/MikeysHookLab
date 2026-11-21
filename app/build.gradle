@@ -1,4 +1,17 @@
 plugins { id 'com.android.application' }
+// Only the protected GitHub Actions environment injects stable signing inputs.
+// PR/debug jobs never receive these variables, and libxposed hooks are unchanged.
+def hooklabSigningEnv = [
+    path: System.getenv('HOOKLAB_SIGNING_KEYSTORE_PATH'),
+    storePass: System.getenv('HOOKLAB_SIGNING_STORE_PASSWORD'),
+    keyAlias: System.getenv('HOOKLAB_SIGNING_KEY_ALIAS'),
+    keyPass: System.getenv('HOOKLAB_SIGNING_KEY_PASSWORD')
+]
+def signingRequested = hooklabSigningEnv.values().any { it != null && !it.isEmpty() }
+if (signingRequested && !hooklabSigningEnv.values().every { it != null && !it.isEmpty() }) {
+    throw new GradleException('HOOKLAB_SIGNING_PARTIAL_CONFIG_REFUSED')
+}
+
 android {
     namespace 'com.mikeyphw.hooklab'
     // Android SDK Platform 37 is published as android-37.0.
@@ -13,14 +26,30 @@ android {
         applicationId 'com.mikeyphw.hooklab'
         minSdk 29
         targetSdk 36
-        versionCode 3
-        versionName '0.3.0'
+        versionCode 5
+        versionName '0.4.1'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    buildTypes { release { minifyEnabled false } }
+    signingConfigs {
+        if (signingRequested) {
+            hooklabStable {
+                storeFile file(hooklabSigningEnv.path)
+                storePassword hooklabSigningEnv.storePass
+                keyAlias hooklabSigningEnv.keyAlias
+                keyPassword hooklabSigningEnv.keyPass
+                storeType 'PKCS12'
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (signingRequested) signingConfig signingConfigs.hooklabStable
+        }
+    }
     lint { abortOnError true; checkReleaseBuilds true }
 }
 dependencies {
@@ -29,5 +58,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'io.github.libxposed:service:102.0.0'
     compileOnly 'io.github.libxposed:api:102.0.0'
+    // Only the hosted JVM test classpath includes API stubs; not bundled in the APK.
+    testImplementation 'io.github.libxposed:api:102.0.0'
     testImplementation 'junit:junit:4.13.2'
 }

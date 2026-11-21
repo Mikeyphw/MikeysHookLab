@@ -1,0 +1,102 @@
+name: HookLab Stable Signed APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hooklab-stable-signing
+  cancel-in-progress: false
+jobs:
+  signed-release:
+    name: Stable signed release APK (main only)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    environment: hooklab-signing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact main source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Current Android command line tools (no deprecated tools package)
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          cmdline-tools-version: '15859902'
+          packages: 'platform-tools'
+      - name: Install pinned Android SDK packages
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sdkmanager --version
+          sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'
+          test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
+      - name: Verify exact release source and signing-source contracts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$GITHUB_REPOSITORY" = 'Mikeyphw/MikeysHookLab'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -B scripts/check_contract.py
+          python3 -B scripts/check_signing_contract.py
+      - name: Test, lint, assemble release and verify stable certificate
+        shell: bash
+        env:
+          HOOKLAB_SIGNING_KEYSTORE_B64: ${{ secrets.HOOKLAB_SIGNING_KEYSTORE_B64 }}
+          HOOKLAB_SIGNING_STORE_PASSWORD: ${{ secrets.HOOKLAB_SIGNING_STORE_PASSWORD }}
+          HOOKLAB_SIGNING_KEY_ALIAS: ${{ secrets.HOOKLAB_SIGNING_KEY_ALIAS }}
+          HOOKLAB_SIGNING_KEY_PASSWORD: ${{ secrets.HOOKLAB_SIGNING_KEY_PASSWORD }}
+          HOOKLAB_SIGNING_CERT_SHA256: ${{ secrets.HOOKLAB_SIGNING_CERT_SHA256 }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          for key in HOOKLAB_SIGNING_KEYSTORE_B64 HOOKLAB_SIGNING_STORE_PASSWORD HOOKLAB_SIGNING_KEY_ALIAS HOOKLAB_SIGNING_KEY_PASSWORD HOOKLAB_SIGNING_CERT_SHA256; do
+            test -n "${!key:-}" || { printf 'SIGNING_REQUIRED_SECRET_MISSING=%s\n' "$key" >&2; exit 1; }
+          done
+          [[ "$HOOKLAB_SIGNING_CERT_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo 'SIGNING_CERT_DIGEST_INVALID' >&2; exit 1; }
+          KEYSTORE="$RUNNER_TEMP/hooklab-stable-signing.p12"
+          trap 'rm -f -- "$KEYSTORE"' EXIT
+          printf '%s' "$HOOKLAB_SIGNING_KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
+          chmod 600 "$KEYSTORE"
+          test -s "$KEYSTORE"
+          export HOOKLAB_SIGNING_KEYSTORE_PATH="$KEYSTORE"
+          # Gradle is executed only by the GitHub-hosted runner.
+          bash gradlew --no-daemon --console=plain :app:testDebugUnitTest :app:lintRelease :app:assembleRelease
+          APK='app/build/outputs/apk/release/app-release.apk'
+          test -s "$APK"
+          mkdir -p evidence-stable
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee evidence-stable/signature-report.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > evidence-stable/apk-badging.txt
+          python3 -B scripts/verify_signed_apk.py \
+            --apk "$APK" \
+            --signature-report evidence-stable/signature-report.txt \
+            --badging evidence-stable/apk-badging.txt \
+            --expected-cert "$HOOKLAB_SIGNING_CERT_SHA256"
+          cp "$APK" evidence-stable/hooklab-stable-release.apk
+          git rev-parse HEAD > evidence-stable/source-commit.txt
+          (cd evidence-stable && sha256sum hooklab-stable-release.apk > hooklab-stable-release.apk.sha256)
+          printf '%s\n' "$HOOKLAB_SIGNING_CERT_SHA256" > evidence-stable/signing-cert-sha256.txt
+          echo 'HOOKLAB_STABLE_SIGNED_RELEASE_VERIFIED'
+      - name: Upload private-use signed APK (not a GitHub Release)
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-stable-release-${{ github.run_attempt }}
+          path: evidence-stable/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload hosted test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-stable-reports-${{ github.run_attempt }}
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: warn
+          retention-days: 14
