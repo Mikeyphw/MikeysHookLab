@@ -1,7 +1,13 @@
 plugins { id 'com.android.application' }
 android {
     namespace 'com.mikeyphw.hooklab'
-    compileSdk 37
+    // Android SDK Platform 37 is published as android-37.0.
+    // Explicit minor API level prevents AGP looking for android-37.
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 0
+        }
+    }
     buildToolsVersion '36.0.0'
     defaultConfig {
         applicationId 'com.mikeyphw.hooklab'

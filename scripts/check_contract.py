@@ -34,15 +34,18 @@ check(all(term in wf for term in (':app:assembleDebug',':app:testDebugUnitTest',
                                   'apksigner','sha256sum','source-commit.txt')),
       'hosted build/test/lint/provenance stages')
 # AAR metadata for libxposed API 102 requires compileSdk 37. Do not upgrade targetSdk here.
-check("version '9.1.1'" in read('build.gradle') and 'compileSdk 37' in read('app/build.gradle')
+check("version '9.1.1'" in read('build.gradle') and 'version = release(37)' in read('app/build.gradle')
+      and 'minorApiLevel = 0' in read('app/build.gradle')
+      and 'compileSdk 37' not in read('app/build.gradle')
       and 'targetSdk 36' in read('app/build.gradle'), 'supported AGP/API37 while preserving targetSdk36')
-check("sdkmanager 'platforms;android-37' 'build-tools;36.0.0' 'platform-tools'" in wf
-      and 'sdkmanager tools' not in wf, 'CI installs API37 with no deprecated tools package')
+check("sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'" in wf
+      and 'platforms/android-37.0/android.jar' in wf
+      and 'sdkmanager tools' not in wf, 'CI installs published API37.0 with no deprecated tools package')
 with (r/'.devtool.toml').open('rb') as fp:
     config = tomllib.load(fp)
 for task in ('assemble_debug', 'unit_debug', 'lint_debug'):
     md = config['targets']['hooklab']['jobs'][task]['metadata']
-    check('platforms;android-37' in md['ci_android_sdk_packages']
+    check('platforms;android-37.0' in md['ci_android_sdk_packages']
           and md['ci_android_wrapper_jar_sha256'] ==
           '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f',
           'native Devtool Android environment '+task)
