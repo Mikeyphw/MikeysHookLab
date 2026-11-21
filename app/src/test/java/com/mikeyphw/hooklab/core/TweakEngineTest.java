@@ -55,7 +55,7 @@ public class TweakEngineTest {
         TweakEngine.immutableCatalog(Collections.singletonList(entry(spec, s -> {}))).clear();
     }
     @Test public void productionRegistersOnlyMccTargets() {
-        assertEquals(4, TweakCatalog.entries().size()); assertEquals(4, TweakCatalog.all().size());
+        assertEquals(1, TweakCatalog.entries().size()); assertEquals(1, TweakCatalog.all().size());
         assertFalse(TweakCatalog.knowsPackage(HOST));
         assertTrue(TweakCatalog.knowsPackage("br.art.code.meucronogramacapilar"));
     }

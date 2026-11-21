@@ -74,10 +74,10 @@ check(all(term in module for term in ('extends XposedModule', 'onModuleLoaded(',
       'getRemotePreferences(TweakKeys.GROUP)', 'settings.getBoolean(TweakKeys.enabled(id), false)')),
       'late verified process/version/opt-in dispatcher')
 catalog = read('app/src/main/java/com/mikeyphw/hooklab/core/TweakCatalog.java')
-check(all(x in catalog for x in ('MccIds.VIP', 'MccIds.DIAMOND_MANUAL',
-      'MccIds.DIAMOND_AUTO', 'MccIds.BANNER_HIDE')) and
-      'Long.MAX_VALUE' in catalog and 'MccIds.PACKAGE' in catalog,
-      'four reviewed MCC entries; no default opt-in')
+check('MccIds.DIAMOND_MANUAL' in catalog and
+      all(x not in catalog for x in ('MccIds.VIP','MccIds.DIAMOND_AUTO','MccIds.BANNER_HIDE')) and
+      'MccDiamondUi::install' in catalog and 'Collections.singletonList' in catalog,
+      'only one opt-in manual MCC diamond installer; no active VIP/auto/banner')
 ui = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 check(all(term in ui for term in ('requestScope(', 'removeScope(', 'getRemotePreferences(TweakKeys.GROUP)',
                                   '.commit()', 'runOnUiThread(', 'TweakCatalog.knowsPackage(')),
@@ -135,53 +135,45 @@ check(tests.count('@Test') >= 12 and all(t in tests for t in (
       'compatibilityNeverAssumesCurrentVersion')),
       'M4 hosted fault-isolation and compatibility regression coverage')
 mcc = r/'app/src/main/java/com/mikeyphw/hooklab/mcc'
-for name in ('MccIds', 'MccVipPayload', 'MccVipHooks', 'MccDiamondUi', 'MccAutoPolicy',
-             'MccAutoWatcher', 'MccRefillCommand', 'MccRefillWorker', 'MccControlActivity',
-             'MccBannerHooks'):
-    check((mcc/(name+'.java')).is_file(), 'MCC adapter '+name)
-check('chain.proceed(new Object[]{wrapped})' in read(mcc.relative_to(r)/'MccVipHooks.java')
-      and 'MccVipPayload.patch(raw)' in read(mcc.relative_to(r)/'MccVipHooks.java')
-      and 'TEST_STORE' in read(mcc.relative_to(r)/'MccVipPayload.java'),
-      'API102 RevenueCat adapters and non-authentic local fixture')
-check('getLaunchedFromUid()' in read(mcc.relative_to(r)/'MccControlActivity.java')
-      and 'autoEnabledInFramework()' in read(mcc.relative_to(r)/'MccControlActivity.java')
-      and 'ProcessBuilder("su", "-c"' in read(mcc.relative_to(r)/'MccRefillWorker.java')
-      and 'MccRefillCommand.script(onlyWhenZero, dataDir)' in read(mcc.relative_to(r)/'MccRefillWorker.java'),
-      'root writes restricted to module Activity and identity-verified auto flow')
-check('MccAutoPolicy.exactZero' in read(mcc.relative_to(r)/'MccAutoWatcher.java')
-      and 'MccDiamondUi.requestAutomatic()' in read(mcc.relative_to(r)/'MccAutoWatcher.java')
-      and 'MCC_REFILL_AUTO_SKIP_NONZERO' in read(mcc.relative_to(r)/'MccRefillCommand.java'),
-      'zero-only auto watcher and root script')
-check('hooklab.mcc.banner.platform' in read(mcc.relative_to(r)/'MccBannerHooks.java')
-      and 'View.GONE' in read(mcc.relative_to(r)/'MccBannerHooks.java'),
-      'opt-in scoped banner hook')
+for name in ('MccIds','MccDiamondUi','MccDiamondPlacement','MccRefillCommand',
+             'MccRefillWorker','MccControlActivity'):
+    check((mcc/(name+'.java')).is_file(), 'MCC manual adapter '+name)
+button=read(mcc.relative_to(r)/'MccDiamondUi.java')
+control=read(mcc.relative_to(r)/'MccControlActivity.java')
+worker=read(mcc.relative_to(r)/'MccRefillWorker.java')
+command=read(mcc.relative_to(r)/'MccRefillCommand.java')
+check('setOnClickListener(v -> openControl(activity))' in button
+      and 'MccDiamondPlacement.position(' in button
+      and 'onWindowFocusChanged' in button and 'isFlutter(activity)' in button
+      and 'ActivityOptions.makeBasic()' in button,
+      'Flutter Activity button visible and solely user initiated')
+check('MccRefillWorker.setNine(' in control
+      and 'MccRefillWorker.inspect(' in control
+      and 'setPositiveButton("Set to 9"' in control
+      and '.setOnClickListener(v -> operation(' in control
+      and 'onCreate(' in control and 'startRefill(true)' not in control,
+      'no automatic navigation/root on MCC control Activity creation')
+check('getApplicationInfo(MccIds.PACKAGE,0)' in worker
+      and 'new ProcessBuilder("su","-c",MccRefillCommand.script(dir,probe))' in worker
+      and 'WRITE_9_VERIFIED_' in worker and 'return "BALANCE_FILE_NOT_FOUND"' in worker,
+      'manual root operation under HookLab UID with explicit failure truth')
+check('checkedDataDir(verifiedDir)' in command,
+      'source-checked data-directory input')
+check('data/databases' in command
+      and 'data/files' in command and 'data/app_flutter' in command
+      and 'MCC_MULTIPLE_ACCOUNTS' in command and 'MCC_BALANCE_WRITE_VERIFIED' in command
+      and 'am force-stop --user' in command and 'MCC_STORAGE_READY' in command,
+      'strict bounded MCC-only balance discovery and verified manual write')
+check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in catalog
+      and 'HANDED_OFF' not in button and 'requestAutomatic() { return false; }' in button,
+      'legacy automatic process cannot install or navigate')
 check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
-      'companion control and visible unverified-version warning')
-check('versionCode 5' in build and "versionName '0.4.1'" in build,
-      'MCC module version bump')
-
-# M5.1: no retry loop, explicit source-validated data directory, and disarm after failure.
-watcher = read(mcc.relative_to(r)/'MccAutoWatcher.java')
-control = read(mcc.relative_to(r)/'MccControlActivity.java')
-worker = read(mcc.relative_to(r)/'MccRefillWorker.java')
-refill = read(mcc.relative_to(r)/'MccRefillCommand.java')
-check('HANDED_OFF.compareAndSet(false, true)' in watcher
-      and 'HANDED_OFF.set(false)' in watcher
-      and 'MccDiamondUi.requestAutomatic()' in watcher,
-      'MCC automatic control one-request-per-process gate')
-check('disableAutoInFramework()' in control
-      and '.putBoolean(TweakKeys.enabled(MccIds.DIAMOND_AUTO), false).commit()' in control
-      and '!successfulWrite && disableAutoInFramework()' in control
-      and 'finish(); // no root command and no persistent focus theft' in control,
-      'MCC failed refill disarms persistent automatic feature')
-check('getApplicationInfo(MccIds.PACKAGE, 0)' in worker
-      and 'MccRefillCommand.script(onlyWhenZero, dataDir)' in worker
-      and 'MCC_DATABASES_DIRECTORY_NOT_FOUND' in worker,
-      'MCC package-manager-derived data directory and explicit missing-directory error')
-check('checkedDataDir(verifiedDataDir)' in refill
-      and 'Unverified MCC data directory' in refill
-      and 'am force-stop \\"$pkg\\"' in refill,
-      'MCC strict path validation before any root stop/write')
+      'module companion control and unverified-version notice')
+check('versionCode 6' in build and "versionName '0.5.0'" in build,
+      'bump versionCode for stable signing updates')
+check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.java').is_file()
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccRefillCommandTest.java').is_file(),
+      'hosted placement, storage and root contract tests')
 
 print('HOOKLAB_M5_MCC_SOURCE_CONTRACT_PASS', flush=True)
 print('HOOKLAB_M4_SOURCE_CONTRACT_PASS', flush=True)

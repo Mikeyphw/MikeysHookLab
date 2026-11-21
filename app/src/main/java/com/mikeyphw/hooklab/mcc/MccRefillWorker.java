@@ -5,78 +5,94 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.util.Log;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
-/** Module-UID-only root worker. Never invoked inside an LSPosed hooked app process. */
+/** Root executes only under HookLab's UID, never from the hooked MCC process. */
 public final class MccRefillWorker {
     private static final int TIMEOUT_SECONDS = 20;
     private MccRefillWorker() { }
 
-    private static String launch(Context context) {
-        try {
-            if (Build.VERSION.SDK_INT >= 33) {
-                context.getPackageManager().getLaunchIntentSenderForPackage(MccIds.PACKAGE)
-                    .sendIntent(context, 0, null, null, null);
-            } else {
-                Intent intent = context.getPackageManager().getLaunchIntentForPackage(MccIds.PACKAGE);
-                if (intent == null) return "LAUNCH_UNAVAILABLE";
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(intent);
-            }
-            return "LAUNCH_DISPATCHED_NOT_VERIFIED";
-        } catch (Throwable ex) {
-            return "LAUNCH_FAILED_" + ex.getClass().getSimpleName();
-        }
-    }
-
-    /** Resolve actual per-user installation directory; never assume Android user 0. */
+    /** Strictly resolve MCC's installed data directory for the current Android user. */
     @SuppressWarnings("deprecation")
     private static String installedDataDir(Context context) {
         try {
-            ApplicationInfo info = context.getPackageManager().getApplicationInfo(MccIds.PACKAGE, 0);
+            ApplicationInfo info=context.getPackageManager().getApplicationInfo(MccIds.PACKAGE,0);
             return MccRefillCommand.checkedDataDir(info.dataDir);
-        } catch (PackageManager.NameNotFoundException | IllegalArgumentException | SecurityException ex) {
+        } catch (PackageManager.NameNotFoundException | SecurityException | IllegalArgumentException ex) {
             return null;
         }
     }
 
-    public static synchronized String execute(Context ctx, boolean onlyWhenZero) {
-        String dataDir = installedDataDir(ctx);
-        if (dataDir == null) return "TARGET_DATA_DIRECTORY_UNVERIFIED";
-        Process process = null;
+    private static String relaunch(Context context) {
         try {
-            process = new ProcessBuilder("su", "-c", MccRefillCommand.script(onlyWhenZero, dataDir))
+            if (Build.VERSION.SDK_INT >= 33) {
+                context.getPackageManager().getLaunchIntentSenderForPackage(MccIds.PACKAGE)
+                    .sendIntent(context,0,null,null,null);
+            } else {
+                Intent intent=context.getPackageManager().getLaunchIntentForPackage(MccIds.PACKAGE);
+                if (intent == null) return "RELAUNCH_UNAVAILABLE";
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+            }
+            return "RELAUNCH_REQUESTED_NOT_VERIFIED";
+        } catch (Throwable error) {
+            return "RELAUNCH_FAILED_"+error.getClass().getSimpleName();
+        }
+    }
+
+    private static String failure(int code) {
+        switch (code) {
+            case 51: return "BALANCE_FILE_NOT_FOUND";
+            case 52: return "UNSAFE_STORAGE_REFUSED";
+            case 53: return "MULTIPLE_BALANCE_FILES_REFUSED";
+            case 54: case 55: return "UNKNOWN_BALANCE_FORMAT_REFUSED";
+            case 56: return "UNRECOGNIZED_ACCOUNT_FILE_REFUSED";
+            case 57: return "BALANCE_CHANGED_DURING_OPERATION";
+            case 59: return "WRITE_VERIFICATION_FAILED";
+            case 70: return "ROOT_NOT_GRANTED";
+            default: return "ROOT_COMMAND_EXIT_"+code;
+        }
+    }
+
+    private static String run(Context context, boolean probe) {
+        String dir=installedDataDir(context);
+        if (dir == null) return "MCC_DATA_DIRECTORY_UNVERIFIED";
+        Process process=null;
+        try {
+            process=new ProcessBuilder("su","-c",MccRefillCommand.script(dir,probe))
                 .redirectErrorStream(true).start();
-            if (!process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            if (!process.waitFor(TIMEOUT_SECONDS,TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 return "ROOT_COMMAND_TIMEOUT";
             }
-            int code = process.exitValue();
-            boolean verified = false, skipped = false;
-            try (BufferedReader lines = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            int exit=process.exitValue();
+            boolean ready=false, written=false, already=false;
+            try (BufferedReader reader=new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
-                for (int count = 0; count < 100 && (line = lines.readLine()) != null; count++) {
-                    if ("MCC_REFILL_WRITE_VERIFIED".equals(line)) verified = true;
-                    if ("MCC_REFILL_AUTO_SKIP_NONZERO".equals(line)) skipped = true;
+                for (int i=0; i<40 && (line=reader.readLine())!=null; i++) {
+                    if ("MCC_STORAGE_READY".equals(line)) ready=true;
+                    if ("MCC_BALANCE_WRITE_VERIFIED".equals(line)) written=true;
+                    if ("MCC_BALANCE_ALREADY_NINE".equals(line)) already=true;
+                    // Ignore all other root output. Never expose account file paths or data.
                 }
             }
-            if (verified && code == 0) return "WRITE_9_VERIFIED_" + launch(ctx);
-            if (onlyWhenZero && skipped && code == 63) return "AUTO_SKIPPED_BALANCE_NOT_ZERO";
-            if (code == 51) return "MCC_DATABASES_DIRECTORY_NOT_FOUND";
-            if (code == 53) return "MCC_BALANCE_FILE_MISSING_OR_AMBIGUOUS";
-            if (code == 70) return "ROOT_UID_NOT_ZERO";
-            return "REFILL_COMMAND_EXIT_" + code;
+            if (exit!=0) return failure(exit);
+            if (probe) return ready ? "BALANCE_FILE_READY" : "ROOT_PROBE_UNVERIFIED";
+            if (already) return "ALREADY_9_NO_RESTART";
+            if (written) return "WRITE_9_VERIFIED_"+relaunch(context);
+            return "ROOT_RESULT_UNVERIFIED";
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            return "REFILL_INTERRUPTED";
-        } catch (Throwable ex) {
-            Log.w("HookLabMCC", "Refill unavailable: " + ex.getClass().getSimpleName());
-            return "REFILL_UNAVAILABLE_" + ex.getClass().getSimpleName();
+            return "ROOT_INTERRUPTED";
+        } catch (Exception ex) {
+            return "ROOT_UNAVAILABLE_"+ex.getClass().getSimpleName();
         } finally {
-            if (process != null) process.destroy();
+            if (process!=null) process.destroy();
         }
     }
+
+    public static synchronized String inspect(Context context) { return run(context,true); }
+    public static synchronized String setNine(Context context) { return run(context,false); }
 }

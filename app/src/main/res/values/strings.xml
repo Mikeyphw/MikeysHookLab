@@ -31,7 +31,7 @@
     <string name="system_theme">Follow system</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
-    <string name="about_detail">Version 0.3.0 • Modern Xposed API 102\nFramework-managed settings and scoped, opt-in dispatcher. No third-party tweaks registered yet.</string>
+    <string name="about_detail">Version 0.5.0 • Modern Xposed API 102\nMCC manual diamond button only. No automatic refill or VIP/ad hooks.</string>
     <string name="registered_count">%1$d registered tweaks</string>
     <string name="diagnostics">Diagnostics</string>
     <string name="diagnostics_disconnected">Framework diagnostics are unavailable until the API 102 service connects.</string>
@@ -52,5 +52,5 @@
     <string name="diagnostics_reset_failed">Could not update the framework safety lock.</string>
     <string name="mcc_target_package">Package: %1$s | Version compatibility not yet verified</string>
     <string name="mcc_open_control">Open MCC diamond control</string>
-    <string name="mcc_version_warning">Last manually tested MCC version: 20.2609.3009. Newer versions are unverified. Restart MCC after enabling or disabling any tweak.</string>
+    <string name="mcc_version_warning">MCC storage format last verified on app version 20.2609.3009. Newer versions are unverified. Restart MCC after changing the manual button switch.</string>
 </resources>
