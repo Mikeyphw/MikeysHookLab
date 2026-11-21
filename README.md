@@ -39,3 +39,7 @@ Only GitHub Actions may execute Android Gradle build, `testDebugUnitTest`, lint 
 Native Devtool performs source-pinned checks, a committed immutable overlay, and a durable delivery session, with a draft PR and independent exact-head CI verification. Device writes, signing, release qualification, automatic merge, force-push or any host Gradle execution are excluded.
 
 Details: [MCC port mapping and acceptance](docs/mcc_port.md).
+
+## Stable signing (M5.1)
+
+See [stable signing guide](docs/signing.md) for the protected GitHub Environment, local key bootstrap, exact-source manual release, and certificate continuity. PR/debug APK artifacts do not share the stable signing certificate.

@@ -10,11 +10,20 @@ public final class MccRefillCommand {
     public static final String ACTION_FROM_TARGET = "com.mikeyphw.hooklab.mcc.action.OPEN_CONTROL";
     public static final String EXTRA_AUTO = "com.mikeyphw.hooklab.mcc.extra.AUTO";
 
-    public static String script(boolean onlyWhenZero) {
+    /** Only accept the exact target app directory under Android's known user storage. */
+    public static String checkedDataDir(String dataDir) {
+        if (dataDir == null || !dataDir.matches(
+                "(?:/data/data|/data/user/[0-9]{1,6})/br\\.art\\.code\\.meucronogramacapilar"))
+            throw new IllegalArgumentException("Unverified MCC data directory");
+        return dataDir;
+    }
+
+    public static String script(boolean onlyWhenZero, String verifiedDataDir) {
+        String dataDir = checkedDataDir(verifiedDataDir);
         return "set -eu\n"
             + "[ \"$(id -u)\" = '0' ] || { echo MCC_REFILL_NOT_ROOT; exit 70; }\n"
             + "pkg='" + MccIds.PACKAGE + "'\n"
-            + "base='/data/user/0/" + MccIds.PACKAGE + "/databases'\n"
+            + "base='" + dataDir + "/databases'\n"
             + "[ -d \"$base\" ] && [ ! -L \"$base\" ] || { echo MCC_REFILL_NO_DATABASE; exit 51; }\n"
             + "count=0\nf=''\n"
             + "for candidate in \"$base\"/*-DiamondBalance; do\n"

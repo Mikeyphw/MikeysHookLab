@@ -146,7 +146,7 @@ check('chain.proceed(new Object[]{wrapped})' in read(mcc.relative_to(r)/'MccVipH
 check('getLaunchedFromUid()' in read(mcc.relative_to(r)/'MccControlActivity.java')
       and 'autoEnabledInFramework()' in read(mcc.relative_to(r)/'MccControlActivity.java')
       and 'ProcessBuilder("su", "-c"' in read(mcc.relative_to(r)/'MccRefillWorker.java')
-      and 'MccRefillCommand.script(onlyWhenZero)' in read(mcc.relative_to(r)/'MccRefillWorker.java'),
+      and 'MccRefillCommand.script(onlyWhenZero, dataDir)' in read(mcc.relative_to(r)/'MccRefillWorker.java'),
       'root writes restricted to module Activity and identity-verified auto flow')
 check('MccAutoPolicy.exactZero' in read(mcc.relative_to(r)/'MccAutoWatcher.java')
       and 'MccDiamondUi.requestAutomatic()' in read(mcc.relative_to(r)/'MccAutoWatcher.java')
@@ -157,7 +157,35 @@ check('hooklab.mcc.banner.platform' in read(mcc.relative_to(r)/'MccBannerHooks.j
       'opt-in scoped banner hook')
 check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
       'companion control and visible unverified-version warning')
-check('versionCode 4' in build and "versionName '0.4.0'" in build,
+check('versionCode 5' in build and "versionName '0.4.1'" in build,
       'MCC module version bump')
+
+# M5.1: no retry loop, explicit source-validated data directory, and disarm after failure.
+watcher = read(mcc.relative_to(r)/'MccAutoWatcher.java')
+control = read(mcc.relative_to(r)/'MccControlActivity.java')
+worker = read(mcc.relative_to(r)/'MccRefillWorker.java')
+refill = read(mcc.relative_to(r)/'MccRefillCommand.java')
+check('HANDED_OFF.compareAndSet(false, true)' in watcher
+      and 'HANDED_OFF.set(false)' in watcher
+      and 'MccDiamondUi.requestAutomatic()' in watcher,
+      'MCC automatic control one-request-per-process gate')
+check('disableAutoInFramework()' in control
+      and '.putBoolean(TweakKeys.enabled(MccIds.DIAMOND_AUTO), false).commit()' in control
+      and '!successfulWrite && disableAutoInFramework()' in control
+      and 'finish(); // no root command and no persistent focus theft' in control,
+      'MCC failed refill disarms persistent automatic feature')
+check('getApplicationInfo(MccIds.PACKAGE, 0)' in worker
+      and 'MccRefillCommand.script(onlyWhenZero, dataDir)' in worker
+      and 'MCC_DATABASES_DIRECTORY_NOT_FOUND' in worker,
+      'MCC package-manager-derived data directory and explicit missing-directory error')
+check('checkedDataDir(verifiedDataDir)' in refill
+      and 'Unverified MCC data directory' in refill
+      and 'am force-stop \\"$pkg\\"' in refill,
+      'MCC strict path validation before any root stop/write')
+
 print('HOOKLAB_M5_MCC_SOURCE_CONTRACT_PASS', flush=True)
 print('HOOKLAB_M4_SOURCE_CONTRACT_PASS', flush=True)
+
+# M5.1 signed-release contract: no key material, main-only protected environment.
+subprocess.run(['python3','-B',str(r/'scripts/check_signing_contract.py')],check=True)
+subprocess.run(['python3','-B',str(r/'scripts/test_signing.py')],check=True)

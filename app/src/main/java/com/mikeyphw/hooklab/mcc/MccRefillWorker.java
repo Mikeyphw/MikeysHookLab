@@ -2,6 +2,8 @@ package com.mikeyphw.hooklab.mcc;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
 import java.io.BufferedReader;
@@ -30,10 +32,23 @@ public final class MccRefillWorker {
         }
     }
 
+    /** Resolve actual per-user installation directory; never assume Android user 0. */
+    @SuppressWarnings("deprecation")
+    private static String installedDataDir(Context context) {
+        try {
+            ApplicationInfo info = context.getPackageManager().getApplicationInfo(MccIds.PACKAGE, 0);
+            return MccRefillCommand.checkedDataDir(info.dataDir);
+        } catch (PackageManager.NameNotFoundException | IllegalArgumentException | SecurityException ex) {
+            return null;
+        }
+    }
+
     public static synchronized String execute(Context ctx, boolean onlyWhenZero) {
+        String dataDir = installedDataDir(ctx);
+        if (dataDir == null) return "TARGET_DATA_DIRECTORY_UNVERIFIED";
         Process process = null;
         try {
-            process = new ProcessBuilder("su", "-c", MccRefillCommand.script(onlyWhenZero))
+            process = new ProcessBuilder("su", "-c", MccRefillCommand.script(onlyWhenZero, dataDir))
                 .redirectErrorStream(true).start();
             if (!process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
@@ -50,7 +65,10 @@ public final class MccRefillWorker {
             }
             if (verified && code == 0) return "WRITE_9_VERIFIED_" + launch(ctx);
             if (onlyWhenZero && skipped && code == 63) return "AUTO_SKIPPED_BALANCE_NOT_ZERO";
-            return code == 70 ? "ROOT_UID_NOT_ZERO" : "REFILL_COMMAND_EXIT_" + code;
+            if (code == 51) return "MCC_DATABASES_DIRECTORY_NOT_FOUND";
+            if (code == 53) return "MCC_BALANCE_FILE_MISSING_OR_AMBIGUOUS";
+            if (code == 70) return "ROOT_UID_NOT_ZERO";
+            return "REFILL_COMMAND_EXIT_" + code;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             return "REFILL_INTERRUPTED";

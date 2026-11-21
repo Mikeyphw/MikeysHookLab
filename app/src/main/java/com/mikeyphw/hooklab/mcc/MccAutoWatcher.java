@@ -14,6 +14,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** Target process observes only; any root write is performed by the separate HookLab Activity. */
 public final class MccAutoWatcher {
     private static final AtomicBoolean STARTED = new AtomicBoolean();
+    // Never steal foreground focus repeatedly when the module-side operation fails.
+    // The gate persists for this MCC process; a subsequent host restart is a new session.
+    private static final AtomicBoolean HANDED_OFF = new AtomicBoolean();
     private static final long POLL_MS = 1200, QUIET_MS = 750, COOLDOWN_MS = 15000;
     private static Handler handler;
     private static File directory;
@@ -30,6 +33,7 @@ public final class MccAutoWatcher {
     }
 
     private static void poll() {
+        if (HANDED_OFF.get()) return; // never keep rescanning after an automatic handoff
         File file = uniqueBalance();
         if (file == null || file.length() != 1) { zeroFirstSeen = 0; return; }
         try {
@@ -40,7 +44,13 @@ public final class MccAutoWatcher {
             long now = SystemClock.elapsedRealtime();
             if (zeroFirstSeen == 0) { zeroFirstSeen = now; return; }
             if (now-zeroFirstSeen < QUIET_MS || now-lastRequest < COOLDOWN_MS) return;
-            if (MccDiamondUi.requestAutomatic()) lastRequest = now;
+            if (!HANDED_OFF.compareAndSet(false, true)) return;
+            if (MccDiamondUi.requestAutomatic()) {
+                lastRequest = now;
+                Log.i("HookLabMCC", "Automatic refill handoff attempted once in this host process");
+            } else {
+                HANDED_OFF.set(false); // no foreground target Activity; no request occurred
+            }
         } catch (Exception ex) {
             lastRequest = SystemClock.elapsedRealtime();
             Log.w("HookLabMCC", "Auto-refill observation unavailable: " + ex.getClass().getSimpleName());

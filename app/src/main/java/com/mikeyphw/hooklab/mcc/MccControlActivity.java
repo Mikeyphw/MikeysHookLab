@@ -46,6 +46,17 @@ public final class MccControlActivity extends AppCompatActivity {
         } catch (RuntimeException ex) { return false; }
     }
 
+    /** Only module UI may write framework-owned opt-in state. Never write from MCC. */
+    private boolean disableAutoInFramework() {
+        XposedService s = ((HookLabApp)getApplication()).currentService();
+        if (s == null) return false;
+        try {
+            return s.getApiVersion() >= 102 &&
+                    s.getRemotePreferences(TweakKeys.GROUP).edit()
+                    .putBoolean(TweakKeys.enabled(MccIds.DIAMOND_AUTO), false).commit();
+        } catch (RuntimeException ex) { return false; }
+    }
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         LinearLayout panel = new LinearLayout(this);
@@ -68,12 +79,17 @@ public final class MccControlActivity extends AppCompatActivity {
         panel.addView(status);
         setContentView(panel);
         perform.setOnClickListener(v -> startRefill(false));
-        // Do not automatically rerun after an orientation change.
-        if (state == null && callerVerified(getIntent()) &&
-                getIntent().getBooleanExtra(MccRefillCommand.EXTRA_AUTO, false) &&
-                autoEnabledInFramework()) {
-            autoStarted = true;
-            startRefill(true);
+        // Automatic requests must never leave a stale control page in the foreground
+        // after a failed caller verification or a user-disabled auto setting.
+        boolean automaticRequest = getIntent() != null
+                && getIntent().getBooleanExtra(MccRefillCommand.EXTRA_AUTO, false);
+        if (automaticRequest) {
+            if (state == null && callerVerified(getIntent()) && autoEnabledInFramework()) {
+                autoStarted = true;
+                startRefill(true);
+            } else {
+                finish(); // no root command and no persistent focus theft
+            }
         }
     }
 
@@ -84,11 +100,22 @@ public final class MccControlActivity extends AppCompatActivity {
         status.setText("Root operation requested; awaiting verified result…");
         new Thread(() -> {
             String result = MccRefillWorker.execute(getApplicationContext(), onlyWhenZero);
+            boolean successfulWrite = result.startsWith("WRITE_9_VERIFIED_");
+            // A failed *manual* attempt also disarms auto mode: no retry loop next launch.
+            final boolean autoDisarmed = !successfulWrite && disableAutoInFramework();
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
                 running = false;
                 perform.setEnabled(true);
-                status.setText("Result: " + result);
+                String guidance = "";
+                if (!successfulWrite) {
+                    guidance = autoDisarmed
+                        ? "\nAutomatic refill was disabled. Write verification failed; inspect local state before retrying."
+                        : "\nNo verified balance write. Disable MCC Auto Refill in HookLab Tweaks before reopening MCC.";
+                }
+                if (result.equals("MCC_DATABASES_DIRECTORY_NOT_FOUND"))
+                    guidance += "\nMCC's expected databases directory was not found; check its actual per-user app storage. Do not create it manually.";
+                status.setText("Result: " + result + guidance);
                 if (autoStarted && result.startsWith("WRITE_9_VERIFIED_LAUNCH_DISPATCHED")) finish();
             });
         }, "hooklab-mcc-refill").start();
