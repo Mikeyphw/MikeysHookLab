@@ -19,9 +19,11 @@ ns = '{http://schemas.android.com/apk/res/android}'
 app = root.find('application')
 check(not root.findall('uses-permission'), 'no dangerous app permissions')
 query_list = root.findall('queries')
-check(len(query_list)==1 and len(query_list[0])==1 and query_list[0][0].tag=='package'
-      and query_list[0][0].get(ns+'name')=='br.art.code.meucronogramacapilar',
-      'only exact MCC package visibility')
+check(len(query_list)==1 and all(x.tag=='package' for x in query_list[0])
+      and [x.get(ns+'name') for x in query_list[0]]==[
+          'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
+          'com.looker.droidify','dev.bikram.obtainx'],
+      'exact MCC/Neo Store/Droid-ify/ObtainX package visibility only')
 check(app.get(ns+'allowBackup')=='false' and app.get(ns+'name')=='.HookLabApp', 'lifecycle application')
 act = app.findall('activity')
 check(len(act)==2 and
@@ -76,8 +78,9 @@ check(all(term in module for term in ('extends XposedModule', 'onModuleLoaded(',
 catalog = read('app/src/main/java/com/mikeyphw/hooklab/core/TweakCatalog.java')
 check('MccIds.DIAMOND_MANUAL' in catalog and
       all(x not in catalog for x in ('MccIds.VIP','MccIds.DIAMOND_AUTO','MccIds.BANNER_HIDE')) and
-      'MccDiamondUi::install' in catalog and 'Collections.singletonList' in catalog,
-      'only one opt-in manual MCC diamond installer; no active VIP/auto/banner')
+      'MccDiamondUi::install' in catalog and 'NeoStoreHook::install' in catalog
+      and 'DroidifyHook::install' in catalog and 'Arrays.<TweakEngine.Entry' in catalog,
+      'manual MCC and two independent ObtainX adapters; no active VIP/auto/banner')
 ui = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 check(all(term in ui for term in ('requestScope(', 'removeScope(', 'getRemotePreferences(TweakKeys.GROUP)',
                                   '.commit()', 'runOnUiThread(', 'TweakCatalog.knowsPackage(')),
@@ -169,7 +172,7 @@ check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in ca
       'legacy automatic process cannot install or navigate')
 check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
       'module companion control and unverified-version notice')
-check('versionCode 6' in build and "versionName '0.5.0'" in build,
+check('versionCode 7' in build and "versionName '0.6.0'" in build,
       'bump versionCode for stable signing updates')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.java').is_file()
       and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccRefillCommandTest.java').is_file(),
@@ -177,6 +180,8 @@ check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.jav
 
 print('HOOKLAB_M5_MCC_SOURCE_CONTRACT_PASS', flush=True)
 print('HOOKLAB_M4_SOURCE_CONTRACT_PASS', flush=True)
+
+subprocess.run(['python3','-B',str(r/'scripts/check_obtainx_contract.py')],check=True)
 
 # M5.1 signed-release contract: no key material, main-only protected environment.
 subprocess.run(['python3','-B',str(r/'scripts/check_signing_contract.py')],check=True)
