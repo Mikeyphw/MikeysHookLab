@@ -1,0 +1,11 @@
+[project]
+runner = "android"
+platform = "android"
+
+[workspace]
+default_target = "hooklab"
+
+[targets.hooklab]
+runner = "android"
+platform = "android"
+root = "."
