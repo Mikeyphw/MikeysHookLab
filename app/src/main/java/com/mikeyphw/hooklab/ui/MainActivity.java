@@ -1,6 +1,15 @@
 package com.mikeyphw.hooklab.ui;
 
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.ImageView;
+import androidx.activity.OnBackPressedCallback;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,44 +51,97 @@ public final class MainActivity extends AppCompatActivity {
     private LinearLayout body;
     private ScrollView scroll;
     private SharedPreferences appearance;
+    private static final int HOME = 0, APPS = 1, DIAGNOSTICS = 2;
+    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6;
+    private static final int MENU_SETTINGS = 100, MENU_SCOPE = 101, MENU_ABOUT = 102;
+    private static final int NAV_HOME = 201, NAV_APPS = 202, NAV_DIAGNOSTICS = 203;
+    private static final int THEME_AMOLED = 100;
     private int page;
+    private String selectedPackage;
+    private MaterialToolbar toolbar;
+    private BottomNavigationView navigation;
     private final Runnable frameworkObserver = this::render;
 
     @Override public void onCreate(Bundle state) {
         appearance = getSharedPreferences("appearance", MODE_PRIVATE);
-        getDelegate().setLocalNightMode(appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM));
+        int night = appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        if (night == THEME_AMOLED) {
+            setTheme(R.style.Theme_HookLab_Amoled);
+            night = AppCompatDelegate.MODE_NIGHT_YES;
+        }
+        getDelegate().setLocalNightMode(night);
         super.onCreate(state);
-        page = state == null ? 0 : Math.max(0, Math.min(5, state.getInt("page")));
+        page = state == null ? HOME : Math.max(HOME, Math.min(APP_DETAIL, state.getInt("page")));
+        selectedPackage = state == null ? null : state.getString("selectedPackage");
+        if (page == APP_DETAIL && selectedEntry() == null) page = APPS;
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurface));
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, w) -> {
             Insets i = w.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(i.left, i.top, i.right, i.bottom); return w;
+            v.setPadding(i.left, i.top, i.right, i.bottom);
+            return w;
         });
-        scroll = new ScrollView(this); scroll.setFillViewport(true);
-        body = new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(20), dp(16), dp(20), dp(24));
-        scroll.addView(body); root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-        LinearLayout nav = new LinearLayout(this); nav.setOrientation(LinearLayout.VERTICAL);
-        int[] names = {R.string.home, R.string.tweaks, R.string.scope,
-                R.string.diagnostics, R.string.settings, R.string.about};
-        // Compact two-column navigation scales better on narrow portrait screens.
-        for (int row = 0; row < 3; row++) {
-            LinearLayout line = new LinearLayout(this);
-            for (int col = 0; col < 2; col++) {
-                final int target = row * 2 + col;
-                if (target >= names.length) break;
-                MaterialButton b = new MaterialButton(this, null,
-                        com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                b.setText(names[target]); b.setMinHeight(dp(48));
-                b.setOnClickListener(v -> { page = target; render(); scroll.scrollTo(0, 0); });
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
-                lp.setMargins(dp(4), 0, dp(4), 0); line.addView(b, lp);
+
+        toolbar = new MaterialToolbar(this);
+        toolbar.setTitle(R.string.app_name);
+        toolbar.getMenu().add(Menu.NONE, MENU_SETTINGS, 0, R.string.settings)
+                .setIcon(R.drawable.ic_nav_settings).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        toolbar.getMenu().add(Menu.NONE, MENU_SCOPE, 1, R.string.scope);
+        toolbar.getMenu().add(Menu.NONE, MENU_ABOUT, 2, R.string.about);
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == MENU_SETTINGS) goTo(SETTINGS);
+            else if (item.getItemId() == MENU_SCOPE) goTo(SCOPE);
+            else if (item.getItemId() == MENU_ABOUT) goTo(ABOUT);
+            else return false;
+            return true;
+        });
+        toolbar.setNavigationOnClickListener(v -> navigateBack());
+        root.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(56)));
+
+        scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(16), dp(12), dp(16), dp(32));
+        scroll.addView(body);
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+
+        navigation = new BottomNavigationView(this);
+        navigation.getMenu().add(Menu.NONE, NAV_HOME, 0, R.string.home).setIcon(R.drawable.ic_nav_home);
+        navigation.getMenu().add(Menu.NONE, NAV_APPS, 1, R.string.apps).setIcon(R.drawable.ic_nav_apps);
+        navigation.getMenu().add(Menu.NONE, NAV_DIAGNOSTICS, 2, R.string.diagnostics)
+                .setIcon(R.drawable.ic_nav_diagnostics);
+        navigation.setLabelVisibilityMode(
+                com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED);
+        navigation.setOnItemSelectedListener(item -> {
+            int target = item.getItemId() == NAV_HOME ? HOME
+                    : item.getItemId() == NAV_APPS ? APPS
+                    : item.getItemId() == NAV_DIAGNOSTICS ? DIAGNOSTICS : -1;
+            if (target < 0) return false;
+            goTo(target);
+            return true;
+        });
+        root.addView(navigation, new LinearLayout.LayoutParams(-1, -2));
+        setContentView(root);
+        ViewCompat.requestApplyInsets(root);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                if (page == HOME) finish();
+                else navigateBack();
             }
-            nav.addView(line);
-        }
-        root.addView(nav); setContentView(root); ViewCompat.requestApplyInsets(root); render();
+        });
+        render();
+    }
+    private void navigateBack() {
+        goTo(page == APP_DETAIL ? APPS : HOME);
+    }
+    private void goTo(int target) {
+        if (target == page) return;
+        page = target;
+        render();
+        scroll.scrollTo(0, 0);
     }
     @Override protected void onStart() {
         super.onStart(); ((HookLabApp) getApplication()).addObserver(frameworkObserver); render();
@@ -88,7 +150,8 @@ public final class MainActivity extends AppCompatActivity {
         ((HookLabApp) getApplication()).removeObserver(frameworkObserver); super.onStop();
     }
     @Override protected void onSaveInstanceState(Bundle out) {
-        out.putInt("page", page); super.onSaveInstanceState(out);
+        out.putInt("page", page); out.putString("selectedPackage", selectedPackage);
+        super.onSaveInstanceState(out);
     }
     private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
     private XposedService service() { return ((HookLabApp) getApplication()).currentService(); }
@@ -134,12 +197,169 @@ public final class MainActivity extends AppCompatActivity {
         try { return new HashSet<>(s.getScope()); }
         catch (RuntimeException ex) { return null; }
     }
+    private TweakEngine.Entry<HookContext> selectedEntry() {
+        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) {
+            if (entry.spec.packageName.equals(selectedPackage)) return entry;
+        }
+        return null;
+    }
+
+    /** Framework-observable configuration only; never assert that a hook ran. */
+    private TweakCompatibility.State eligibility(TweakSpec spec, XposedService s) {
+        Boolean inScope = null;
+        Set<String> scope = scopedPackages(s);
+        if (scope != null) inScope = scope.contains(spec.packageName);
+        boolean enabled = false, locked = false;
+        if (ready(s)) {
+            try {
+                enabled = s.getRemotePreferences(TweakKeys.GROUP)
+                        .getBoolean(TweakKeys.enabled(spec.id), false);
+                locked = s.getRemotePreferences(TweakDiagnostics.GROUP)
+                        .getBoolean(TweakDiagnostics.quarantineKey(spec.id), false);
+            } catch (RuntimeException error) {
+                return TweakCompatibility.State.SCOPE_UNKNOWN;
+            }
+        }
+        Long version = null;
+        // MCC's broad installer range does NOT establish storage-format compatibility.
+        if (!MccIds.PACKAGE.equals(spec.packageName)) {
+            try {
+                version = getPackageManager().getPackageInfo(spec.packageName, 0).getLongVersionCode();
+            } catch (PackageManager.NameNotFoundException | SecurityException ignored) {
+                // Host not installed or not visible. Never assume a version.
+            }
+        }
+        return TweakCompatibility.assess(spec, ready(s), inScope, enabled, locked, version);
+    }
+    private String statusText(TweakCompatibility.State state) {
+        switch (state) {
+            case FRAMEWORK_UNAVAILABLE: return getString(R.string.ui_framework_unavailable);
+            case SCOPE_UNKNOWN: return getString(R.string.ui_scope_unknown);
+            case OUT_OF_SCOPE: return getString(R.string.ui_scope_needed);
+            case QUARANTINED: return getString(R.string.ui_safety_locked);
+            case DISABLED: return getString(R.string.ui_disabled);
+            case VERSION_UNVERIFIED: return getString(R.string.ui_version_unverified);
+            case VERSION_UNSUPPORTED: return getString(R.string.ui_version_unsupported);
+            case ELIGIBLE: return getString(R.string.ui_eligible);
+            default: return getString(R.string.ui_unknown);
+        }
+    }
+    private LinearLayout horizontal() {
+        LinearLayout line = new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        return line;
+    }
+    private ImageView hostIcon(String pkg) {
+        ImageView icon = new ImageView(this);
+        try {
+            icon.setImageDrawable(getPackageManager().getApplicationIcon(pkg));
+        } catch (PackageManager.NameNotFoundException | SecurityException ex) {
+            icon.setImageResource(R.drawable.ic_hooklab);
+        }
+        icon.setContentDescription(null); // Adjacent app name is announced instead.
+        LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(dp(44), dp(44));
+        size.rightMargin = dp(14);
+        icon.setLayoutParams(size);
+        return icon;
+    }
+    private void showApp(TweakEngine.Entry<HookContext> entry) {
+        selectedPackage = entry.spec.packageName;
+        goTo(APP_DETAIL);
+    }
+    private void appCard(TweakEngine.Entry<HookContext> entry) {
+        LinearLayout inner = card(entry.title, statusText(eligibility(entry.spec, service())));
+        LinearLayout row = horizontal();
+        row.addView(hostIcon(entry.spec.packageName));
+        MaterialTextView description = text(entry.description, 14);
+        row.addView(description, new LinearLayout.LayoutParams(0, -2, 1));
+        inner.addView(row);
+        button(inner, R.string.ui_configure, v -> showApp(entry));
+    }
+    private void apps() {
+        heading(R.string.apps);
+        body.addView(text(getString(R.string.ui_apps_intro), 14));
+        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) appCard(entry);
+    }
+    private void appDetail() {
+        TweakEngine.Entry<HookContext> entry = selectedEntry();
+        if (entry == null) { apps(); return; }
+        TweakSpec spec = entry.spec;
+        XposedService s = service();
+        heading(R.string.ui_app_configuration);
+        LinearLayout overview = card(entry.title, entry.description);
+        LinearLayout iconLine = horizontal();
+        iconLine.addView(hostIcon(spec.packageName));
+        iconLine.addView(text(spec.packageName, 14),
+                new LinearLayout.LayoutParams(0, -2, 1));
+        overview.addView(iconLine);
+        overview.addView(text(getString(R.string.ui_current_status) + ": " +
+                statusText(eligibility(spec, s)), 16));
+        overview.addView(text(getString(R.string.ui_status_caution), 14));
+
+        Set<String> scope = scopedPackages(s);
+        boolean scoped = scope != null && scope.contains(spec.packageName);
+        LinearLayout scopeCard = card(getString(R.string.scope),
+                scope == null ? getString(R.string.ui_scope_unknown) :
+                scoped ? getString(R.string.ui_scope_approved) : getString(R.string.ui_scope_needed));
+        if (ready(s) && scope != null) {
+            button(scopeCard, scoped ? R.string.scope_remove : R.string.scope_add,
+                    v -> { if (scoped) removeScope(s, spec.packageName);
+                           else requestScope(s, spec.packageName); });
+        }
+
+        LinearLayout tweakCard = card(getString(R.string.ui_tweak_setting), entry.description);
+        MaterialSwitch sw = new MaterialSwitch(this);
+        sw.setText(R.string.ui_enable_tweak);
+        boolean available = ready(s), checked = false;
+        if (available) {
+            try {
+                checked = s.getRemotePreferences(TweakKeys.GROUP)
+                        .getBoolean(TweakKeys.enabled(spec.id), false);
+            } catch (RuntimeException error) { available = false; }
+        }
+        sw.setChecked(checked);
+        sw.setEnabled(available);
+        sw.setOnCheckedChangeListener((view, wanted) -> {
+            sw.setEnabled(false);
+            saveTweak(s, spec.id, wanted);
+        });
+        tweakCard.addView(sw, new ViewGroup.LayoutParams(-1, -2));
+        if (!available) tweakCard.addView(text(getString(R.string.settings_unavailable), 14));
+        if (MccIds.DIAMOND_MANUAL.equals(spec.id)) {
+            button(tweakCard, R.string.mcc_open_control, v ->
+                    startActivity(new Intent(this, MccControlActivity.class)));
+            tweakCard.addView(text(getString(R.string.mcc_version_warning), 14));
+        } else {
+            tweakCard.addView(text(getString(R.string.tweak_version,
+                    spec.packageName, spec.minVersion, spec.maxVersion), 14));
+        }
+        LinearLayout next = card(getString(R.string.ui_next_steps),
+                getString(R.string.ui_restart_target));
+        next.addView(text(getString(R.string.ui_host_log_note), 14));
+    }
+
     private void home() {
-        heading(R.string.app_name); body.addView(text(getString(R.string.tagline), 18));
-        card(getString(R.string.status), connection(service()));
-        card(getString(R.string.tweaks), getString(R.string.registered_count, TweakCatalog.all().size()));
-        card(getString(R.string.scope), ready(service())
-                ? getString(R.string.scope_approval) : getString(R.string.scope_unavailable));
+        heading(R.string.app_name);
+        body.addView(text(getString(R.string.tagline), 18));
+        XposedService s = service();
+        LinearLayout status = card(getString(R.string.status), connection(s));
+        if (!ready(s)) {
+            status.addView(text(getString(R.string.ui_framework_help), 14));
+        }
+        int scoped = 0;
+        Set<String> approved = scopedPackages(s);
+        if (approved != null) {
+            for (TweakSpec spec : TweakCatalog.all()) {
+                if (approved.contains(spec.packageName)) scoped++;
+            }
+        }
+        card(getString(R.string.ui_overview), getString(R.string.ui_overview_summary,
+                TweakCatalog.all().size(), approved == null ? "?" :
+                        Integer.toString(scoped)));
+        body.addView(text(getString(R.string.ui_status_caution), 14));
+        body.addView(text(getString(R.string.ui_integrations_heading), 20));
+        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) appCard(entry);
     }
     private void saveTweak(XposedService s, String id, boolean enabled) {
         new Thread(() -> {
@@ -152,44 +372,7 @@ public final class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> { toast(success ? R.string.tweak_saved : R.string.tweak_failed); render(); });
         }, "hooklab-prefs-write").start();
     }
-    private void tweaks() {
-        heading(R.string.tweaks);
-        List<TweakEngine.Entry<HookContext>> entries = TweakCatalog.entries();
-        if (entries.isEmpty()) {
-            card(getString(R.string.registered_count, 0), getString(R.string.catalog_empty)); return;
-        }
-        card(getString(R.string.registered_count, entries.size()), getString(R.string.catalog_note));
-        XposedService s = service(); Set<String> scope = scopedPackages(s);
-        for (TweakEngine.Entry<HookContext> entry : entries) {
-            TweakSpec spec = entry.spec;
-            String compatibility = MccIds.PACKAGE.equals(spec.packageName)
-                    ? getString(R.string.mcc_target_package, spec.packageName)
-                    : getString(R.string.tweak_version, spec.packageName, spec.minVersion, spec.maxVersion);
-            LinearLayout inner = card(entry.title, entry.description + "\n" + compatibility);
-            MaterialSwitch sw = new MaterialSwitch(this); sw.setText(spec.id);
-            boolean available = ready(s); boolean checked = false;
-            if (available) {
-                try { checked = s.getRemotePreferences(TweakKeys.GROUP)
-                        .getBoolean(TweakKeys.enabled(spec.id), false); }
-                catch (RuntimeException ex) { available = false; }
-            }
-            sw.setChecked(checked); sw.setEnabled(available);
-            sw.setOnCheckedChangeListener((view, wanted) -> {
-                sw.setEnabled(false); saveTweak(s, spec.id, wanted);
-            });
-            inner.addView(sw, new ViewGroup.LayoutParams(-1, -2));
-            if (MccIds.DIAMOND_MANUAL.equals(spec.id)) {
-                button(inner, R.string.mcc_open_control, v ->
-                    startActivity(new Intent(this, MccControlActivity.class)));
-            }
-            if (MccIds.PACKAGE.equals(spec.packageName)) {
-                inner.addView(text(getString(R.string.mcc_version_warning), 14));
-            }
-            if (!available) inner.addView(text(getString(R.string.settings_unavailable), 14));
-            if (scope == null || !scope.contains(spec.packageName))
-                inner.addView(text(getString(R.string.scope_approval), 14));
-        }
-    }
+    // Tweaks and scope are configured together on each application's detail page.
     private void requestScope(XposedService s, String pkg) {
         if (!ready(s) || !TweakCatalog.knowsPackage(pkg)) return;
         try {
@@ -268,7 +451,7 @@ public final class MainActivity extends AppCompatActivity {
             TweakCompatibility.State eligibility = TweakCompatibility.assess(entry.spec,
                     connected, inScope, enabled, locked, null);
             LinearLayout inner = card(entry.title,
-                    getString(R.string.diagnostics_compatibility, eligibility.name())
+                    getString(R.string.diagnostics_compatibility, statusText(eligibility))
                     + "\n" + getString(R.string.diagnostics_safety_state,
                           getString(locked ? R.string.diagnostics_locked : R.string.diagnostics_unlocked)));
             final boolean nextLock = !locked;
@@ -301,16 +484,22 @@ public final class MainActivity extends AppCompatActivity {
                 }).show();
     }
 
-    private void themeButton(int label, int mode) {
-        MaterialButton b = new MaterialButton(this); b.setText(label); b.setMinHeight(dp(48));
-        b.setEnabled(appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM) != mode);
-        b.setOnClickListener(v -> {
+    private void themeChip(ChipGroup group, int label, int mode, int current) {
+        Chip chip = new Chip(this);
+        chip.setText(label);
+        chip.setCheckable(true);
+        chip.setChecked(mode == current);
+        chip.setOnClickListener(v -> {
+            if (mode == appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM))
+                return;
             appearance.edit().putInt("night", mode).apply();
-            getDelegate().setLocalNightMode(mode); render();
+            recreate();
         });
-        body.addView(b, new ViewGroup.LayoutParams(-1, -2));
+        group.addView(chip);
     }
     private void verboseLogging() {
+        LinearLayout panel = card(getString(R.string.verbose_lsposed_heading),
+                getString(R.string.ui_logging_summary));
         XposedService s = service();
         boolean available = ready(s);
         boolean current = false;
@@ -328,9 +517,9 @@ public final class MainActivity extends AppCompatActivity {
             sw.setEnabled(false);
             writeVerboseLogging(s, wanted);
         });
-        body.addView(sw, new ViewGroup.LayoutParams(-1, -2));
-        body.addView(text(getString(R.string.verbose_lsposed_description), 14));
-        if (!available) body.addView(text(getString(R.string.settings_unavailable), 14));
+        panel.addView(sw, new ViewGroup.LayoutParams(-1, -2));
+        panel.addView(text(getString(R.string.verbose_lsposed_description), 14));
+        if (!available) panel.addView(text(getString(R.string.settings_unavailable), 14));
     }
     private void writeVerboseLogging(XposedService expected, boolean value) {
         new Thread(() -> {
@@ -348,23 +537,52 @@ public final class MainActivity extends AppCompatActivity {
         }, "hooklab-verbose-preference").start();
     }
     private void settings() {
-        heading(R.string.settings); body.addView(text(getString(R.string.appearance), 20));
-        themeButton(R.string.system_theme, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        themeButton(R.string.light_theme, AppCompatDelegate.MODE_NIGHT_NO);
-        themeButton(R.string.dark_theme, AppCompatDelegate.MODE_NIGHT_YES);
-        body.addView(text(getString(R.string.verbose_lsposed_heading), 20));
+        heading(R.string.settings);
+        LinearLayout appearanceCard = card(getString(R.string.appearance),
+                getString(R.string.ui_theme_description));
+        ChipGroup themes = new ChipGroup(this);
+        themes.setSingleSelection(true);
+        int current = appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        themeChip(themes, R.string.system_theme, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, current);
+        themeChip(themes, R.string.light_theme, AppCompatDelegate.MODE_NIGHT_NO, current);
+        themeChip(themes, R.string.dark_theme, AppCompatDelegate.MODE_NIGHT_YES, current);
+        themeChip(themes, R.string.ui_amoled_theme, THEME_AMOLED, current);
+        appearanceCard.addView(themes);
         verboseLogging();
     }
     private void render() {
         if (body == null) return;
+        int navId = page == APP_DETAIL || page == APPS ? NAV_APPS
+                : page == DIAGNOSTICS ? NAV_DIAGNOSTICS : NAV_HOME;
+        navigation.getMenu().findItem(navId).setChecked(true);
+        boolean secondary = page >= SETTINGS;
+        toolbar.setNavigationIcon(secondary ? R.drawable.ic_nav_back : 0);
+        if (secondary) toolbar.setNavigationContentDescription(R.string.ui_back);
+        switch (page) {
+            case APPS: toolbar.setTitle(R.string.apps); break;
+            case DIAGNOSTICS: toolbar.setTitle(R.string.diagnostics); break;
+            case SETTINGS: toolbar.setTitle(R.string.settings); break;
+            case ABOUT: toolbar.setTitle(R.string.about); break;
+            case SCOPE: toolbar.setTitle(R.string.scope); break;
+            case APP_DETAIL:
+                TweakEngine.Entry<HookContext> entry = selectedEntry();
+                toolbar.setTitle(entry == null ? getString(R.string.apps) : entry.title);
+                break;
+            default: toolbar.setTitle(R.string.app_name);
+        }
         body.removeAllViews();
         switch (page) {
-            case 1: tweaks(); break;
-            case 2: scopePage(); break;
-            case 3: diagnosticsPage(); break;
-            case 4: settings(); break;
-            case 5: heading(R.string.about); card(getString(R.string.app_name), getString(R.string.about_detail)); break;
+            case APPS: apps(); break;
+            case DIAGNOSTICS: diagnosticsPage(); break;
+            case SETTINGS: settings(); break;
+            case ABOUT:
+                heading(R.string.about);
+                card(getString(R.string.app_name), getString(R.string.about_detail));
+                break;
+            case SCOPE: scopePage(); break;
+            case APP_DETAIL: appDetail(); break;
             default: home();
         }
     }
+
 }

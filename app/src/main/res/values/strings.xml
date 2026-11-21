@@ -42,7 +42,7 @@
     <string name="diagnostics_empty">No registered tweaks to diagnose</string>
     <string name="diagnostics_inert">No reviewed tweaks are registered. No third-party host hooks are installed by this release.</string>
     <string name="diagnostics_unavailable">Framework preferences cannot be read. Tweak status is unknown.</string>
-    <string name="diagnostics_compatibility">Eligibility: %1$s (host version checked only inside target process)</string>
+    <string name="diagnostics_compatibility">Configuration status: %1$s. Hook execution is not confirmed.</string>
     <string name="diagnostics_safety_state">Persistent manual safety lock: %1$s</string>
     <string name="diagnostics_locked">Enabled</string>
     <string name="diagnostics_unlocked">Disabled</string>
@@ -57,4 +57,34 @@
     <string name="mcc_target_package">Package: %1$s | Version compatibility not yet verified</string>
     <string name="mcc_open_control">Open MCC diamond control</string>
     <string name="mcc_version_warning">MCC storage format last verified on app version 20.2609.3009. Newer versions are unverified. Restart MCC after changing the manual button switch.</string>
+
+    <string name="apps">Apps</string>
+    <string name="ui_overview">Overview</string>
+    <string name="ui_overview_summary">%1$d available integrations · %2$s scoped</string>
+    <string name="ui_integrations_heading">Integrations</string>
+    <string name="ui_apps_intro">Choose an app to manage its LSPosed scope and tweak together.</string>
+    <string name="ui_configure">Configure</string>
+    <string name="ui_app_configuration">Integration setup</string>
+    <string name="ui_tweak_setting">Tweak preference</string>
+    <string name="ui_enable_tweak">Enable tweak</string>
+    <string name="ui_current_status">Configuration status</string>
+    <string name="ui_status_caution">Configuration status does not prove that a hook has executed.</string>
+    <string name="ui_framework_help">Connect a compatible API 102 LSPosed service to configure integrations.</string>
+    <string name="ui_framework_unavailable">Framework unavailable</string>
+    <string name="ui_scope_unknown">Framework state unavailable</string>
+    <string name="ui_scope_needed">Scope approval required</string>
+    <string name="ui_scope_approved">Scope approved by framework</string>
+    <string name="ui_safety_locked">Safety lock enabled</string>
+    <string name="ui_disabled">Tweak disabled</string>
+    <string name="ui_version_unverified">Target version not verified</string>
+    <string name="ui_version_unsupported">Unsupported target version</string>
+    <string name="ui_eligible">Eligible configuration; runtime unverified</string>
+    <string name="ui_unknown">Status unknown</string>
+    <string name="ui_next_steps">After changing settings</string>
+    <string name="ui_restart_target">Restart the target app to apply new scope, preferences, or safety locks.</string>
+    <string name="ui_host_log_note">For actual hook results, use sanitized LSPosed logs. In-app configuration alone cannot confirm injection.</string>
+    <string name="ui_theme_description">Choose the look of HookLab. AMOLED uses a true black surface.</string>
+    <string name="ui_amoled_theme">AMOLED</string>
+    <string name="ui_logging_summary">Optional sanitized LSPosed event codes, disabled by default.</string>
+    <string name="ui_back">Back</string>
 </resources>
