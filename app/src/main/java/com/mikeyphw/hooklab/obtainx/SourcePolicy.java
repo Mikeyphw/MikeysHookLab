@@ -1,8 +1,6 @@
 package com.mikeyphw.hooklab.obtainx;
 
 import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -76,7 +74,10 @@ public final class SourcePolicy {
         String path=trimTrailingSlash(uri.getRawPath()==null?"":uri.getRawPath());
         if (path.endsWith("/index.xml")) path=path.substring(0,path.length()-10);
         boolean standardPort=uri.getPort()==-1 || uri.getPort()==443;
-        String id=URLEncoder.encode(pkg,StandardCharsets.UTF_8);
+        // packageId() already admits only ASCII letters, digits, underscores and dots.
+        // These are URI-safe and need no encoding. The Charset overload of
+        // URLEncoder is unavailable below Android API 33 (HookLab minSdk=29).
+        String id=pkg;
         if (host.equals("f-droid.org") || host.equals("www.f-droid.org")) {
             if (!path.equals("/repo") || !standardPort) return null;
             return new Mapping("https://f-droid.org/packages/"+id,null);

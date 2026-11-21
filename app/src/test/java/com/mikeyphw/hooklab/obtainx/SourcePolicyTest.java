@@ -63,6 +63,19 @@ public class SourcePolicyTest {
         assertNull(ready("https://f-droid.org:8443/repo",null));
         assertNull(ready("https://example.org/repo/%2e%2e/private",null));
     }
+    @Test public void android29AsciiPackageIdsNeedNoUrlEncoding() {
+        String pkg="com.example_app.demo_2";
+        SourcePolicy.Snapshot official=SourcePolicy.ready(pkg,pkg,pkg,3L,3L,
+            "https://f-droid.org/repo","",null);
+        assertNotNull(official);
+        assertEquals("https://f-droid.org/packages/"+pkg,official.preferredUrl);
+        SourcePolicy.Snapshot custom=SourcePolicy.ready(pkg,pkg,pkg,3L,3L,
+            "https://repo.example.org/fdroid/repo","",null);
+        assertNotNull(custom);
+        assertEquals("https://repo.example.org/fdroid/repo?appId="+pkg,custom.preferredUrl);
+        assertNull(SourcePolicy.ready("com.example%0A.other","com.example%0A.other",
+            "com.example%0A.other",3L,3L,"https://f-droid.org/repo","",null));
+    }
     @Test public void JSONQuoteEscapesControlAndQuotes() {
         assertEquals("\"a\\\"b\\\\c\\n\"",SourcePolicy.quote("a\"b\\c\n"));
     }

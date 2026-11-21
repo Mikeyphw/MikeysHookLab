@@ -62,6 +62,9 @@ for required in ['f-droid.org','IzzyOnDroid','FDroidRepo','github.com',
     if required=='prepared': continue
     assert required in policy, required
 assert 'Snapshot again=ready' in policy
+assert 'String id=pkg;' in policy, 'M7 Android API29-safe ASCII package identifier'
+assert 'URLEncoder.encode(' not in policy and 'import java.net.URLEncoder;' not in policy, \
+    'M7 must not use API33-only URLEncoder overload' 
 for required in ['obtainium://app/','Uri.encode(json)','setPackage(ObtainXIds.OBTAIN_X)',
     'resolveActivity','activityInfo.exported','activity.startActivity(intent)']:
     assert required in bridge, required
