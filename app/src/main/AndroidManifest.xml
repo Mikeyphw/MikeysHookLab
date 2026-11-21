@@ -1,7 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Exact target visibility only; no broad installed-app query. -->
+    <!-- Explicit visibility only for the three host packages and ObtainX destination. -->
     <queries>
         <package android:name="br.art.code.meucronogramacapilar" />
+        <package android:name="com.machiav3lli.fdroid" />
+        <package android:name="com.looker.droidify" />
+        <package android:name="dev.bikram.obtainx" />
     </queries>
     <application android:name=".HookLabApp" android:allowBackup="false"
         android:label="@string/app_name" android:description="@string/module_description"
@@ -13,9 +16,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- Exported only for verified Activity launch identity sharing; never silent root. -->
         <activity android:name=".mcc.MccControlActivity" android:exported="true" />
-        <!-- Exact authority expected by libxposed service; no app-defined binder provider. -->
         <provider android:name="io.github.libxposed.service.XposedProvider"
             android:authorities="${applicationId}.XposedService"
             android:exported="true" android:directBootAware="true" />

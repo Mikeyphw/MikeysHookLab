@@ -17,3 +17,27 @@ APK builds, unit tests, lint and provenance checks run on GitHub Actions with An
 Native Devtool creates a new isolated worktree and draft PR, verifies exact source and hosted CI, and does **not** merge, install APKs, call root, rotate signing identities, or qualify a device/release.
 
 See [MCC manual port and device acceptance](docs/mcc_port.md) and [stable signing](docs/signing.md).
+
+
+## M7 — NeoStoreObtainX PR #12 integration (candidate)
+
+Two **independent**, disabled-by-default HookLab tweaks port selected behavior of
+[`Mikeyphw/NeoStoreObtainX` PR #12](https://github.com/Mikeyphw/NeoStoreObtainX/pull/12)
+from merged upstream source `c59f810699d47782f9a6710fb231ec66177b2efb`.
+Both use **modern libxposed API 102**; none uses the original API 82 entry point.
+
+- **Neo Store 1.3.3 (1304)**: guarded 48dp ObtainX header action. It observes
+  the app-detail route and pinned R8 state fields and prefers the upstream
+  source-code repository, with strict F-Droid/Izzy/custom repository fallback.
+- **Droid-ify 0.7.8 (780)**: one native MaterialToolbar menu action on app details;
+  uses PR #12's ContextWrapper Activity resolution and inherited-method lookup.
+- On tap, re-validate package, selected source and repository identity; only
+  open `obtainium://app/<encoded JSON>` with explicit target `dev.bikram.obtainx`.
+  ObtainX owns the preview, duplicate checks and final save decision.
+- **No** ObtainX fork/database hooks, automatic imports, account credentials,
+  ad changes, MCC regression, automatic scope assignment or device writes.
+
+Enable the two host packages separately in HookLab **Scope** and **Tweaks**.
+The original legacy `@array/xposed_scope` is not copied: HookLab uses
+framework-managed dynamic scope. The stable-signing workflow remains unchanged.
+See `docs/obtainx_pr12_port.md` for source pin, risks and device acceptance.

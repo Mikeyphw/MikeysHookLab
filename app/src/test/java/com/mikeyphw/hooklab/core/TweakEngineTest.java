@@ -54,10 +54,13 @@ public class TweakEngineTest {
     @Test(expected=UnsupportedOperationException.class) public void catalogIsImmutable() {
         TweakEngine.immutableCatalog(Collections.singletonList(entry(spec, s -> {}))).clear();
     }
-    @Test public void productionRegistersOnlyMccTargets() {
-        assertEquals(1, TweakCatalog.entries().size()); assertEquals(1, TweakCatalog.all().size());
+    @Test public void productionRegistersOnlyReviewedHosts() {
+        assertEquals(3, TweakCatalog.entries().size()); assertEquals(3, TweakCatalog.all().size());
         assertFalse(TweakCatalog.knowsPackage(HOST));
         assertTrue(TweakCatalog.knowsPackage("br.art.code.meucronogramacapilar"));
+        assertTrue(TweakCatalog.knowsPackage("com.machiav3lli.fdroid"));
+        assertTrue(TweakCatalog.knowsPackage("com.looker.droidify"));
+        assertFalse(TweakCatalog.knowsPackage("dev.bikram.obtainx"));
     }
     @Test public void keyIsNamespaced() {
         assertEquals("enabled.example.safe", TweakKeys.enabled("example.safe"));

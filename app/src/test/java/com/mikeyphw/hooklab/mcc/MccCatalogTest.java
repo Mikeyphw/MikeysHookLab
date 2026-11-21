@@ -9,7 +9,7 @@ import static org.junit.Assert.*;
 
 public class MccCatalogTest {
     @Test public void onlyManualDiamondTweakIsRegistered() {
-        assertEquals(1,TweakCatalog.entries().size());
+        assertEquals(3,TweakCatalog.entries().size());
         TweakEngine.Entry<HookContext> entry=TweakCatalog.entries().get(0);
         TweakSpec s=entry.spec;
         assertEquals(MccIds.DIAMOND_MANUAL,s.id);
