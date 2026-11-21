@@ -10,6 +10,7 @@ import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.TweakEngine;
 import com.mikeyphw.hooklab.core.TweakKeys;
 import com.mikeyphw.hooklab.core.TweakDiagnostics;
+import com.mikeyphw.hooklab.core.VerboseLogs;
 import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedModuleInterface;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -88,6 +89,9 @@ public final class HookLabModule extends XposedModule {
             log(Log.WARN, "HookLab", "Framework safety-lock state unavailable; skipping tweaks category=" + TweakDiagnostics.failureCategory(ex));
             return;
         }
+        // Bind only after verified host identity and both framework preference groups.
+        VerboseLogs.bind(settings, this);
+        VerboseLogs.emit(VerboseLogs.Event.HOST_DISPATCH_READY);
         HookContext context = new HookContext(pkg, process, version, loader, this, ctx);
         TweakEngine.dispatch(TweakCatalog.entries(), pkg, process, version,
                 id -> settings.getBoolean(TweakKeys.enabled(id), false), context,
@@ -103,8 +107,10 @@ public final class HookLabModule extends XposedModule {
                         failedInProcess.add(id);
                     }
                 },
-                (id, outcome, category) -> log(Log.INFO, "HookLab",
-                        "Tweak outcome id=" + id + " status=" + outcome.name()
-                        + " category=" + category));
+                (id, outcome, category) -> {
+                    log(Log.INFO, "HookLab", "Tweak outcome id=" + id +
+                        " status=" + outcome.name() + " category=" + category);
+                    VerboseLogs.emit(VerboseLogs.Event.TWEAK_DISPATCH_OUTCOME);
+                });
     }
 }

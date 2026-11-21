@@ -17,6 +17,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 import com.mikeyphw.hooklab.core.HookContext;
+import com.mikeyphw.hooklab.core.VerboseLogs;
 import io.github.libxposed.api.XposedInterface;
 import java.util.ArrayDeque;
 import java.util.Locale;
@@ -117,6 +118,7 @@ public final class MccDiamondUi {
 
     /** A tap ONLY opens HookLab's visible confirmation screen; no root side effect. */
     private static void openControl(Activity activity) {
+        VerboseLogs.emit(VerboseLogs.Event.MCC_CONTROL_OPEN);
         try {
             Intent intent = new Intent(MccRefillCommand.ACTION_FROM_TARGET);
             intent.setComponent(new ComponentName("com.mikeyphw.hooklab",
@@ -129,6 +131,7 @@ public final class MccDiamondUi {
                 activity.startActivity(intent);
             }
         } catch (RuntimeException ex) {
+            VerboseLogs.emit(VerboseLogs.Event.MCC_CONTROL_OPEN_REFUSED);
             Toast.makeText(activity, "HookLab diamond control unavailable", Toast.LENGTH_LONG).show();
         }
     }
@@ -160,6 +163,7 @@ public final class MccDiamondUi {
         button.setElevation(dp(activity,4));
         root.addView(button,new FrameLayout.LayoutParams(dp(activity,68),dp(activity,38),
                 Gravity.TOP | Gravity.END));
+        VerboseLogs.emit(VerboseLogs.Event.MCC_BUTTON_ATTACHED);
         button.setOnClickListener(v -> openControl(activity));
         // Flutter semantics may arrive after the Activity is resumed. Bounded retries
         // reposition the button; no recurring watcher or foreground navigation loop.
@@ -200,6 +204,7 @@ public final class MccDiamondUi {
                     }
                     return result;
                 });
+            VerboseLogs.emit(VerboseLogs.Event.MCC_HOOK_INSTALLED);
         } catch (Throwable failure) {
             INSTALLED.set(false);
             if (failure instanceof Exception) throw (Exception)failure;

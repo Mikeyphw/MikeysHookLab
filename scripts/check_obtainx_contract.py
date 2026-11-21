@@ -69,7 +69,12 @@ for required in ['obtainium://app/','Uri.encode(json)','setPackage(ObtainXIds.OB
     'resolveActivity','activityInfo.exported','activity.startActivity(intent)']:
     assert required in bridge, required
 assert 'dev.bikram.obtainx' not in cat # never scope destination
-assert 'versionCode 7' in (ROOT/'app/build.gradle').read_text()
-assert "versionName '0.6.0'" in (ROOT/'app/build.gradle').read_text()
+assert 'versionCode 8' in (ROOT/'app/build.gradle').read_text()
+assert "versionName '0.6.1'" in (ROOT/'app/build.gradle').read_text()
+scope=(ROOT/'app/src/main/resources/META-INF/xposed/scope.list').read_text(encoding='utf-8').splitlines()
+assert scope==['br.art.code.meucronogramacapilar','com.machiav3lli.fdroid','com.looker.droidify']
+assert 'dev.bikram.obtainx' not in scope
+assert 'staticScope=false' in (ROOT/'app/src/main/resources/META-INF/xposed/module.prop').read_text()
 assert (ROOT/'app/src/test/java/com/mikeyphw/hooklab/obtainx/SourcePolicyTest.java').is_file()
+assert 'VerboseLogs.Event.NEO_PAGE_READY' in neo and 'VerboseLogs.Event.DROID_TOOLBAR_ADDED' in droid
 print('HOOKLAB_M7_OBTAINX_API102_SOURCE_CONTRACT_PASS',flush=True)

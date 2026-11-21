@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakDiagnostics;
+import com.mikeyphw.hooklab.core.VerboseLogs;
 import io.github.libxposed.api.XposedInterface;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
@@ -127,6 +128,7 @@ public final class DroidifyHook {
         View page=viewRef.get();
         if(activity==null||page==null||!NeoStoreAction.visible(activity)||
             !page.isAttachedToWindow()||!page.isShown())return;
+        VerboseLogs.emit(VerboseLogs.Event.DROID_TAP);
         try {
             if(!Boolean.TRUE.equals(inheritedGetter(fragment,"isResumed")) ||
                 inheritedGetter(fragment,"getView")!=page ||
@@ -134,18 +136,22 @@ public final class DroidifyHook {
             SourcePolicy.Snapshot live=fresh(fragment,packageBound);
             if(live==null){
                 Toast.makeText(activity,"ObtainX source not ready or unsupported",Toast.LENGTH_SHORT).show();
-                note(xp,"SOURCE_NOT_READY");return;
+                note(xp,"SOURCE_NOT_READY");
+                VerboseLogs.emit(VerboseLogs.Event.DROID_SOURCE_REFUSED);return;
             }
             ObtainXBridge.Outcome result=ObtainXBridge.launch(activity,live,route(fragment));
             if(result!=ObtainXBridge.Outcome.DISPATCHED_FOR_PREVIEW)
                 Toast.makeText(activity,"ObtainX preview unavailable",Toast.LENGTH_SHORT).show();
             note(xp,result.name());
+            VerboseLogs.emit(result==ObtainXBridge.Outcome.DISPATCHED_FOR_PREVIEW
+                ?VerboseLogs.Event.DROID_PREVIEW_REQUESTED:VerboseLogs.Event.DROID_PREVIEW_REFUSED);
         } catch(ReflectiveOperationException | RuntimeException | LinkageError e) {
             note(xp,"TAP_REFUSED_"+e.getClass().getSimpleName());
             Toast.makeText(activity,"ObtainX action unavailable",Toast.LENGTH_SHORT).show();
         }
     }
     private static void attach(Object fragment,View view,XposedInterface xp) {
+        VerboseLogs.emit(VerboseLogs.Event.DROID_ATTACH_ATTEMPT);
         String stage="VIEW";
         try {
             if(view==null)return;
@@ -157,7 +163,8 @@ public final class DroidifyHook {
             if(!SourcePolicy.packageId(pkg)){note(xp,"ATTACH_REFUSED_ROUTE_UNAVAILABLE");return;}
             stage="NATIVE_TOOLBAR";
             View bar=toolbar(view);
-            if(bar==null){note(xp,"NATIVE_TOOLBAR_MISSING");return;}
+            if(bar==null){note(xp,"NATIVE_TOOLBAR_MISSING");
+                VerboseLogs.emit(VerboseLogs.Event.DROID_TOOLBAR_MISSING);return;}
             stage="TOOLBAR_MENU";
             Object raw=inheritedGetter(bar,"getMenu");
             if(!(raw instanceof Menu)){note(xp,"ATTACH_REFUSED_TOOLBAR_MENU");return;}
@@ -183,6 +190,7 @@ public final class DroidifyHook {
                 return true;
             });
             note(xp,"NATIVE_TOOLBAR_ACTION_ADDED");
+            VerboseLogs.emit(VerboseLogs.Event.DROID_TOOLBAR_ADDED);
         } catch(Throwable error){
             TweakDiagnostics.rethrowFatal(error);
             note(xp,"ATTACH_REFUSED_"+stage+"_"+error.getClass().getSimpleName());
@@ -213,6 +221,7 @@ public final class DroidifyHook {
                     return result;
                 });
             note(xp,"SOURCE_PINNED_HOOK_INSTALLED");
+            VerboseLogs.emit(VerboseLogs.Event.DROID_HOOK_INSTALLED);
         } catch(Throwable error){
             INSTALLED.set(false);
             TweakDiagnostics.rethrowFatal(error);

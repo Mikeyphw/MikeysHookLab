@@ -310,11 +310,50 @@ public final class MainActivity extends AppCompatActivity {
         });
         body.addView(b, new ViewGroup.LayoutParams(-1, -2));
     }
+    private void verboseLogging() {
+        XposedService s = service();
+        boolean available = ready(s);
+        boolean current = false;
+        if (available) {
+            try {
+                current = s.getRemotePreferences(TweakKeys.GROUP)
+                        .getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false);
+            } catch (RuntimeException ex) { available = false; }
+        }
+        MaterialSwitch sw = new MaterialSwitch(this);
+        sw.setText(R.string.verbose_lsposed_logs);
+        sw.setChecked(current);
+        sw.setEnabled(available);
+        sw.setOnCheckedChangeListener((view, wanted) -> {
+            sw.setEnabled(false);
+            writeVerboseLogging(s, wanted);
+        });
+        body.addView(sw, new ViewGroup.LayoutParams(-1, -2));
+        body.addView(text(getString(R.string.verbose_lsposed_description), 14));
+        if (!available) body.addView(text(getString(R.string.settings_unavailable), 14));
+    }
+    private void writeVerboseLogging(XposedService expected, boolean value) {
+        new Thread(() -> {
+            boolean saved;
+            try {
+                saved = ready(expected) && expected == service() &&
+                    expected.getRemotePreferences(TweakKeys.GROUP).edit()
+                        .putBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, value).commit();
+            } catch (RuntimeException error) { saved = false; }
+            final boolean result = saved;
+            runOnUiThread(() -> {
+                toast(result ? R.string.verbose_lsposed_saved : R.string.tweak_failed);
+                render();
+            });
+        }, "hooklab-verbose-preference").start();
+    }
     private void settings() {
         heading(R.string.settings); body.addView(text(getString(R.string.appearance), 20));
         themeButton(R.string.system_theme, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
         themeButton(R.string.light_theme, AppCompatDelegate.MODE_NIGHT_NO);
         themeButton(R.string.dark_theme, AppCompatDelegate.MODE_NIGHT_YES);
+        body.addView(text(getString(R.string.verbose_lsposed_heading), 20));
+        verboseLogging();
     }
     private void render() {
         if (body == null) return;

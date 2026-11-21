@@ -41,3 +41,31 @@ Enable the two host packages separately in HookLab **Scope** and **Tweaks**.
 The original legacy `@array/xposed_scope` is not copied: HookLab uses
 framework-managed dynamic scope. The stable-signing workflow remains unchanged.
 See `docs/obtainx_pr12_port.md` for source pin, risks and device acceptance.
+
+## M8 — LSPosed recommended scope correction (0.6.1, versionCode 8)
+
+The modern API 102 metadata now includes `META-INF/xposed/scope.list` with the
+three supported host packages: Meu Cronograma Capilar, Neo Store and Droid-ify.
+ObtainX is an external Intent destination and is **not** a scope target.
+`staticScope=false` is intentionally retained, so this is a **recommended**
+list rather than a fixed scope or automatic authorization. Approve the packages
+in LSPosed Vector or use HookLab → Scope → Add, then enable individual tweaks
+in HookLab → Tweaks and restart each target app. Existing user-selected scope
+and disabled-by-default tweak settings are not overwritten.
+
+This patch changes scope metadata, package version and source tests only; it
+does not alter hooks, stable signing, account data or remote preferences.
+Device acceptance and the new stable-signed 0.6.1 release are separate steps.
+
+## M8 — Recommended LSPosed scope and verbose event logging
+
+The scope recommendation file lists MCC, Neo Store and Droid-ify, while
+`staticScope=false` keeps framework approval and user-selected scopes authoritative.
+ObtainX is never a hooked package. The **Settings → Runtime logging → Verbose
+LSPosed logging** switch is **off by default**. When enabled, a host process
+reads a framework-owned preference and sends a bounded, rate-limited set of
+static stage codes to the libxposed logger (`HookLabVerbose`). It does not log
+app names, route IDs, account data, private file paths, source URLs, passwords,
+exception messages or stack traces. Restart target apps after toggling to
+ensure the framework has delivered updated preferences. No logging is enabled
+if API 102 service or preferences are unavailable.

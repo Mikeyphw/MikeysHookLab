@@ -52,3 +52,19 @@ user approval of each host package is requested via `XposedService.requestScope(
 
 DEVICE_ACCEPTANCE=NOT_PERFORMED
 SIGNED_RELEASE_QUALIFICATION=NOT_PERFORMED
+
+## Subsequent scope correction (M8, version 0.6.1)
+
+The M7 port omitted the modern `META-INF/xposed/scope.list`, so LSPosed had
+no packaged recommended scope. M8 adds exactly MCC, Neo Store and Droid-ify
+while retaining `staticScope=false` and per-tweak opt-in. These are *suggestions*;
+no user approval is assumed. ObtainX remains outside the injected scope.
+Re-run Android build/JUnit/lint, inspect packaged APK assets, sign from merged
+main using the existing certificate, and validate scope with LSPosed Vector.
+
+
+## M8 logging supplement
+The M8 settings toggle enables sanitized `HookLabVerbose` stage-code logs in
+both adapters. It does not log repository addresses, package IDs, credentials,
+object representations, or exception messages. Preference is disabled by default
+and transported through the existing API 102 framework remote-preferences group.
