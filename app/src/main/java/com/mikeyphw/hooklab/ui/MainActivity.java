@@ -1,7 +1,8 @@
 package com.mikeyphw.hooklab.ui;
 
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
+import android.os.Build;
+import com.google.android.material.color.DynamicColors;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
@@ -33,15 +34,12 @@ import com.mikeyphw.hooklab.R;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.TweakEngine;
-import com.mikeyphw.hooklab.core.TweakKeys;
-import com.mikeyphw.hooklab.core.TweakDiagnostics;
 import com.mikeyphw.hooklab.core.TweakCompatibility;
 import com.mikeyphw.hooklab.core.TweakSpec;
 import com.mikeyphw.hooklab.mcc.MccIds;
 import com.mikeyphw.hooklab.mcc.MccControlActivity;
 import android.content.Intent;
 import io.github.libxposed.service.XposedService;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -60,7 +58,11 @@ public final class MainActivity extends AppCompatActivity {
     private String selectedPackage;
     private MaterialToolbar toolbar;
     private BottomNavigationView navigation;
-    private final Runnable frameworkObserver = this::render;
+    private FrameworkStateStore stateStore;
+    private FrameworkSnapshot snapshot = FrameworkSnapshot.loading();
+    private final Set<String> pendingPreferences = new HashSet<>();
+    private final Set<String> pendingScope = new HashSet<>();
+    private final Runnable frameworkObserver = () -> stateStore.refresh();
 
     @Override public void onCreate(Bundle state) {
         appearance = getSharedPreferences("appearance", MODE_PRIVATE);
@@ -71,6 +73,13 @@ public final class MainActivity extends AppCompatActivity {
         }
         getDelegate().setLocalNightMode(night);
         super.onCreate(state);
+        if (Build.VERSION.SDK_INT >= 31
+                && appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM) != THEME_AMOLED
+                && appearance.getBoolean("dynamicColors", true)) {
+            try { DynamicColors.applyToActivityIfAvailable(this); }
+            catch (RuntimeException ignored) { /* Fallback to packaged Material 3 palette. */ }
+        }
+        stateStore = new FrameworkStateStore((HookLabApp) getApplication());
         page = state == null ? HOME : Math.max(HOME, Math.min(APP_DETAIL, state.getInt("page")));
         selectedPackage = state == null ? null : state.getString("selectedPackage");
         if (page == APP_DETAIL && selectedEntry() == null) page = APPS;
@@ -144,10 +153,26 @@ public final class MainActivity extends AppCompatActivity {
         scroll.scrollTo(0, 0);
     }
     @Override protected void onStart() {
-        super.onStart(); ((HookLabApp) getApplication()).addObserver(frameworkObserver); render();
+        super.onStart();
+        pendingPreferences.clear();
+        pendingScope.clear();
+        ((HookLabApp) getApplication()).addObserver(frameworkObserver);
+        stateStore.start(next -> {
+            if (isFinishing() || isDestroyed() || snapshot.equals(next)) return;
+            int previousScroll = scroll.getScrollY();
+            snapshot = next;
+            render(); // Only rebuild the current page; toolbar and tabs remain attached.
+            scroll.post(() -> scroll.scrollTo(0, previousScroll));
+        });
     }
     @Override protected void onStop() {
-        ((HookLabApp) getApplication()).removeObserver(frameworkObserver); super.onStop();
+        ((HookLabApp) getApplication()).removeObserver(frameworkObserver);
+        stateStore.stop();
+        super.onStop();
+    }
+    @Override protected void onDestroy() {
+        stateStore.close();
+        super.onDestroy();
     }
     @Override protected void onSaveInstanceState(Bundle out) {
         out.putInt("page", page); out.putString("selectedPackage", selectedPackage);
@@ -156,8 +181,7 @@ public final class MainActivity extends AppCompatActivity {
     private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
     private XposedService service() { return ((HookLabApp) getApplication()).currentService(); }
     private boolean ready(XposedService s) {
-        try { return s != null && s.getApiVersion() >= 102; }
-        catch (RuntimeException ex) { return false; }
+        return s != null && s == service() && snapshot.ready();
     }
     private MaterialTextView text(CharSequence value, int sp) {
         MaterialTextView t = new MaterialTextView(this); t.setText(value); t.setTextSize(sp);
@@ -178,24 +202,28 @@ public final class MainActivity extends AppCompatActivity {
         lp.topMargin = dp(16); body.addView(card, lp);
         return inner;
     }
-    private void button(LinearLayout parent, int label, View.OnClickListener click) {
+    private MaterialButton button(LinearLayout parent, int label, View.OnClickListener click) {
         MaterialButton b = new MaterialButton(this); b.setText(label); b.setMinHeight(dp(48));
         b.setOnClickListener(click); parent.addView(b, new ViewGroup.LayoutParams(-1, -2));
+        return b;
     }
     private void toast(int message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     private String connection(XposedService s) {
-        if (s == null) return getString(R.string.status_disconnected);
-        try {
-            int api = s.getApiVersion();
-            return api < 102 ? getString(R.string.status_unsupported, api)
-                    : getString(R.string.status_connected, s.getFrameworkName(), s.getFrameworkVersion(), api);
-        } catch (RuntimeException ex) { return getString(R.string.status_disconnected); }
+        switch (snapshot.connection) {
+            case LOADING: return getString(R.string.ui_loading_framework);
+            case UNSUPPORTED: return getString(R.string.status_unsupported, snapshot.apiVersion);
+            case CONNECTED:
+                return getString(R.string.status_connected,
+                        snapshot.frameworkName == null ? "LSPosed" : snapshot.frameworkName,
+                        snapshot.frameworkVersion == null ? "?" : snapshot.frameworkVersion,
+                        snapshot.apiVersion);
+            case UNAVAILABLE: return getString(R.string.ui_framework_read_failed);
+            default: return getString(R.string.status_disconnected);
+        }
     }
     private Set<String> scopedPackages(XposedService s) {
-        if (!ready(s)) return null;
-        try { return new HashSet<>(s.getScope()); }
-        catch (RuntimeException ex) { return null; }
+        return ready(s) ? snapshot.scope : null;
     }
     private TweakEngine.Entry<HookContext> selectedEntry() {
         for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) {
@@ -206,32 +234,11 @@ public final class MainActivity extends AppCompatActivity {
 
     /** Framework-observable configuration only; never assert that a hook ran. */
     private TweakCompatibility.State eligibility(TweakSpec spec, XposedService s) {
-        Boolean inScope = null;
-        Set<String> scope = scopedPackages(s);
-        if (scope != null) inScope = scope.contains(spec.packageName);
-        boolean enabled = false, locked = false;
-        if (ready(s)) {
-            try {
-                enabled = s.getRemotePreferences(TweakKeys.GROUP)
-                        .getBoolean(TweakKeys.enabled(spec.id), false);
-                locked = s.getRemotePreferences(TweakDiagnostics.GROUP)
-                        .getBoolean(TweakDiagnostics.quarantineKey(spec.id), false);
-            } catch (RuntimeException error) {
-                return TweakCompatibility.State.SCOPE_UNKNOWN;
-            }
-        }
-        Long version = null;
-        // MCC's broad installer range does NOT establish storage-format compatibility.
-        if (!MccIds.PACKAGE.equals(spec.packageName)) {
-            try {
-                version = getPackageManager().getPackageInfo(spec.packageName, 0).getLongVersionCode();
-            } catch (PackageManager.NameNotFoundException | SecurityException ignored) {
-                // Host not installed or not visible. Never assume a version.
-            }
-        }
-        return TweakCompatibility.assess(spec, ready(s), inScope, enabled, locked, version);
+        return snapshot.eligibility(spec);
     }
     private String statusText(TweakCompatibility.State state) {
+        if (snapshot.connection == FrameworkSnapshot.Connection.LOADING)
+            return getString(R.string.ui_loading_framework);
         switch (state) {
             case FRAMEWORK_UNAVAILABLE: return getString(R.string.ui_framework_unavailable);
             case SCOPE_UNKNOWN: return getString(R.string.ui_scope_unknown);
@@ -305,27 +312,25 @@ public final class MainActivity extends AppCompatActivity {
         if (ready(s) && scope != null) {
             button(scopeCard, scoped ? R.string.scope_remove : R.string.scope_add,
                     v -> { if (scoped) removeScope(s, spec.packageName);
-                           else requestScope(s, spec.packageName); });
+                           else requestScope(s, spec.packageName); })
+                    .setEnabled(!pendingScope.contains(spec.packageName));
         }
 
         LinearLayout tweakCard = card(getString(R.string.ui_tweak_setting), entry.description);
         MaterialSwitch sw = new MaterialSwitch(this);
         sw.setText(R.string.ui_enable_tweak);
-        boolean available = ready(s), checked = false;
-        if (available) {
-            try {
-                checked = s.getRemotePreferences(TweakKeys.GROUP)
-                        .getBoolean(TweakKeys.enabled(spec.id), false);
-            } catch (RuntimeException error) { available = false; }
-        }
-        sw.setChecked(checked);
+        FrameworkSnapshot.Flag tweakFlag = snapshot.flag(spec.id);
+        boolean available = ready(s) && tweakFlag != null && tweakFlag.enabled != null
+                && !pendingPreferences.contains(spec.id);
+        sw.setChecked(tweakFlag != null && Boolean.TRUE.equals(tweakFlag.enabled));
         sw.setEnabled(available);
         sw.setOnCheckedChangeListener((view, wanted) -> {
             sw.setEnabled(false);
             saveTweak(s, spec.id, wanted);
         });
         tweakCard.addView(sw, new ViewGroup.LayoutParams(-1, -2));
-        if (!available) tweakCard.addView(text(getString(R.string.settings_unavailable), 14));
+        if (!available) tweakCard.addView(text(getString(pendingPreferences.contains(spec.id)
+                ? R.string.ui_saving : R.string.settings_unavailable), 14));
         if (MccIds.DIAMOND_MANUAL.equals(spec.id)) {
             button(tweakCard, R.string.mcc_open_control, v ->
                     startActivity(new Intent(this, MccControlActivity.class)));
@@ -362,40 +367,33 @@ public final class MainActivity extends AppCompatActivity {
         for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) appCard(entry);
     }
     private void saveTweak(XposedService s, String id, boolean enabled) {
-        new Thread(() -> {
-            boolean ok;
-            try {
-                ok = s == service() && s.getRemotePreferences(TweakKeys.GROUP)
-                        .edit().putBoolean(TweakKeys.enabled(id), enabled).commit();
-            } catch (RuntimeException ex) { ok = false; }
-            final boolean success = ok;
-            runOnUiThread(() -> { toast(success ? R.string.tweak_saved : R.string.tweak_failed); render(); });
-        }, "hooklab-prefs-write").start();
+        if (!ready(s) || !pendingPreferences.add(id)) return;
+        render(); // Show pending state; no optimistic preference change.
+        stateStore.writeTweak(id, enabled, success -> {
+            pendingPreferences.remove(id);
+            toast(success ? R.string.tweak_saved : R.string.tweak_failed);
+        });
     }
-    // Tweaks and scope are configured together on each application's detail page.
     private void requestScope(XposedService s, String pkg) {
-        if (!ready(s) || !TweakCatalog.knowsPackage(pkg)) return;
-        try {
-            s.requestScope(Collections.singletonList(pkg), new XposedService.OnScopeEventListener() {
-                @Override public void onScopeRequestApproved(List<String> approved) {
-                    runOnUiThread(() -> { toast(R.string.scope_added); render(); });
-                }
-                @Override public void onScopeRequestFailed(String failure) {
-                    runOnUiThread(() -> toast(getString(R.string.scope_request_failed, failure)));
-                }
-            });
-        } catch (RuntimeException ex) { toast(getString(R.string.scope_change_failed, ex.getClass().getSimpleName())); }
+        if (!ready(s) || !TweakCatalog.knowsPackage(pkg) || !pendingScope.add(pkg)) return;
+        render();
+        stateStore.requestScope(pkg, confirmed -> {
+            pendingScope.remove(pkg);
+            toast(confirmed ? R.string.scope_added : R.string.ui_scope_request_unconfirmed);
+        });
     }
     private void removeScope(XposedService s, String pkg) {
-        if (!ready(s) || !TweakCatalog.knowsPackage(pkg)) return;
-        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle(R.string.scope_remove)
-                .setMessage(pkg).setNegativeButton(android.R.string.cancel, null)
+        if (!ready(s) || !TweakCatalog.knowsPackage(pkg) || pendingScope.contains(pkg)) return;
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.scope_remove).setMessage(pkg)
+                .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    try {
-                        s.removeScope(Collections.singletonList(pkg)); toast(R.string.scope_removed); render();
-                    } catch (RuntimeException ex) {
-                        toast(getString(R.string.scope_change_failed, ex.getClass().getSimpleName()));
-                    }
+                    if (!pendingScope.add(pkg)) return;
+                    render();
+                    stateStore.removeScope(pkg, requested -> {
+                        pendingScope.remove(pkg);
+                        toast(requested ? R.string.scope_removed : R.string.ui_scope_request_unconfirmed);
+                    });
                 }).show();
     }
     private void scopePage() {
@@ -413,17 +411,18 @@ public final class MainActivity extends AppCompatActivity {
             LinearLayout inner = card(spec.packageName, getString(R.string.scope_approval));
             button(inner, present ? R.string.scope_remove : R.string.scope_add,
                     v -> { if (present) removeScope(s, spec.packageName);
-                           else requestScope(s, spec.packageName); });
+                           else requestScope(s, spec.packageName); })
+                    .setEnabled(!pendingScope.contains(spec.packageName));
         }
     }
     /** Framework-truth diagnostics. Per-process events live only in Xposed logs. */
     private void diagnosticsPage() {
         heading(R.string.diagnostics);
         XposedService s = service();
-        boolean connected = ready(s);
         card(getString(R.string.status), connection(s));
-        if (!connected) {
-            card(getString(R.string.diagnostics), getString(R.string.diagnostics_disconnected));
+        if (!ready(s)) {
+            card(getString(R.string.diagnostics), snapshot.connection == FrameworkSnapshot.Connection.LOADING
+                    ? getString(R.string.ui_loading_framework) : getString(R.string.diagnostics_disconnected));
             return;
         }
         List<TweakEngine.Entry<HookContext>> entries = TweakCatalog.entries();
@@ -431,56 +430,40 @@ public final class MainActivity extends AppCompatActivity {
             card(getString(R.string.diagnostics_empty), getString(R.string.diagnostics_inert));
             return;
         }
-        Set<String> scope = scopedPackages(s);
         for (TweakEngine.Entry<HookContext> entry : entries) {
             String id = entry.spec.id;
-            Boolean inScope = scope == null ? null : scope.contains(entry.spec.packageName);
-            boolean enabled = false, locked = false, readable = true;
-            try {
-                SharedPreferences flags = s.getRemotePreferences(TweakKeys.GROUP);
-                SharedPreferences safety = s.getRemotePreferences(TweakDiagnostics.GROUP);
-                enabled = flags.getBoolean(TweakKeys.enabled(id), false);
-                locked = safety.getBoolean(TweakDiagnostics.quarantineKey(id), false);
-            } catch (RuntimeException ex) { readable = false; }
-            if (!readable) {
+            FrameworkSnapshot.Flag flag = snapshot.flag(id);
+            if (flag == null || flag.enabled == null || flag.locked == null) {
                 card(entry.title, getString(R.string.diagnostics_unavailable));
                 continue;
             }
-            // A package/version read in the UI would be subject to visibility limits;
-            // null means unverified, never infer compatibility from historical logs.
-            TweakCompatibility.State eligibility = TweakCompatibility.assess(entry.spec,
-                    connected, inScope, enabled, locked, null);
+            boolean locked = flag.locked;
+            TweakCompatibility.State assessed = eligibility(entry.spec, s);
             LinearLayout inner = card(entry.title,
-                    getString(R.string.diagnostics_compatibility, statusText(eligibility))
+                    getString(R.string.diagnostics_compatibility, statusText(assessed))
                     + "\n" + getString(R.string.diagnostics_safety_state,
                           getString(locked ? R.string.diagnostics_locked : R.string.diagnostics_unlocked)));
-            final boolean nextLock = !locked;
+            boolean nextLock = !locked;
             button(inner, nextLock ? R.string.diagnostics_enable_lock : R.string.diagnostics_reset_quarantine,
-                    v -> confirmSafetyLock(s, id, nextLock));
+                    v -> confirmSafetyLock(s, id, nextLock))
+                    .setEnabled(!pendingPreferences.contains("lock:" + id));
         }
         card(getString(R.string.diagnostics_note_title), getString(R.string.diagnostics_note));
     }
 
     private void confirmSafetyLock(XposedService s, String id, boolean locked) {
-        if (!ready(s)) return;
+        if (!ready(s) || pendingPreferences.contains("lock:" + id)) return;
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle(locked ? R.string.diagnostics_enable_lock : R.string.diagnostics_reset_quarantine)
                 .setMessage(locked ? R.string.diagnostics_lock_confirm : R.string.diagnostics_reset_confirm)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    new Thread(() -> {
-                        boolean success;
-                        try {
-                            // Only the module app's XposedService may WRITE remote preferences.
-                            success = s == service() && s.getRemotePreferences(TweakDiagnostics.GROUP)
-                                    .edit().putBoolean(TweakDiagnostics.quarantineKey(id), locked).commit();
-                        } catch (RuntimeException ex) { success = false; }
-                        final boolean result = success;
-                        runOnUiThread(() -> {
-                            toast(result ? R.string.diagnostics_reset_success : R.string.diagnostics_reset_failed);
-                            render();
-                        });
-                    }, "hooklab-update-safety-lock").start();
+                    pendingPreferences.add("lock:" + id);
+                    render();
+                    stateStore.writeSafetyLock(id, locked, success -> {
+                        pendingPreferences.remove("lock:" + id);
+                        toast(success ? R.string.diagnostics_reset_success : R.string.diagnostics_reset_failed);
+                    });
                 }).show();
     }
 
@@ -500,41 +483,28 @@ public final class MainActivity extends AppCompatActivity {
     private void verboseLogging() {
         LinearLayout panel = card(getString(R.string.verbose_lsposed_heading),
                 getString(R.string.ui_logging_summary));
-        XposedService s = service();
-        boolean available = ready(s);
-        boolean current = false;
-        if (available) {
-            try {
-                current = s.getRemotePreferences(TweakKeys.GROUP)
-                        .getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false);
-            } catch (RuntimeException ex) { available = false; }
-        }
         MaterialSwitch sw = new MaterialSwitch(this);
+        boolean available = ready(service()) && snapshot.verboseLogging != null
+                && !pendingPreferences.contains("verbose");
         sw.setText(R.string.verbose_lsposed_logs);
-        sw.setChecked(current);
+        sw.setChecked(Boolean.TRUE.equals(snapshot.verboseLogging));
         sw.setEnabled(available);
         sw.setOnCheckedChangeListener((view, wanted) -> {
             sw.setEnabled(false);
-            writeVerboseLogging(s, wanted);
+            writeVerboseLogging(service(), wanted);
         });
         panel.addView(sw, new ViewGroup.LayoutParams(-1, -2));
         panel.addView(text(getString(R.string.verbose_lsposed_description), 14));
-        if (!available) panel.addView(text(getString(R.string.settings_unavailable), 14));
+        if (!available) panel.addView(text(getString(pendingPreferences.contains("verbose")
+                ? R.string.ui_saving : R.string.settings_unavailable), 14));
     }
     private void writeVerboseLogging(XposedService expected, boolean value) {
-        new Thread(() -> {
-            boolean saved;
-            try {
-                saved = ready(expected) && expected == service() &&
-                    expected.getRemotePreferences(TweakKeys.GROUP).edit()
-                        .putBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, value).commit();
-            } catch (RuntimeException error) { saved = false; }
-            final boolean result = saved;
-            runOnUiThread(() -> {
-                toast(result ? R.string.verbose_lsposed_saved : R.string.tweak_failed);
-                render();
-            });
-        }, "hooklab-verbose-preference").start();
+        if (!ready(expected) || !pendingPreferences.add("verbose")) return;
+        render();
+        stateStore.writeVerbose(value, success -> {
+            pendingPreferences.remove("verbose");
+            toast(success ? R.string.verbose_lsposed_saved : R.string.tweak_failed);
+        });
     }
     private void settings() {
         heading(R.string.settings);
@@ -548,6 +518,18 @@ public final class MainActivity extends AppCompatActivity {
         themeChip(themes, R.string.dark_theme, AppCompatDelegate.MODE_NIGHT_YES, current);
         themeChip(themes, R.string.ui_amoled_theme, THEME_AMOLED, current);
         appearanceCard.addView(themes);
+        if (Build.VERSION.SDK_INT >= 31) {
+            MaterialSwitch dynamic = new MaterialSwitch(this);
+            dynamic.setText(R.string.ui_dynamic_colors);
+            dynamic.setChecked(appearance.getBoolean("dynamicColors", true));
+            dynamic.setEnabled(current != THEME_AMOLED);
+            dynamic.setOnCheckedChangeListener((view, wanted) -> {
+                appearance.edit().putBoolean("dynamicColors", wanted).apply();
+                recreate();
+            });
+            appearanceCard.addView(dynamic);
+            appearanceCard.addView(text(getString(R.string.ui_dynamic_colors_detail), 14));
+        }
         verboseLogging();
     }
     private void render() {

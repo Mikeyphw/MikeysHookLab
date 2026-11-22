@@ -100,9 +100,22 @@ check('android:icon="@mipmap/ic_launcher"' in read('app/src/main/AndroidManifest
       and 'M256 186' in read('app/src/main/res/drawable/ic_hooklab.xml'),
       'flat HookLab adaptive icon and SVG-backed hook glyph')
 
-check(all(term in ui for term in ('requestScope(', 'removeScope(', 'getRemotePreferences(TweakKeys.GROUP)',
-                                  '.commit()', 'runOnUiThread(', 'TweakCatalog.knowsPackage(')),
-      'framework-backed UI with explicit scope and writes')
+state_store = read('app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkStateStore.java')
+state_model = read('app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkSnapshot.java')
+check(all(term in ui for term in ('stateStore.start(', 'stateStore.refresh()',
+                                  'stateStore.writeTweak(', 'stateStore.writeSafetyLock(',
+                                  'stateStore.writeVerbose(', 'TweakCatalog.knowsPackage('))
+      and all(term not in ui for term in ('getRemotePreferences(', 'getScope(', 'getApiVersion('))
+      and 'DynamicColors.applyToActivityIfAvailable(this)' in ui
+      and 'snapshot.eligibility(spec)' in ui
+      and all(term in state_store for term in ('getRemotePreferences(TweakKeys.GROUP)',
+             'getRemotePreferences(TweakDiagnostics.GROUP)', 'worker.execute(',
+             'ticket != generation', 'expected == app.currentService()',
+             'prefs.edit().putBoolean(key, value).commit()', 'prefs.getBoolean(key, !value) == value',
+             'requestScope(', 'removeScope(', 'main.post(', 'FrameworkSnapshot.loading()'))
+      and all(term in state_model for term in ('Connection.LOADING', 'Connection.UNAVAILABLE',
+             'Collections.unmodifiableMap', 'Collections.unmodifiableSet', 'TweakCompatibility.assess(')),
+      'UI-03 background-only binder, immutable snapshot, verified writes and Material You')
 app_source = read('app/src/main/java/com/mikeyphw/hooklab/HookLabApp.java')
 check('XposedServiceHelper.registerListener(this)' in app_source and 'onServiceDied(' in app_source,
       'service connection lifecycle')
@@ -142,11 +155,11 @@ check(all(t in compat for t in ('FRAMEWORK_UNAVAILABLE', 'SCOPE_UNKNOWN',
       'VERSION_UNSUPPORTED', 'ELIGIBLE', 'verifiedVersion == null')),
       'honest three-valued compatibility model')
 check(all(t in ui for t in ('diagnosticsPage()', 'confirmSafetyLock(s, id, nextLock)',
-      'TweakDiagnostics.GROUP', 'TweakCompatibility.assess(',
       'R.string.diagnostics_note', 'R.string.diagnostics_reset_confirm',
-      's == service()', '.putBoolean(TweakDiagnostics.quarantineKey(id), locked).commit()',
-      'runOnUiThread(')),
-      'framework-backed manual locks and explicit confirmation-gated diagnostics UI')
+      's == service()', 'stateStore.writeSafetyLock(id, locked,'))
+      and all(t in state_store for t in ('writeSafetyLock(String id, boolean locked, Completion cb)',
+             'TweakDiagnostics.quarantineKey(id)', 'prefs.edit().putBoolean(key, value).commit()')),
+      'framework-backed manual safety locks on background executor with UI confirmation')
 check('targetSdk 36' in build, 'preserve Android target SDK 36')
 tests = read('app/src/test/java/com/mikeyphw/hooklab/core/TweakEngineM4Test.java')
 check(tests.count('@Test') >= 12 and all(t in tests for t in (

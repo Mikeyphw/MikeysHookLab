@@ -14,13 +14,17 @@ ui=read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 strings=read('app/src/main/res/values/strings.xml')
 root=ET.fromstring(strings)
 must('diagnostics.verbose_logs' in keys and 'hooklab.tweaks.v1' in keys,'framework-only preference key')
+store=read('app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkStateStore.java')
 must('getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false)' in logs
-     and 'getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false)' in ui,
+     and 'getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false)' in store
+     and 'Boolean.TRUE.equals(snapshot.verboseLogging)' in ui,
      'default-off toggle both app and host')
-must('expected.getRemotePreferences(TweakKeys.GROUP).edit()' in ui
-     and '.putBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, value).commit()' in ui
-     and 'expected == service()' in ui and 'ready(expected)' in ui,
-     'framework preference write with connection gate and actual commit')
+must('write(TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb)' in store
+     and 'prefs.edit().putBoolean(key, value).commit()' in store
+     and 'prefs.getBoolean(key, !value) == value' in store
+     and 'expected == app.currentService()' in store
+     and 'ready(expected)' in ui and 'stateStore.writeVerbose(value,' in ui,
+     'framework preference write with connection gate and verified commit')
 must('VerboseLogs.bind(settings, this)' in module and
      'getRemotePreferences(TweakKeys.GROUP)' in module,
      'host logs bound to framework prefs after verified identity')
@@ -35,8 +39,9 @@ must('logcat' not in logs.split('public static void emit(Event event)')[1] and
      'FileOutputStream' not in logs and 'getStackTrace' not in logs and
      'getMessage()' not in logs,'no logcat, host file, stacktrace or exception message writing')
 must('new MaterialSwitch(this)' in ui and 'verboseLogging();' in ui and
-     'writeVerboseLogging(s, wanted)' in ui and 'sw.setEnabled(available)' in ui,
-     'settings control disabled without API102 framework service')
+     'writeVerboseLogging(service(), wanted)' in ui and 'sw.setEnabled(available)' in ui
+     and 'snapshot.verboseLogging != null' in ui,
+     'settings control disabled until framework snapshot confirms preference')
 must(all(root.find("./string[@name='%s']"%n) is not None for n in
      ('verbose_lsposed_heading','verbose_lsposed_logs','verbose_lsposed_description','verbose_lsposed_saved')),
      'translatable UI resources exist')
