@@ -11,6 +11,7 @@ EXPECTED_SCOPE = (
     b"br.art.code.meucronogramacapilar\n"
     b"com.machiav3lli.fdroid\n"
     b"com.looker.droidify\n"
+    b"com.fugo.wowsolitaire\n"
 )
 EXPECTED_PROPS = {
     "minApiVersion": "102",
@@ -30,7 +31,7 @@ def verify(apk: Path) -> None:
         assert z.read(PREFIX + "java_init.list").decode("utf-8").strip() == ENTRY, "Module entry mismatch"
         props = dict(line.split("=", 1) for line in z.read(PREFIX + "module.prop").decode("utf-8").splitlines())
         assert props == EXPECTED_PROPS, "Modern libxposed API102 properties mismatch"
-        # M8 deliberately restores recommended scope, without static approval.
+        # M8 recommended scope plus WM01 opt-in Word Master; still not static approval.
         # Byte-for-byte comparison rejects extras, duplicates, reordering, CRLF,
         # Unicode tricks, and accidentally scoped ObtainX itself.
         assert names.count(PREFIX + "scope.list") == 1, "Expected one modern scope.list"

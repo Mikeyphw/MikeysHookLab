@@ -55,11 +55,17 @@ public class TweakEngineTest {
         TweakEngine.immutableCatalog(Collections.singletonList(entry(spec, s -> {}))).clear();
     }
     @Test public void productionRegistersOnlyReviewedHosts() {
-        assertEquals(3, TweakCatalog.entries().size()); assertEquals(3, TweakCatalog.all().size());
+        // Verify actual reviewed package identities, never the global hook count.
+        java.util.Set<String> packages = new java.util.HashSet<>();
+        for (TweakSpec registered : TweakCatalog.all()) packages.add(registered.packageName);
+        assertEquals(new java.util.HashSet<>(Arrays.asList(
+                "br.art.code.meucronogramacapilar", "com.machiav3lli.fdroid",
+                "com.looker.droidify", "com.fugo.wowsolitaire")), packages);
         assertFalse(TweakCatalog.knowsPackage(HOST));
         assertTrue(TweakCatalog.knowsPackage("br.art.code.meucronogramacapilar"));
         assertTrue(TweakCatalog.knowsPackage("com.machiav3lli.fdroid"));
         assertTrue(TweakCatalog.knowsPackage("com.looker.droidify"));
+        assertTrue(TweakCatalog.knowsPackage("com.fugo.wowsolitaire"));
         assertFalse(TweakCatalog.knowsPackage("dev.bikram.obtainx"));
     }
     @Test public void keyIsNamespaced() {

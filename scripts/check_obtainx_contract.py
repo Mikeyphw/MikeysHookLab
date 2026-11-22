@@ -22,7 +22,7 @@ ns='{http://schemas.android.com/apk/res/android}'
 queries=manifest.findall('./queries/package')
 assert [x.get(ns+'name') for x in queries]==[
     'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
-    'com.looker.droidify','dev.bikram.obtainx']
+    'com.looker.droidify','com.fugo.wowsolitaire','dev.bikram.obtainx']
 assert manifest.findall('uses-permission')==[]
 assert manifest.findall('./application/activity') and len(manifest.findall('./application/activity'))==2
 for required in ['NEO_CODE = 1304L','DROIDIFY_CODE = 780L',
@@ -72,7 +72,8 @@ assert 'dev.bikram.obtainx' not in cat # never scope destination
 assert 'versionCode 8' in (ROOT/'app/build.gradle').read_text()
 assert "versionName '0.6.1'" in (ROOT/'app/build.gradle').read_text()
 scope=(ROOT/'app/src/main/resources/META-INF/xposed/scope.list').read_text(encoding='utf-8').splitlines()
-assert scope==['br.art.code.meucronogramacapilar','com.machiav3lli.fdroid','com.looker.droidify']
+assert scope==['br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
+               'com.looker.droidify','com.fugo.wowsolitaire']
 assert 'dev.bikram.obtainx' not in scope
 assert 'staticScope=false' in (ROOT/'app/src/main/resources/META-INF/xposed/module.prop').read_text()
 assert (ROOT/'app/src/test/java/com/mikeyphw/hooklab/obtainx/SourcePolicyTest.java').is_file()

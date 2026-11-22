@@ -69,3 +69,20 @@ app names, route IDs, account data, private file paths, source URLs, passwords,
 exception messages or stack traces. Restart target apps after toggling to
 ensure the framework has delivered updated preferences. No logging is enabled
 if API 102 service or preferences are unavailable.
+
+
+## WM01 — Word Master 0.6.10: opt-in night filter (experimental)
+
+A fourth, independent API 102 integration targets exactly
+`com.fugo.wowsolitaire` version `0.6.10` / versionCode `56240403`.
+The **Word Master · Night filter** switch is off by default. LSPosed scope is
+recommended but never automatically granted. When explicitly enabled, the
+hook attaches a non-interactive, accessibility-hidden dark scrim over the
+Unity Player Activity after `onResume`, once per activity window. Restart
+Word Master after enabling or disabling it. It does not edit game data,
+patch IL2CPP, change rewards, or hook advertising or payment paths.
+
+**Limit:** This visibly dims the Unity viewport; it is **not** a true
+in-game dark palette and cannot recolor Unity textures or text independently.
+Source APK is a base split requiring its ABI split. Dark palette acceptance
+is pending real-device tests. See `docs/WM01_ACCEPTANCE.md`.

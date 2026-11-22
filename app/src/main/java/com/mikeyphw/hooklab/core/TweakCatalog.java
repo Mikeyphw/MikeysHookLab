@@ -5,12 +5,13 @@ import com.mikeyphw.hooklab.mcc.MccIds;
 import com.mikeyphw.hooklab.obtainx.ObtainXIds;
 import com.mikeyphw.hooklab.obtainx.NeoStoreHook;
 import com.mikeyphw.hooklab.obtainx.DroidifyHook;
+import com.mikeyphw.hooklab.wordmaster.WordMasterNightHook;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** Three independently opted-in, exact-host API102 integrations. */
+/** Four independently opted-in, exact-host API102 integrations. */
 public final class TweakCatalog {
     private TweakCatalog() { }
 
@@ -37,7 +38,14 @@ public final class TweakCatalog {
                 "Droid-ify · Add to ObtainX",
                 "Droid-ify 0.7.8/780 only. Adds one native toolbar action after " +
                 "validating the current app and repository. No host data writes.",
-                DroidifyHook::install)
+                DroidifyHook::install),
+            new TweakEngine.Entry<>(
+                new TweakSpec(WordMasterNightHook.TWEAK_ID, WordMasterNightHook.PACKAGE,
+                    WordMasterNightHook.VERSION_CODE, WordMasterNightHook.VERSION_CODE),
+                "Word Master · Night filter (experimental)",
+                "Word Master 0.6.10 only. Dims the Unity gameplay view without " +
+                "recoloring in-game textures. Fully opt-in; restart the game to apply or remove.",
+                WordMasterNightHook::install)
         ));
 
     public static List<TweakEngine.Entry<HookContext>> entries() { return REGISTRY; }
