@@ -556,8 +556,12 @@ public final class MainActivity extends AppCompatActivity {
                 : page == DIAGNOSTICS ? NAV_DIAGNOSTICS : NAV_HOME;
         navigation.getMenu().findItem(navId).setChecked(true);
         boolean secondary = page >= SETTINGS;
-        toolbar.setNavigationIcon(secondary ? R.drawable.ic_nav_back : 0);
-        if (secondary) toolbar.setNavigationContentDescription(R.string.ui_back);
+        if (secondary) {
+            toolbar.setNavigationIcon(R.drawable.ic_nav_back);
+            toolbar.setNavigationContentDescription(R.string.ui_back);
+        } else {
+            toolbar.setNavigationIcon((android.graphics.drawable.Drawable) null);
+        }
         switch (page) {
             case APPS: toolbar.setTitle(R.string.apps); break;
             case DIAGNOSTICS: toolbar.setTitle(R.string.diagnostics); break;

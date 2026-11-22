@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">HookLab app icon</title>
+  <desc id="desc">Flat navy rounded square with a minimalist white laboratory flask, turquoise liquid, and a white hook.</desc>
+  <path d="M132 28 H380 C437 28 484 75 484 132 V380 C484 437 437 484 380 484 H132 C75 484 28 437 28 380 V132 C28 75 75 28 132 28 Z" fill="#0E1B2B"/>
+  <path d="M170 310 C201 295 228 313 256 309 C285 305 312 294 342 309 L365 360 C376 383 363 398 334 398 H178 C149 398 136 384 147 360 Z" fill="#2DD4BF"/>
+  <path d="M223 143 V203 L145 359 C132 384 149 411 179 411 H333 C363 411 380 384 367 359 L289 203 V143" fill="none" stroke="#F8FAFC" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M215 128 H297" fill="none" stroke="#F8FAFC" stroke-width="24" stroke-linecap="round"/>
+  <path d="M256 186 V308 C256 348 228 370 201 354 C184 344 177 321 186 301" fill="none" stroke="#F8FAFC" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M169 303 L197 285 L205 317 Z" fill="#F8FAFC"/>
+</svg>

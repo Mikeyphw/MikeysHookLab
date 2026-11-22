@@ -84,6 +84,22 @@ check('MccIds.DIAMOND_MANUAL' in catalog and
       and 'DroidifyHook::install' in catalog and 'Arrays.<TweakEngine.Entry' in catalog,
       'manual MCC and two independent ObtainX adapters; no active VIP/auto/banner')
 ui = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+
+# PR #8 Android 16 startup regression: Toolbar.setNavigationIcon(int) must not get 0.
+render_source = ui.split('private void render() {', 1)[-1]
+check('private void render() {' in ui
+      and 'toolbar.setNavigationIcon(R.drawable.ic_nav_back);' in render_source
+      and 'toolbar.setNavigationIcon((android.graphics.drawable.Drawable) null);' in render_source
+      and 'setNavigationIcon(secondary ?' not in render_source
+      and 'setNavigationIcon(0)' not in render_source,
+      'toolbar navigation uses nullable Drawable; no invalid resource ID zero')
+check('android:icon="@mipmap/ic_launcher"' in read('app/src/main/AndroidManifest.xml')
+      and '@drawable/ic_hooklab_foreground' in read('app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml')
+      and '@drawable/ic_hooklab_monochrome' in read('app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml')
+      and 'M223 143' in read('app/src/main/res/drawable/ic_hooklab.xml')
+      and 'M256 186' in read('app/src/main/res/drawable/ic_hooklab.xml'),
+      'flat HookLab adaptive icon and SVG-backed hook glyph')
+
 check(all(term in ui for term in ('requestScope(', 'removeScope(', 'getRemotePreferences(TweakKeys.GROUP)',
                                   '.commit()', 'runOnUiThread(', 'TweakCatalog.knowsPackage(')),
       'framework-backed UI with explicit scope and writes')
