@@ -55,11 +55,12 @@ public class TweakEngineTest {
         TweakEngine.immutableCatalog(Collections.singletonList(entry(spec, s -> {}))).clear();
     }
     @Test public void productionRegistersOnlyReviewedHosts() {
-        assertEquals(3, TweakCatalog.entries().size()); assertEquals(3, TweakCatalog.all().size());
+        assertEquals(4, TweakCatalog.entries().size()); assertEquals(4, TweakCatalog.all().size());
         assertFalse(TweakCatalog.knowsPackage(HOST));
         assertTrue(TweakCatalog.knowsPackage("br.art.code.meucronogramacapilar"));
         assertTrue(TweakCatalog.knowsPackage("com.machiav3lli.fdroid"));
         assertTrue(TweakCatalog.knowsPackage("com.looker.droidify"));
+        assertTrue(TweakCatalog.knowsPackage("com.fugo.wowsolitaire"));
         assertFalse(TweakCatalog.knowsPackage("dev.bikram.obtainx"));
     }
     @Test public void keyIsNamespaced() {

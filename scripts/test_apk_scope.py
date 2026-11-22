@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""APK ZIP regression checks for the M8 recommended libxposed scope."""
+"""APK ZIP regression checks for the current M8+WM01 libxposed scope."""
 import tempfile
 import unittest
 import zipfile
@@ -46,9 +46,13 @@ class ApkScopeContractTest(unittest.TestCase):
         self.reject(scope=EXPECTED_SCOPE + b"dev.bikram.obtainx\n")
 
     def test_reordered_scope_refused(self):
-        self.reject(scope=b"com.looker.droidify\n" +
+        self.reject(scope=b"com.fugo.wowsolitaire\n" +
+                          b"com.looker.droidify\n" +
                           b"com.machiav3lli.fdroid\n" +
                           b"br.art.code.meucronogramacapilar\n")
+
+    def test_missing_word_master_refused(self):
+        self.reject(scope=EXPECTED_SCOPE.replace(b"com.fugo.wowsolitaire\n", b""))
 
     def test_duplicate_scope_refused(self):
         self.reject(scope=EXPECTED_SCOPE + b"com.looker.droidify\n")
