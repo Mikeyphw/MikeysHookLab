@@ -3,4 +3,9 @@
         <item name="colorPrimary">#6750A4</item>
         <item name="colorOnPrimary">#FFFFFF</item>
     </style>
+    <style name="Theme.HookLab.Amoled" parent="Theme.HookLab">
+        <item name="colorSurface">#000000</item>
+        <item name="colorSurfaceContainer">#101010</item>
+        <item name="android:windowBackground">#000000</item>
+    </style>
 </resources>
