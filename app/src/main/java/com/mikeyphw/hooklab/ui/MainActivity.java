@@ -1,6 +1,7 @@
 package com.mikeyphw.hooklab.ui;
 
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import com.google.android.material.color.DynamicColors;
 import android.view.Menu;

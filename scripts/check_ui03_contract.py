@@ -14,6 +14,13 @@ def check(what: bool, name: str) -> None:
     print("HOOKLAB_UI03_PASS=" + name, flush=True)
 
 ui = read("app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java")
+
+# A JavaSyntaxCheck parser does not resolve Android SDK imports.
+# Guard the verified CI regression from run 44973294781 before Gradle compiles.
+check("import android.content.pm.PackageManager;" in ui
+      and "PackageManager.NameNotFoundException" in ui,
+      "android_package_manager_import_for_host_icon")
+
 store = read("app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkStateStore.java")
 snapshot = read("app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkSnapshot.java")
 strings = ET.fromstring(read("app/src/main/res/values/strings.xml"))
