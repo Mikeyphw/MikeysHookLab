@@ -233,3 +233,6 @@ subprocess.run(['python3','-B',str(r/'scripts/test_signing.py')],check=True)
 
 # WM01: new Unity night appearance remains opt-in and scene-level proof requires device.
 subprocess.run(['python3','-B',str(r/'scripts/check_wordmaster_contract.py')],check=True)
+
+# MCC source/negative tests run in CI. APK binary is independently verified off-CI.
+subprocess.run(['python3','-B',str(r/'scripts/check_mcc_apk_contract.py')],check=True)
