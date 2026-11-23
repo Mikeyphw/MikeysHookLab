@@ -3,6 +3,7 @@ package com.mikeyphw.hooklab.ui;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.view.View;
+import android.widget.TextView;
 import com.google.android.material.R;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -36,17 +37,22 @@ public final class FlatUi {
         section.setStrokeWidth(0);
         section.setCardBackgroundColor(MaterialColors.getColor(section, R.attr.colorSurfaceContainer));
     }
+    /** Mark every native section title as a TalkBack-recognized heading. */
+    public static void sectionHeading(TextView title) {
+        if (title == null) throw new IllegalArgumentException("Missing section title");
+        title.setAccessibilityHeading(true);
+    }
     public static void button(MaterialButton action) {
         action.setElevation(0f);
         action.setStrokeWidth(0);
         action.setCornerRadius(dp(action, 12));
-        action.setMinHeight(dp(action, 48));
+        action.setMinHeight(dp(action, Ui08QualityPolicy.MIN_TOUCH_DP));
     }
     public static void chip(Chip chip) {
         chip.setChipStrokeWidth(0f);
         chip.setElevation(0f);
         chip.setEnsureMinTouchTargetSize(true);
-        chip.setChipMinHeight(dp(chip, 48));
+        chip.setChipMinHeight(dp(chip, Ui08QualityPolicy.MIN_TOUCH_DP));
     }
     public static void navigation(NavigationBarView nav) {
         nav.setBackgroundColor(MaterialColors.getColor(nav, R.attr.colorSurface));

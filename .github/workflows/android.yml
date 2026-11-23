@@ -44,6 +44,8 @@ jobs:
           test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
       - name: Validate source contract
         run: python3 -B scripts/check_contract.py
+      - name: Audit final UI accessibility, routing and privacy
+        run: python3 -B scripts/check_ui08_qa.py
       - name: Assemble, test and lint
         shell: bash
         # Only HTTP 429 dependency download failures receive up to 3 attempts.
