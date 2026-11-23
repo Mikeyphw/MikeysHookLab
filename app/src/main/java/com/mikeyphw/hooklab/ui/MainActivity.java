@@ -38,6 +38,7 @@ import com.mikeyphw.hooklab.R;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.HookGroupCatalog;
+import com.mikeyphw.hooklab.core.HookDetailRoute;
 import com.mikeyphw.hooklab.core.TweakEngine;
 import com.mikeyphw.hooklab.core.TweakCompatibility;
 import com.mikeyphw.hooklab.core.TweakSpec;
@@ -55,12 +56,15 @@ public final class MainActivity extends AppCompatActivity {
     private ScrollView scroll;
     private SharedPreferences appearance;
     private static final int HOME = 0, APPS = 1, DIAGNOSTICS = 2;
-    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6;
+    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7;
     private static final int MENU_SETTINGS = 100, MENU_SCOPE = 101, MENU_ABOUT = 102;
     private static final int NAV_HOME = 201, NAV_APPS = 202, NAV_DIAGNOSTICS = 203;
     private static final int THEME_AMOLED = 100;
     private int page;
+    private static final String ACTION_OPEN_HOOK = "com.mikeyphw.hooklab.action.OPEN_HOOK";
     private String selectedHookId;
+    private String selectedGroupId;
+    private int detailReturnPage = APPS;
     private static final String UI04_VIEW_KEY = "catalog.view";
     private static final String UI04_QUERY_KEY = "catalog.search";
     private static final String UI04_EXPANDED_GROUP_KEY = "catalog.expanded.group";
@@ -151,6 +155,7 @@ public final class MainActivity extends AppCompatActivity {
                         getString(R.string.ui_group_members,
                                 matches.size(), matchingPackages.size()));
                 card.addView(text(getString(R.string.ui_group_no_toggle), 12));
+                button(card, R.string.ui05_group_details, v -> showGroup(group));
                 boolean searching = !catalogQuery.trim().isEmpty();
                 boolean expanded = searching || group.id.equals(expandedGroupId);
                 if (!searching) button(card, expanded ? R.string.ui_catalog_collapse : R.string.ui_catalog_expand,
@@ -263,8 +268,12 @@ public final class MainActivity extends AppCompatActivity {
             catch (RuntimeException ignored) { /* Fallback to packaged Material 3 palette. */ }
         }
         stateStore = new FrameworkStateStore((HookLabApp) getApplication());
-        page = state == null ? HOME : Math.max(HOME, Math.min(APP_DETAIL, state.getInt("page")));
+        page = state == null ? HOME : Math.max(HOME, Math.min(GROUP_DETAIL, state.getInt("page")));
         selectedHookId = state == null ? null : state.getString("selectedHookId");
+        selectedGroupId = state == null ? null : state.getString("selectedGroupId");
+        detailReturnPage = state == null ? APPS : state.getInt("detailReturnPage", APPS);
+        if (detailReturnPage != APPS && detailReturnPage != HOME
+                && detailReturnPage != GROUP_DETAIL) detailReturnPage = APPS;
         // Migrate a pre-UI-04 activity state by package once; never use the
         // package as the permanent selection key (multiple hooks may share it).
         if (selectedHookId == null && state != null) {
@@ -282,7 +291,21 @@ public final class MainActivity extends AppCompatActivity {
         if (catalogQuery == null) catalogQuery = "";
         expandedGroupId = appearance.getString(UI04_EXPANDED_GROUP_KEY, null);
         expandedAppPackage = appearance.getString(UI04_EXPANDED_APP_KEY, null);
+        // Explicit-component deep link accepts only an exact registered hook ID.
+        if (state == null && getIntent() != null
+                && ACTION_OPEN_HOOK.equals(getIntent().getAction())) {
+            try {
+                String requested = getIntent().getStringExtra("hook_id");
+                if (HookDetailRoute.hook(TweakCatalog.all(), requested) != null) {
+                    selectedHookId = requested;
+                    detailReturnPage = APPS;
+                    page = APP_DETAIL;
+                }
+            } catch (RuntimeException ignored) { /* Reject malformed untrusted extras. */ }
+        }
+        if (page == GROUP_DETAIL && selectedGroup() == null) page = APPS;
         if (page == APP_DETAIL && selectedEntry() == null) page = APPS;
+        if (detailReturnPage == GROUP_DETAIL && selectedGroup() == null) detailReturnPage = APPS;
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         // DS-01: the same content/behavior on phone and tablet, with a native rail
         // on wide windows. Never tie navigation choices to hook preference writes.
@@ -365,7 +388,11 @@ public final class MainActivity extends AppCompatActivity {
         render();
     }
     private void navigateBack() {
-        goTo(page == APP_DETAIL ? APPS : HOME);
+        if (page == APP_DETAIL) {
+            int destination = detailReturnPage == GROUP_DETAIL && selectedGroup() == null
+                    ? APPS : detailReturnPage;
+            goTo(destination);
+        } else goTo(page == GROUP_DETAIL ? APPS : HOME);
     }
     private void goTo(int target) {
         if (target == page) return;
@@ -400,6 +427,8 @@ public final class MainActivity extends AppCompatActivity {
     }
     @Override protected void onSaveInstanceState(Bundle out) {
         out.putInt("page", page); out.putString("selectedHookId", selectedHookId);
+        out.putString("selectedGroupId", selectedGroupId);
+        out.putInt("detailReturnPage", detailReturnPage);
         super.onSaveInstanceState(out);
     }
     private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
@@ -452,10 +481,8 @@ public final class MainActivity extends AppCompatActivity {
         return ready(s) ? snapshot.scope : null;
     }
     private TweakEngine.Entry<HookContext> selectedEntry() {
-        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) {
-            if (entry.spec.id.equals(selectedHookId)) return entry;
-        }
-        return null;
+        TweakSpec verified = HookDetailRoute.hook(TweakCatalog.all(), selectedHookId);
+        return verified == null ? null : entryForId(verified.id);
     }
 
     /** Framework-observable configuration only; never assert that a hook ran. */
@@ -497,6 +524,8 @@ public final class MainActivity extends AppCompatActivity {
         return icon;
     }
     private void showApp(TweakEngine.Entry<HookContext> entry) {
+        if (entry == null || entryForId(entry.spec.id) == null) return;
+        detailReturnPage = page == GROUP_DETAIL ? GROUP_DETAIL : page == HOME ? HOME : APPS;
         selectedHookId = entry.spec.id;
         goTo(APP_DETAIL);
     }
@@ -512,6 +541,54 @@ public final class MainActivity extends AppCompatActivity {
     private void apps() {
         hooksCatalog();
     }
+
+
+
+    private HookGroupCatalog.Group selectedGroup() {
+        return HookDetailRoute.group(HookGroupCatalog.groups(TweakCatalog.all()), selectedGroupId);
+    }
+    private void showGroup(HookGroupCatalog.Group group) {
+        if (group == null || HookDetailRoute.group(
+                HookGroupCatalog.groups(TweakCatalog.all()), group.id) == null) return;
+        selectedGroupId = group.id;
+        goTo(GROUP_DETAIL); // Navigation only, never a group-wide preference write.
+    }
+    private void groupDetail() {
+        HookGroupCatalog.Group group = selectedGroup();
+        if (group == null) {
+            heading(R.string.ui_hooks);
+            card(getString(R.string.ui05_group_unavailable), getString(R.string.ui_status_caution));
+            return;
+        }
+        heading(R.string.ui05_group_setup);
+        card(groupName(group), group.description + "\n" + getString(R.string.ui_group_no_toggle));
+        XposedService expected = service();
+        Set<String> scope = scopedPackages(expected);
+        body.addView(text(getString(R.string.ui05_scope_targets), 22));
+        for (String pkg : group.packages) {
+            boolean approved = scope != null && scope.contains(pkg);
+            LinearLayout target = card(pkg,
+                    scope == null ? getString(R.string.ui_scope_unknown) :
+                    approved ? getString(R.string.ui_scope_approved) : getString(R.string.ui_scope_needed));
+            if (ready(expected) && scope != null) {
+                button(target, approved ? R.string.scope_remove : R.string.scope_add,
+                        v -> { if (approved) removeScope(expected, pkg);
+                               else requestScope(expected, pkg); })
+                        .setEnabled(!pendingScope.contains(pkg));
+            } else target.addView(text(getString(R.string.scope_unavailable), 14));
+        }
+        body.addView(text(getString(R.string.ui05_group_hooks), 22));
+        for (TweakSpec spec : group.members) {
+            TweakEngine.Entry<HookContext> entry = entryForId(spec.id);
+            if (entry == null) continue;
+            LinearLayout detail = card(entry.title,
+                    statusText(eligibility(spec, expected)));
+            detail.addView(text(spec.packageName, 14));
+            detail.addView(text(getString(R.string.ui05_independent_config), 14));
+            button(detail, R.string.ui05_open_hook, v -> showApp(entry));
+        }
+    }
+
     private void appDetail() {
         TweakEngine.Entry<HookContext> entry = selectedEntry();
         if (entry == null) { apps(); return; }
@@ -527,6 +604,32 @@ public final class MainActivity extends AppCompatActivity {
         overview.addView(text(getString(R.string.ui_current_status) + ": " +
                 statusText(eligibility(spec, s)), 16));
         overview.addView(text(getString(R.string.ui_status_caution), 14));
+        HookGroupCatalog.Group owningGroup = HookDetailRoute.groupForHook(
+                HookGroupCatalog.groups(TweakCatalog.all()), spec.id);
+        if (owningGroup != null) {
+            button(overview, R.string.ui05_group_details, v -> showGroup(owningGroup));
+        }
+        FrameworkSnapshot.Flag observedFlag = snapshot.flag(spec.id);
+        String versionText = observedFlag == null || observedFlag.installedVersion == null
+                ? getString(R.string.ui05_version_unknown)
+                : Long.toString(observedFlag.installedVersion);
+        LinearLayout safety = card(getString(R.string.ui05_hook_evidence),
+                getString(R.string.ui05_hook_identity, spec.id, spec.packageName) + "\n" +
+                getString(R.string.ui05_version_observed, versionText) + "\n" +
+                getString(R.string.ui05_main_process_only) + "\n" +
+                getString(R.string.ui_host_log_note));
+        if (observedFlag == null || observedFlag.locked == null || !ready(s)) {
+            safety.addView(text(getString(R.string.ui05_safety_unknown), 14));
+        } else {
+            boolean lock = observedFlag.locked;
+            safety.addView(text(getString(lock ? R.string.ui_safety_locked :
+                    R.string.diagnostics_unlocked), 14));
+            button(safety, lock ? R.string.diagnostics_reset_quarantine :
+                    R.string.diagnostics_enable_lock,
+                    v -> confirmSafetyLock(s, spec.id, !lock))
+                    .setEnabled(!pendingPreferences.contains("lock:" + spec.id));
+        }
+
 
         Set<String> scope = scopedPackages(s);
         boolean scoped = scope != null && scope.contains(spec.packageName);
@@ -546,7 +649,9 @@ public final class MainActivity extends AppCompatActivity {
         FrameworkSnapshot.Flag tweakFlag = snapshot.flag(spec.id);
         boolean available = ready(s) && tweakFlag != null && tweakFlag.enabled != null
                 && !pendingPreferences.contains(spec.id);
-        sw.setChecked(tweakFlag != null && Boolean.TRUE.equals(tweakFlag.enabled));
+        sw.setChecked(Boolean.TRUE.equals(tweakFlag == null ? null : tweakFlag.enabled));
+        sw.setVisibility(tweakFlag == null || tweakFlag.enabled == null
+                ? View.GONE : View.VISIBLE); // Unknown is not a false OFF state.
         sw.setEnabled(available);
         sw.setOnCheckedChangeListener((view, wanted) -> {
             sw.setEnabled(false);
@@ -759,7 +864,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private void render() {
         if (body == null) return;
-        int navId = page == APP_DETAIL || page == APPS ? NAV_APPS
+        int navId = page == APP_DETAIL || page == APPS || page == GROUP_DETAIL ? NAV_APPS
                 : page == DIAGNOSTICS ? NAV_DIAGNOSTICS : NAV_HOME;
         navigation.getMenu().findItem(navId).setChecked(true);
         boolean secondary = page >= SETTINGS;
@@ -775,6 +880,10 @@ public final class MainActivity extends AppCompatActivity {
             case SETTINGS: toolbar.setTitle(R.string.settings); break;
             case ABOUT: toolbar.setTitle(R.string.about); break;
             case SCOPE: toolbar.setTitle(R.string.scope); break;
+            case GROUP_DETAIL:
+                HookGroupCatalog.Group group = selectedGroup();
+                toolbar.setTitle(group == null ? getString(R.string.ui_hooks) : groupName(group));
+                break;
             case APP_DETAIL:
                 TweakEngine.Entry<HookContext> entry = selectedEntry();
                 toolbar.setTitle(entry == null ? getString(R.string.apps) : entry.title);
@@ -792,6 +901,7 @@ public final class MainActivity extends AppCompatActivity {
                 break;
             case SCOPE: scopePage(); break;
             case APP_DETAIL: appDetail(); break;
+            case GROUP_DETAIL: groupDetail(); break;
             default: home();
         }
     }
