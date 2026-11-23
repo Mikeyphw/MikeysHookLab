@@ -39,6 +39,7 @@ import com.mikeyphw.hooklab.core.TweakCompatibility;
 import com.mikeyphw.hooklab.core.TweakSpec;
 import com.mikeyphw.hooklab.mcc.MccIds;
 import com.mikeyphw.hooklab.mcc.MccControlActivity;
+import com.mikeyphw.hooklab.termux.TermuxBridgeActivity;
 import android.content.Intent;
 import io.github.libxposed.service.XposedService;
 import java.util.HashSet;
@@ -532,6 +533,31 @@ public final class MainActivity extends AppCompatActivity {
             appearanceCard.addView(text(getString(R.string.ui_dynamic_colors_detail), 14));
         }
         verboseLogging();
+        LinearLayout terminalBridge = card(getString(R.string.termux_bridge_title),
+                getString(R.string.termux_bridge_settings_summary));
+        button(terminalBridge, R.string.termux_bridge_open,
+                v -> startActivity(new Intent(this, TermuxBridgeActivity.class)));
+        android.content.ComponentName shareAlias = new android.content.ComponentName(
+                this, "com.mikeyphw.hooklab.termux.TermuxShareTarget");
+        android.content.pm.PackageManager pm = getPackageManager();
+        MaterialSwitch shareSwitch = new MaterialSwitch(this);
+        shareSwitch.setText(R.string.termux_bridge_enabled);
+        shareSwitch.setChecked(pm.getComponentEnabledSetting(shareAlias)
+                != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
+        shareSwitch.setOnCheckedChangeListener((view, enabled) -> {
+            try {
+                pm.setComponentEnabledSetting(shareAlias,
+                        enabled ? android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                                : android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        android.content.pm.PackageManager.DONT_KILL_APP);
+                toast(R.string.termux_bridge_saved);
+            } catch (RuntimeException error) {
+                shareSwitch.setOnCheckedChangeListener(null);
+                shareSwitch.setChecked(!enabled);
+                toast(R.string.termux_bridge_setting_failed);
+            }
+        });
+        terminalBridge.addView(shareSwitch, new ViewGroup.LayoutParams(-1, -2));
     }
     private void render() {
         if (body == null) return;

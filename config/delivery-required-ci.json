@@ -1,0 +1,13 @@
+{
+  "base_branch": "main",
+  "event": "pull_request",
+  "release_qualification": "separate",
+  "repository": "Mikeyphw/MikeysHookLab",
+  "required_workflows": [
+    {
+      "name": "HookLab Android CI",
+      "workflow_id": 425729236
+    }
+  ],
+  "schema_version": 1
+}

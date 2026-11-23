@@ -35,7 +35,7 @@
     <string name="system_theme">Follow system</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
-    <string name="about_detail">Version 0.6.1 • Modern Xposed API 102\nMCC manual diamonds, Neo Store and Droid-ify ObtainX actions. No auto refill or VIP/ad hooks.</string>
+    <string name="about_detail">Version 0.7.0 • Modern Xposed API 102\nMCC manual diamonds, Neo Store and Droid-ify ObtainX actions. No auto refill or VIP/ad hooks.</string>
     <string name="registered_count">%1$d registered tweaks</string>
     <string name="diagnostics">Diagnostics</string>
     <string name="diagnostics_disconnected">Framework diagnostics are unavailable until the API 102 service connects.</string>
@@ -93,4 +93,31 @@
     <string name="ui_dynamic_colors">Material You colors</string>
     <string name="ui_dynamic_colors_detail">Use wallpaper-derived colors on Android 12+. AMOLED black keeps its dedicated palette.</string>
     <string name="ui_saving">Saving preference in LSPosed…</string>
+    <string name="termux_bridge_title">Termux command bridge</string>
+    <string name="termux_share_label">HookLab · Run in Termux</string>
+    <string name="termux_bridge_open">Open command bridge</string>
+    <string name="termux_bridge_enabled">Show Run in Termux in Android Share</string>
+    <string name="termux_bridge_saved">Share-target setting saved.</string>
+    <string name="termux_bridge_setting_failed">Could not change Android share-target setting.</string>
+    <string name="termux_bridge_settings_summary">Share commands from other apps, or paste from the clipboard; no LSPosed hooks needed.</string>
+    <string name="termux_bridge_intro">Review and edit the command before executing it in a new foreground Termux Zsh session.</string>
+    <string name="termux_bridge_commands">Commands (multiline)</string>
+    <string name="termux_bridge_paste">Paste from clipboard</string>
+    <string name="termux_bridge_workdir">Working directory inside Termux home</string>
+    <string name="termux_bridge_save_workdir">Save working directory</string>
+    <string name="termux_bridge_setup">Setup: install Zsh in Termux. Enable allow-external-apps=true in ~/.termux/termux.properties and grant HookLab the Run commands in Termux environment permission. These settings are never changed automatically.</string>
+    <string name="termux_bridge_idle">Waiting for a shared command or a clipboard paste. Nothing runs automatically.</string>
+    <string name="termux_bridge_ready">Command loaded for review. Nothing has executed.</string>
+    <string name="termux_bridge_bad_share">Could not read the shared text; no command was executed.</string>
+    <string name="termux_bridge_no_clipboard">No readable clipboard text.</string>
+    <string name="termux_bridge_workdir_saved">Working directory saved.</string>
+    <string name="termux_bridge_run">Run in Termux…</string>
+    <string name="termux_bridge_confirm_title">Execute this command?</string>
+    <string name="termux_bridge_confirm_message">Execute the exact reviewed command in a new foreground Termux Zsh session? This may change files and accounts. No root or background execution is added by HookLab.</string>
+    <string name="termux_bridge_execute">Execute</string>
+    <string name="termux_bridge_missing_termux">Termux (com.termux) is not installed or visible.</string>
+    <string name="termux_bridge_permission_needed">Grant HookLab the Run commands in Termux environment permission in Android App settings. After granting, review and tap Run again.</string>
+    <string name="termux_bridge_granted_retry">Permission granted; review and tap Run again. Nothing executed.</string>
+    <string name="termux_bridge_start_failed">Could not dispatch to Termux. Check permissions, Termux installation and allow-external-apps=true.</string>
+    <string name="termux_bridge_dispatched">Dispatch requested. Check the Termux terminal; completion and exit status are not yet verified.</string>
 </resources>

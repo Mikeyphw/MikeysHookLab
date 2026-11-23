@@ -12,7 +12,7 @@ ns = "{http://schemas.android.com/apk/res/android}"
 root = ET.fromstring(read("app/src/main/AndroidManifest.xml"))
 actual = [x.get(ns + "name") for x in root.findall("./queries/package")]
 assert actual == ["br.art.code.meucronogramacapilar", "com.machiav3lli.fdroid",
-                  "com.looker.droidify", "com.fugo.wowsolitaire", "dev.bikram.obtainx"]
+                  "com.looker.droidify", "com.fugo.wowsolitaire", "dev.bikram.obtainx", "com.termux"]
 assert [x.text for x in []] == []
 assert read("app/src/main/resources/META-INF/xposed/scope.list").splitlines() == [
     "br.art.code.meucronogramacapilar", "com.machiav3lli.fdroid",
@@ -44,7 +44,7 @@ assert 'WordMasterNightHook.VERSION_CODE, WordMasterNightHook.VERSION_CODE' in c
 assert 'Night filter' in catalog and 'Unity' in catalog
 assert 'dev.bikram.obtainx' not in catalog
 assert 'staticScope=false' in read("app/src/main/resources/META-INF/xposed/module.prop")
-assert not root.findall("uses-permission")
+assert [p.get(ns + "name") for p in root.findall("uses-permission")] == ["com.termux.permission.RUN_COMMAND"]
 test = read("app/src/test/java/com/mikeyphw/hooklab/wordmaster/WordMasterNightHookTest.java")
 assert test.count("@Test") >= 3 and 'acceptsExactApk' in test and 'refusesNewerOrOlderBuilds' in test
 print("HOOKLAB_WM01_SOURCE_CONTRACT_PASS", flush=True)
