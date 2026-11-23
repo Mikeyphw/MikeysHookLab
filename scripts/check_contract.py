@@ -388,3 +388,39 @@ check('public boolean executionVerified(){return false;}' in health_model
       and 'NO_EXACT_HOOK_ASSOCIATION' in health_model
       and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/HookHealthModelTest.java').is_file(),
       'DX-03 no claimed ACTIVE status and Java negative evidence regressions')
+
+# UI-07: unified native settings/scope/help/MCC, truthful identities and
+# single-flight manual root. Existing remote store/permissions remain unchanged.
+ui07_scope=read('app/src/main/java/com/mikeyphw/hooklab/ui/Ui07ScopeModel.java')
+ui07_main=read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+ui07_mcc=read('app/src/main/java/com/mikeyphw/hooklab/mcc/MccControlActivity.java')
+ui07_work=read('app/src/main/java/com/mikeyphw/hooklab/mcc/MccManualOperation.java')
+ui07_identity=read('app/src/main/java/com/mikeyphw/hooklab/ui/Ui07Identity.java')
+check('Ui07ScopeModel.project(TweakCatalog.all()' in ui07_main
+      and 'ready(expected),scopedPackages(expected),pendingScope' in ui07_main
+      and 'row.canRequest()' in ui07_main and 'row.canRemove()' in ui07_main
+      and 'removeScope(expected,row.packageName)' in ui07_main
+      and 'State.SCOPE_UNKNOWN' in ui07_scope and 'State.PENDING' in ui07_scope,
+      'UI-07 P01 framework-authoritative deduped scope with permission denial')
+check('MccManualOperation.shared().start(readOnly,work)' in ui07_mcc
+      and 'setPositiveButton("Set to 9"' in ui07_mcc
+      and 'MccRefillWorker.inspect(appContext)' in ui07_mcc
+      and 'MccRefillWorker.setNine(appContext)' in ui07_mcc
+      and 'if(snapshot.stage==Stage.RUNNING)return false;' in ui07_work
+      and 'removeListener(operationObserver)' in ui07_mcc,
+      'UI-07 P02 MCC manual confirmation and cross-rotation single-flight worker')
+check('getPackageInfo(' in ui07_main and 'GET_SIGNING_CERTIFICATES' in ui07_main
+      and 'getApkContentsSigners()' in ui07_main and 'Ui07Identity.signerFingerprint' in ui07_main
+      and 'getString(R.string.ui07_privacy_note)' in ui07_main
+      and 'getString(R.string.ui07_help_logs_body)' in ui07_main
+      and 'MessageDigest.getInstance("SHA-256")' in ui07_identity,
+      'UI-07 P03 runtime app identity, signing fingerprint, privacy and native Help')
+check('case HELP: helpPage(); break;' in ui07_main
+      and 'out.putInt("page", page)' in ui07_main
+      and 'Math.min(HELP, state.getInt("page"))' in ui07_main
+      and 'out.putInt("helpReturnPage", helpReturnPage)' in ui07_main
+      and 'status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE)' in ui07_mcc
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui07ScopeModelTest.java').is_file()
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui07IdentityTest.java').is_file()
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccManualOperationTest.java').is_file(),
+      'UI-07 P04 restoration, accessible manual status and Java regression tests')

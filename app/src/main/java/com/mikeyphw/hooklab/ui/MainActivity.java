@@ -36,6 +36,8 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textview.MaterialTextView;
 import com.mikeyphw.hooklab.HookLabApp;
 import com.mikeyphw.hooklab.R;
+import com.mikeyphw.hooklab.ui.Ui07ScopeModel;
+import com.mikeyphw.hooklab.ui.Ui07Identity;
 import com.mikeyphw.hooklab.ui.HookHealthModel;
 import com.mikeyphw.hooklab.diagnostics.CaptureSession;
 import com.mikeyphw.hooklab.ui.HomeDashboardModel;
@@ -60,13 +62,14 @@ public final class MainActivity extends AppCompatActivity {
     private ScrollView scroll;
     private SharedPreferences appearance;
     private static final int HOME = 0, APPS = 1, DIAGNOSTICS = 2;
-    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7, CAPTURE = 8;
+    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7, CAPTURE = 8, HELP = 9;
     private static final int MENU_SETTINGS = 100, MENU_SCOPE = 101, MENU_ABOUT = 102;
     private static final int NAV_HOME = 201, NAV_APPS = 202, NAV_DIAGNOSTICS = 203;
     private static final int THEME_AMOLED = 100;
     private int page;
     private static final String ACTION_OPEN_HOOK = "com.mikeyphw.hooklab.action.OPEN_HOOK";
     private String selectedHookId;
+    private int helpReturnPage=SETTINGS;
     private String healthFocusHookId;
     private String selectedGroupId;
     private int detailReturnPage = APPS;
@@ -618,8 +621,10 @@ public final class MainActivity extends AppCompatActivity {
             catch (RuntimeException ignored) { /* Fallback to packaged Material 3 palette. */ }
         }
         stateStore = new FrameworkStateStore((HookLabApp) getApplication());
-        page = state == null ? HOME : Math.max(HOME, Math.min(CAPTURE, state.getInt("page")));
+        page = state == null ? HOME : Math.max(HOME, Math.min(HELP, state.getInt("page")));
         selectedHookId = state == null ? null : state.getString("selectedHookId");
+        helpReturnPage = state == null ? SETTINGS : state.getInt("helpReturnPage", SETTINGS);
+        if(helpReturnPage != SETTINGS && helpReturnPage != SCOPE && helpReturnPage != ABOUT) helpReturnPage=SETTINGS;
         healthFocusHookId = state == null ? null : state.getString("healthFocusHookId");
         if(healthFocusHookId!=null){
             if(HookDetailRoute.hook(TweakCatalog.all(),healthFocusHookId)!=null)
@@ -745,6 +750,7 @@ public final class MainActivity extends AppCompatActivity {
         render();
     }
     private void navigateBack() {
+        if(page==HELP){goTo(helpReturnPage);return;}
         if (page == APP_DETAIL) {
             int destination = detailReturnPage == GROUP_DETAIL && selectedGroup() == null
                     ? APPS : detailReturnPage;
@@ -787,6 +793,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     @Override protected void onSaveInstanceState(Bundle out) {
         out.putInt("page", page); out.putString("selectedHookId", selectedHookId);
+        out.putInt("helpReturnPage", helpReturnPage);
         out.putString("healthFocusHookId", healthFocusHookId);
         out.putString("selectedGroupId", selectedGroupId);
         out.putInt("detailReturnPage", detailReturnPage);
@@ -1113,24 +1120,47 @@ public final class MainActivity extends AppCompatActivity {
                     });
                 }).show();
     }
+    private String scopeRowStatus(Ui07ScopeModel.State state){
+        switch(state){
+            case APPROVED:return getString(R.string.ui_scope_approved);
+            case NEEDS_APPROVAL:return getString(R.string.ui_scope_needed);
+            case PENDING:return getString(R.string.ui_saving);
+            case FRAMEWORK_UNAVAILABLE:return getString(R.string.scope_unavailable);
+            default:return getString(R.string.ui_scope_unknown);
+        }
+    }
+    /** UI-07 uses only the immutable framework snapshot; never infer missing scope. */
     private void scopePage() {
         heading(R.string.scope);
-        XposedService s = service();
-        if (!ready(s)) { card(getString(R.string.status), getString(R.string.scope_unavailable)); return; }
-        Set<String> current = scopedPackages(s);
-        if (current == null) { card(getString(R.string.scope), getString(R.string.scope_unavailable)); return; }
-        if (current.isEmpty()) card(getString(R.string.scope), getString(R.string.scope_empty));
-        for (String pkg : current) card(getString(R.string.scope_entry, pkg), getString(R.string.scope_approval));
-        Set<String> listedPackages = new HashSet<>();
-        for (TweakSpec spec : TweakCatalog.all()) {
-            if (!listedPackages.add(spec.packageName)) continue;
-            boolean present = current.contains(spec.packageName);
-            LinearLayout inner = card(spec.packageName, getString(R.string.scope_approval));
-            button(inner, present ? R.string.scope_remove : R.string.scope_add,
-                    v -> { if (present) removeScope(s, spec.packageName);
-                           else requestScope(s, spec.packageName); })
-                    .setEnabled(!pendingScope.contains(spec.packageName));
+        XposedService expected=service();
+        Ui07ScopeModel.Listing listing=Ui07ScopeModel.project(TweakCatalog.all(),
+                ready(expected),scopedPackages(expected),pendingScope);
+        LinearLayout summary=card(getString(R.string.ui07_scope_heading),
+                getString(R.string.ui07_scope_summary,
+                listing.targets.size(),listing.reviewedApproved<0?getString(R.string.ui_unknown):
+                    Integer.toString(listing.reviewedApproved)));
+        summary.addView(text(getString(R.string.ui07_scope_warning),14));
+        if(listing.otherApproved>0)
+            summary.addView(text(getString(R.string.ui07_scope_other,listing.otherApproved),14));
+        if(!ready(expected) || listing.reviewedApproved<0){
+            summary.addView(text(getString(R.string.ui07_scope_connection_help),14));
+            button(summary,R.string.ui07_open_help,v -> openHelp());
         }
+        for(Ui07ScopeModel.Row row:listing.targets){
+            LinearLayout target=card(row.packageName,scopeRowStatus(row.state));
+            if(row.canRequest()){
+                button(target,R.string.scope_add,v -> requestScope(expected,row.packageName));
+            } else if(row.canRemove()){
+                // The existing removeScope() confirmation is never bypassed.
+                button(target,R.string.scope_remove,v -> removeScope(expected,row.packageName));
+            }
+            if(row.state==Ui07ScopeModel.State.PENDING)
+                target.addView(text(getString(R.string.ui_saving),14));
+        }
+        LinearLayout next=card(getString(R.string.ui07_next_steps),
+                getString(R.string.ui_restart_target));
+        button(next,R.string.ui07_open_hooks,v -> goTo(APPS));
+        button(next,R.string.ui07_open_help,v -> openHelp());
     }
     /** Framework-truth diagnostics. Per-process events live only in Xposed logs. */
     /** DX-03: immutable framework truth plus sanitized imported evidence only. */
@@ -1311,31 +1341,86 @@ public final class MainActivity extends AppCompatActivity {
             toast(success ? R.string.verbose_lsposed_saved : R.string.tweak_failed);
         });
     }
+    /** UI-07: installed-package and signer identity, not compile-time claims. */
+    private void aboutPage(){
+        heading(R.string.about);
+        String version=getString(R.string.ui07_identity_unavailable);
+        String signer=getString(R.string.ui07_identity_unavailable);
+        try{
+            android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(
+                    getPackageName(),android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+            version=Ui07Identity.versionDisplay(info.versionName,info.getLongVersionCode());
+            if(info.signingInfo!=null){
+                android.content.pm.Signature[] certificates=info.signingInfo.getApkContentsSigners();
+                if(certificates!=null && certificates.length==1){
+                    String digest=Ui07Identity.signerFingerprint(certificates[0].toByteArray());
+                    if(!digest.isEmpty())signer=digest;
+                }
+            }
+        }catch(android.content.pm.PackageManager.NameNotFoundException | RuntimeException error){
+            // Missing identity is not reported as verification success.
+        }
+        LinearLayout identity=card(getString(R.string.ui07_about_identity),
+                getString(R.string.ui07_app_identity,getPackageName(),version));
+        identity.addView(text(getString(R.string.ui07_signer_fingerprint,signer),14));
+        card(getString(R.string.ui07_framework_contract),
+                getString(R.string.ui07_framework_help,connection(service())));
+        card(getString(R.string.ui07_privacy_heading),getString(R.string.ui07_privacy_note));
+        LinearLayout next=card(getString(R.string.ui07_next_steps),
+                getString(R.string.ui07_about_limitations));
+        button(next,R.string.ui07_open_help,v -> openHelp());
+        button(next,R.string.ui07_open_diagnostics,v -> goTo(DIAGNOSTICS));
+    }
+    private void openHelp(){
+        helpReturnPage=page==HELP?SETTINGS:page;
+        goTo(HELP);
+    }
+    private void helpPage(){
+        heading(R.string.ui07_help_title);
+        card(getString(R.string.ui07_help_setup_title),getString(R.string.ui07_help_setup_body));
+        card(getString(R.string.ui07_help_scope_title),getString(R.string.ui07_help_scope_body));
+        card(getString(R.string.ui07_help_mcc_title),getString(R.string.ui07_help_mcc_body));
+        card(getString(R.string.ui07_help_logs_title),getString(R.string.ui07_help_logs_body));
+        card(getString(R.string.ui07_help_privacy_title),getString(R.string.ui07_help_privacy_body));
+        LinearLayout actions=card(getString(R.string.ui07_next_steps),getString(R.string.ui07_help_action_warning));
+        button(actions,R.string.ui07_open_hooks,v -> goTo(APPS));
+        button(actions,R.string.ui07_open_scope,v -> goTo(SCOPE));
+        button(actions,R.string.ui07_open_diagnostics,v -> goTo(DIAGNOSTICS));
+    }
     private void settings() {
         heading(R.string.settings);
-        LinearLayout appearanceCard = card(getString(R.string.appearance),
+        LinearLayout appearanceCard=card(getString(R.string.appearance),
                 getString(R.string.ui_theme_description));
-        ChipGroup themes = new ChipGroup(this);
+        ChipGroup themes=new ChipGroup(this);
         themes.setSingleSelection(true);
-        int current = appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        themeChip(themes, R.string.system_theme, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, current);
-        themeChip(themes, R.string.light_theme, AppCompatDelegate.MODE_NIGHT_NO, current);
-        themeChip(themes, R.string.dark_theme, AppCompatDelegate.MODE_NIGHT_YES, current);
-        themeChip(themes, R.string.ui_amoled_theme, THEME_AMOLED, current);
+        int current=appearance.getInt("night",AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        themeChip(themes,R.string.system_theme,AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,current);
+        themeChip(themes,R.string.light_theme,AppCompatDelegate.MODE_NIGHT_NO,current);
+        themeChip(themes,R.string.dark_theme,AppCompatDelegate.MODE_NIGHT_YES,current);
+        themeChip(themes,R.string.ui_amoled_theme,THEME_AMOLED,current);
         appearanceCard.addView(themes);
-        if (Build.VERSION.SDK_INT >= 31) {
-            MaterialSwitch dynamic = new MaterialSwitch(this);
+        appearanceCard.addView(text(getString(R.string.ui07_appearance_scope),14));
+        if(Build.VERSION.SDK_INT>=31){
+            MaterialSwitch dynamic=new MaterialSwitch(this);
             dynamic.setText(R.string.ui_dynamic_colors);
-            dynamic.setChecked(appearance.getBoolean("dynamicColors", true));
-            dynamic.setEnabled(current != THEME_AMOLED);
-            dynamic.setOnCheckedChangeListener((view, wanted) -> {
-                appearance.edit().putBoolean("dynamicColors", wanted).apply();
+            dynamic.setChecked(appearance.getBoolean("dynamicColors",true));
+            dynamic.setEnabled(current!=THEME_AMOLED);
+            dynamic.setOnCheckedChangeListener((view,wanted)->{
+                appearance.edit().putBoolean("dynamicColors",wanted).apply();
                 recreate();
             });
             appearanceCard.addView(dynamic);
-            appearanceCard.addView(text(getString(R.string.ui_dynamic_colors_detail), 14));
+            appearanceCard.addView(text(getString(R.string.ui_dynamic_colors_detail),14));
         }
-        verboseLogging();
+        LinearLayout framework=card(getString(R.string.ui07_framework_section),
+                connection(service())+"\n"+getString(R.string.ui07_framework_warning));
+        button(framework,R.string.ui07_open_scope,v -> goTo(SCOPE));
+        button(framework,R.string.ui07_open_hooks,v -> goTo(APPS));
+        verboseLogging(); // Existing framework-owned preference + verified commit/readback.
+        LinearLayout support=card(getString(R.string.ui07_help_title),
+                getString(R.string.ui07_settings_support));
+        button(support,R.string.ui07_open_help,v -> openHelp());
+        button(support,R.string.about,v -> goTo(ABOUT));
     }
     private void render() {
         if (body == null) return;
@@ -1356,6 +1441,7 @@ public final class MainActivity extends AppCompatActivity {
             case SETTINGS: toolbar.setTitle(R.string.settings); break;
             case ABOUT: toolbar.setTitle(R.string.about); break;
             case SCOPE: toolbar.setTitle(R.string.scope); break;
+            case HELP: toolbar.setTitle(R.string.ui07_help_title); break;
             case GROUP_DETAIL:
                 HookGroupCatalog.Group group = selectedGroup();
                 toolbar.setTitle(group == null ? getString(R.string.ui_hooks) : groupName(group));
@@ -1372,10 +1458,8 @@ public final class MainActivity extends AppCompatActivity {
             case DIAGNOSTICS: diagnosticsPage(); break;
             case CAPTURE: capturePage(); break;
             case SETTINGS: settings(); break;
-            case ABOUT:
-                heading(R.string.about);
-                card(getString(R.string.app_name), getString(R.string.about_detail));
-                break;
+            case ABOUT: aboutPage(); break;
+            case HELP: helpPage(); break;
             case SCOPE: scopePage(); break;
             case APP_DETAIL: appDetail(); break;
             case GROUP_DETAIL: groupDetail(); break;
