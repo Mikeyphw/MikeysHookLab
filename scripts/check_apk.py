@@ -12,6 +12,7 @@ EXPECTED_SCOPE = (
     b"com.machiav3lli.fdroid\n"
     b"com.looker.droidify\n"
     b"com.fugo.wowsolitaire\n"
+    b"com.openai.chatgpt\n"
 )
 EXPECTED_PROPS = {
     "minApiVersion": "102",

@@ -71,6 +71,21 @@ ensure the framework has delivered updated preferences. No logging is enabled
 if API 102 service or preferences are unavailable.
 
 
+## CGT01-P02 — ChatGPT 1.2026.314: read-only Copy parity diagnostic (candidate)
+
+An independent, default-off API 102 probe is available for exactly `com.openai.chatgpt`
+versionName `1.2026.314` / versionCode `2631431`. After explicit LSPosed scope approval
+and enabling the tweak in HookLab, it observes the statically verified `p4l.a`
+Compose CodeBlockImpl renderer and Android `ClipboardManager.setPrimaryClip` in the
+ChatGPT process. Values are compared using an ephemeral process-local HMAC. Persistent
+logs contain only a truncated *keyed* token, byte/line-ending counts, and a truthfully
+qualified `MATCH_VALUE_ONLY` result; no source code is logged or retained. It does not
+alter the clipboard, show buttons, launch Termux, or execute commands. Matching a
+clipboard value does **not** prove which identical code block was tapped or that the
+Copy action originated from the corresponding renderer. Valdi/DIL coverage and device
+acceptance are pending. Hosted CI owns all Gradle build/test/lint tasks. See
+`docs/CGT01_CODEBLOCK_PROBE.md` for negative paths and device test protocol.
+
 ## WM01 — Word Master 0.6.10: opt-in night filter (experimental)
 
 A fourth, independent API 102 integration targets exactly

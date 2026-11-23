@@ -22,8 +22,8 @@ query_list = root.findall('queries')
 check(len(query_list)==1 and all(x.tag=='package' for x in query_list[0])
       and [x.get(ns+'name') for x in query_list[0]]==[
           'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
-          'com.looker.droidify','com.fugo.wowsolitaire','dev.bikram.obtainx'],
-      'exact MCC/Neo Store/Droid-ify/Word Master/ObtainX package visibility only')
+          'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx'],
+      'exact MCC/Neo Store/Droid-ify/Word Master/ChatGPT/ObtainX visibility only')
 check(app.get(ns+'allowBackup')=='false' and app.get(ns+'name')=='.HookLabApp', 'lifecycle application')
 act = app.findall('activity')
 check(len(act)==2 and
@@ -67,7 +67,7 @@ meta = r/'app/src/main/resources/META-INF/xposed'
 check((meta/'java_init.list').read_text().strip()=='com.mikeyphw.hooklab.hook.HookLabModule'
       and (meta/'scope.list').read_text(encoding='utf-8').splitlines()==[
           'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
-          'com.looker.droidify','com.fugo.wowsolitaire'],
+          'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt'],
       'modern entry identity and exact recommended host scope')
 check((meta/'module.prop').read_text().splitlines()==[
       'minApiVersion=102','targetApiVersion=102','staticScope=false',
@@ -204,7 +204,7 @@ check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in ca
       'legacy automatic process cannot install or navigate')
 check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
       'module companion control and unverified-version notice')
-check('versionCode 8' in build and "versionName '0.6.1'" in build,
+check('versionCode 9' in build and "versionName '0.7.0'" in build,
       'bump versionCode for stable signing updates')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.java').is_file()
       and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccRefillCommandTest.java').is_file(),
@@ -233,6 +233,7 @@ subprocess.run(['python3','-B',str(r/'scripts/test_signing.py')],check=True)
 
 # WM01: new Unity night appearance remains opt-in and scene-level proof requires device.
 subprocess.run(['python3','-B',str(r/'scripts/check_wordmaster_contract.py')],check=True)
+subprocess.run(['python3','-B',str(r/'scripts/check_cgt01_probe_contract.py')],check=True)
 
 # MCC source/negative tests run in CI. APK binary is independently verified off-CI.
 subprocess.run(['python3','-B',str(r/'scripts/check_mcc_apk_contract.py')],check=True)

@@ -35,7 +35,7 @@
     <string name="system_theme">Follow system</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
-    <string name="about_detail">Version 0.6.1 • Modern Xposed API 102\nMCC manual diamonds, Neo Store and Droid-ify ObtainX actions. No auto refill or VIP/ad hooks.</string>
+    <string name="about_detail">Version 0.7.0 • Modern Xposed API 102\nMCC, ObtainX, Word Master and opt-in ChatGPT code-block diagnostics. No auto refill or VIP/ad hooks.</string>
     <string name="registered_count">%1$d registered tweaks</string>
     <string name="diagnostics">Diagnostics</string>
     <string name="diagnostics_disconnected">Framework diagnostics are unavailable until the API 102 service connects.</string>

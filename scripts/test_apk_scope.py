@@ -51,6 +51,9 @@ class ApkScopeContractTest(unittest.TestCase):
                           b"com.machiav3lli.fdroid\n" +
                           b"br.art.code.meucronogramacapilar\n")
 
+    def test_missing_chatgpt_refused(self):
+        self.reject(scope=EXPECTED_SCOPE.replace(b"com.openai.chatgpt\n", b""))
+
     def test_missing_word_master_refused(self):
         self.reject(scope=EXPECTED_SCOPE.replace(b"com.fugo.wowsolitaire\n", b""))
 

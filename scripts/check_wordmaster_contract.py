@@ -12,11 +12,11 @@ ns = "{http://schemas.android.com/apk/res/android}"
 root = ET.fromstring(read("app/src/main/AndroidManifest.xml"))
 actual = [x.get(ns + "name") for x in root.findall("./queries/package")]
 assert actual == ["br.art.code.meucronogramacapilar", "com.machiav3lli.fdroid",
-                  "com.looker.droidify", "com.fugo.wowsolitaire", "dev.bikram.obtainx"]
+                  "com.looker.droidify", "com.fugo.wowsolitaire", "com.openai.chatgpt", "dev.bikram.obtainx"]
 assert [x.text for x in []] == []
 assert read("app/src/main/resources/META-INF/xposed/scope.list").splitlines() == [
     "br.art.code.meucronogramacapilar", "com.machiav3lli.fdroid",
-    "com.looker.droidify", "com.fugo.wowsolitaire"]
+    "com.looker.droidify", "com.fugo.wowsolitaire", "com.openai.chatgpt"]
 for expected in (
     'PACKAGE = "com.fugo.wowsolitaire"', 'VERSION_NAME = "0.6.10"',
     'VERSION_CODE = 56240403L', 'TWEAK_ID = "wordmaster.night.filter"',
