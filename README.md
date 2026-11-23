@@ -86,6 +86,21 @@ Copy action originated from the corresponding renderer. Valdi/DIL coverage and d
 acceptance are pending. Hosted CI owns all Gradle build/test/lint tasks. See
 `docs/CGT01_CODEBLOCK_PROBE.md` for negative paths and device test protocol.
 
+## CGT01-P03 — Read-only native code-block callback identity (source candidate)
+
+P03 extends the opt-in CGT01-P02 probe without changing its tweak key or
+original clipboard value-parity logging. It observes the actual `Function0`
+callback objects passed into the pinned `p4l.a` native renderer (parameter
+positions 10 and 14), correlating synchronous clipboard writes with the
+callback object's source fingerprint and ephemeral binding ID. Neither
+parameter is assumed to be Copy until verified on the device. Shared or
+reused callback objects are rejected as ambiguous; identical code values
+from different callback objects remain distinct. No Android Share action,
+Termux execution, root use or raw conversation logging is introduced.
+
+Only native Compose is instrumented; Valdi/DIL/preview paths and visual block
+identity are still unverified. See `docs/CGT01_CODEBLOCK_PROBE.md`.
+
 ## WM01 — Word Master 0.6.10: opt-in night filter (experimental)
 
 A fourth, independent API 102 integration targets exactly

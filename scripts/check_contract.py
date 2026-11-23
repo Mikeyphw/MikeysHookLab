@@ -204,7 +204,7 @@ check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in ca
       'legacy automatic process cannot install or navigate')
 check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
       'module companion control and unverified-version notice')
-check('versionCode 9' in build and "versionName '0.7.0'" in build,
+check('versionCode 10' in build and "versionName '0.7.1'" in build,
       'bump versionCode for stable signing updates')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.java').is_file()
       and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccRefillCommandTest.java').is_file(),

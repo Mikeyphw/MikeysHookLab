@@ -31,3 +31,46 @@ This **does not yet prove a particular block was selected**. More precise diagno
 ## No local Gradle
 
 Devtool-native validation must be **Python source-only**, with `restore/build/test=false`, a verified source-check script and no Android Gradle `tasks`. All Android Gradle tasks execute in hosted GitHub Actions. No local Gradle invocation is allowed, including indirect Devtool invocation.
+
+
+## P03 — Action-callback object identity (unaccepted source candidate)
+
+P03 retains P02's value-only logs and adds an independent process-local `CodeBlockActionMatcher`.
+The renderer's two candidate `Function0` arguments (ordinal 10 and 14) are bound
+by **object identity** to the renderer's second String. It hooks the concrete
+zero-argument `invoke()` method of each verified candidate class, limited to
+24 callback classes in the ChatGPT main process. It does not globally hook all
+Kotlin `Function0` invocations or alter their return values or call order.
+
+During a synchronous callback invocation, clipboard writes are checked against
+that specific callback binding. `CGT01_ACTION_CALLBACK_INVOKED role=N binding_id=M`
+is a callback observation only, **not yet proof it is the Copy button**.
+`CGT01_ACTION_COPY_BOUND_VALUE_MATCH` means an exact clipboard text match occurred
+on the same thread inside the bound callback; `visual_block_identity=UNVERIFIED`
+remains explicit until UI tap → renderer block identity is independently shown.
+`CGT01_ACTION_SHARED_CALLBACK_AMBIGUOUS` refuses a callback reused for multiple
+roles or source strings. `CGT01_ACTION_COPY_VALUE_MISMATCH` never authorizes a block.
+Asynchronous clipboard writes have no active callback and cannot be accepted.
+
+Privacy: only process-local, per-installation keyed HMACs and bounded metadata are
+recorded; no raw code, conversation IDs, shell execution or Termux dispatch.
+The separate Valdi `onCopyCode` and DIL action UI remain unverified.
+
+### P03 mandatory runtime tests
+
+1. Confirm `CGT01_PROBE_INSTALLED` on the exact build after explicit opt-in.
+2. Tap Copy on adjacent distinct blocks, separately: collect the paired
+   `CGT01_ACTION_CALLBACK_INVOKED` and `CGT01_ACTION_COPY_BOUND_VALUE_MATCH`.
+3. Tap Copy on two identical blocks, separately; require two distinct binding
+   identities when the app exposes different callback instances. A shared
+   instance is AMBIGUOUS and fails closed.
+4. Repeat after scrolling, streaming, recomposition, theme switch and app restart.
+5. Copy unrelated non-code text: no `ACTION_COPY_BOUND_VALUE_MATCH` may appear.
+6. Check no Host process crash, clipboard mutation or raw code in logs.
+7. Check ordinary Valdi, native Compose, DIL and preview independently. The
+   only instrumented path is currently native `p4l.a`; no claim of full coverage.
+
+**Acceptance: PENDING.** Static evidence supports the two candidate callbacks,
+but a real Android/LSPosed tap test must identify which role, if either,
+actually owns the Copy action and whether it is synchronous. Do not activate
+Termux execution or claim exact block selection from this source alone.
