@@ -90,7 +90,9 @@ public final class MainActivity extends AppCompatActivity {
         LinearLayout inner = new LinearLayout(this);
         inner.setOrientation(LinearLayout.VERTICAL);
         inner.setPadding(dp(18), dp(18), dp(18), dp(18));
-        inner.addView(text(title, 20));
+        TextView titleView = text(title, 20);
+        FlatUi.sectionHeading(titleView);
+        inner.addView(titleView);
         TextView detail = text(description, 14);
         detail.setPadding(0, dp(8), 0, 0);
         inner.addView(detail);
@@ -635,16 +637,11 @@ public final class MainActivity extends AppCompatActivity {
         detailReturnPage = state == null ? APPS : state.getInt("detailReturnPage", APPS);
         if (detailReturnPage != APPS && detailReturnPage != HOME
                 && detailReturnPage != GROUP_DETAIL) detailReturnPage = APPS;
-        // Migrate a pre-UI-04 activity state by package once; never use the
-        // package as the permanent selection key (multiple hooks may share it).
+        // UI-08: a pre-UI-04 package-only selection is safe ONLY if unique.
+        // Never pick the first hook when multiple registered hooks share one app.
         if (selectedHookId == null && state != null) {
             String oldPackage = state.getString("selectedPackage");
-            for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) {
-                if (oldPackage != null && oldPackage.equals(entry.spec.packageName)) {
-                    selectedHookId = entry.spec.id;
-                    break;
-                }
-            }
+            selectedHookId = Ui08LegacySelection.resolveUnique(TweakCatalog.all(),oldPackage);
         }
         catalogView = appearance.getInt(UI04_VIEW_KEY, UI04_GROUPS) == UI04_BY_APP
                 ? UI04_BY_APP : UI04_GROUPS;
@@ -762,6 +759,17 @@ public final class MainActivity extends AppCompatActivity {
         page = target;
         render();
         scroll.scrollTo(0, 0);
+        // UI-08: keyboard/TalkBack navigation begins at the new page heading.
+        // Only user-directed navigation changes focus; asynchronous framework
+        // snapshot updates keep their existing search-focus/scroll preservation.
+        scroll.post(() -> {
+            if (page != target || body == null || body.getChildCount() == 0) return;
+            View first = body.getChildAt(0);
+            if (first instanceof TextView) {
+                first.setFocusableInTouchMode(true);
+                first.requestFocus();
+            }
+        });
     }
     @Override protected void onStart() {
         super.onStart();
@@ -817,7 +825,9 @@ public final class MainActivity extends AppCompatActivity {
         MaterialCardView card = new MaterialCardView(this); FlatUi.section(card);
         LinearLayout inner = new LinearLayout(this); inner.setOrientation(LinearLayout.VERTICAL);
         inner.setPadding(dp(18), dp(18), dp(18), dp(18));
-        inner.addView(text(title, 20));
+        TextView titleView = text(title, 20);
+        FlatUi.sectionHeading(titleView);
+        inner.addView(titleView);
         TextView detail = text(description, 16); detail.setPadding(0, dp(8), 0, 0); inner.addView(detail);
         card.addView(inner);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
@@ -896,15 +906,6 @@ public final class MainActivity extends AppCompatActivity {
         detailReturnPage = page == GROUP_DETAIL ? GROUP_DETAIL : page == HOME ? HOME : APPS;
         selectedHookId = entry.spec.id;
         goTo(APP_DETAIL);
-    }
-    private void appCard(TweakEngine.Entry<HookContext> entry) {
-        LinearLayout inner = card(entry.title, statusText(eligibility(entry.spec, service())));
-        LinearLayout row = horizontal();
-        row.addView(hostIcon(entry.spec.packageName));
-        MaterialTextView description = text(entry.description, 14);
-        row.addView(description, new LinearLayout.LayoutParams(0, -2, 1));
-        inner.addView(row);
-        button(inner, R.string.ui_configure, v -> showApp(entry));
     }
     private void apps() {
         hooksCatalog();

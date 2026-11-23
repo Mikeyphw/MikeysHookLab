@@ -424,3 +424,26 @@ check('case HELP: helpPage(); break;' in ui07_main
       and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui07IdentityTest.java').is_file()
       and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccManualOperationTest.java').is_file(),
       'UI-07 P04 restoration, accessible manual status and Java regression tests')
+
+# UI-08: unified accessible sections, safe legacy ID migration, no dead apps path.
+ui08=read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+flat08=read('app/src/main/java/com/mikeyphw/hooklab/ui/FlatUi.java')
+legacy08=read('app/src/main/java/com/mikeyphw/hooklab/ui/Ui08LegacySelection.java')
+quality08=read('app/src/main/java/com/mikeyphw/hooklab/ui/Ui08QualityPolicy.java')
+workflow08=read('.github/workflows/android.yml')
+check('private void appCard(' not in ui08 and 'hooksCatalog();' in ui08
+      and 'FlatUi.sectionHeading(titleView);' in ui08,
+      'UI-08 P01 single flat native catalog, accessible section headings')
+check('Ui08LegacySelection.resolveUnique(TweakCatalog.all(),oldPackage)' in ui08
+      and 'if (unique != null) return null;' in legacy08
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui08LegacySelectionTest.java').is_file(),
+      'UI-08 P02 deterministic unambiguous legacy selection only')
+check('MIN_TOUCH_DP=48' in quality08 and 'contrast(int foreground,int background)' in quality08
+      and 'setAccessibilityHeading(true)' in flat08
+      and 'python3 -B scripts/check_ui08_qa.py' in workflow08
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui08QualityPolicyTest.java').is_file(),
+      'UI-08 P03 accessible touch/contrast and hosted regression source')
+check((r/'docs/qa/hooklab-flat-ux-acceptance.md').is_file()
+      and 'RELEASE_NOT_AUTHORIZED' in read('docs/qa/hooklab-flat-ux-acceptance.md')
+      and 'DEVICE_NOT_RUN' in read('docs/qa/hooklab-flat-ux-acceptance.md'),
+      'UI-08 P04/P05 release/device stay explicitly unqualified in acceptance matrix')

@@ -2,9 +2,9 @@
 
 **Roadmap ID:** `HOOKLAB-FLAT-UX`  
 **Revision:** 1.0 · **Prepared:** 2026-11-23  
-**Status:** ADOPTED ROADMAP — DS-01, UI-04, UI-05, DX-01, UI-06, DX-02 and DX-03 merged with required hosted CI PASS; UI-07 source candidate pending native/CI/device acceptance  
+**Status:** ADOPTED ROADMAP — DS-01, UI-04, UI-05, UI-06, DX-01, DX-02, DX-03 and UI-07 merged with required hosted CI PASS; UI-08 source candidate pending native/CI/device acceptance; zero fully device-accepted  
 **Repository home:** `docs/roadmaps/hooklab-flat-ux.md` (committed by DS-01)  
-**Verified UI-07 base:** `Mikeyphw/MikeysHookLab` `main` at `5d091ad9985dac6f81d9cb60b29f94880508712b` (merged PR #20, DX-03).  
+**Verified UI-08 base:** `Mikeyphw/MikeysHookLab` `main` at `90f749b84fac6a9adbb61a9d1a740e35f2b10391` (merged PR #21, UI-07, required source CI #45281725404 and post-merge main CI #45282151819 PASS).  
 **Contract:** `/Agent Contracts/ai_agent_operating_contract_cg.md`; `AGENT-OPERATIONS-DEVTOOL` v1.15; SHA-256 `cb3963ba70dd90001d04b07eb11c12cb6f29fad3d9de5fb19dda3952e1596100`.  
 **Visual source of truth:** `hooklab_diagnostics_mock_cg.html`, SHA-256 `0d2d0050be230ee9d27529d711cdb48022b87046f076cc11dd883bb1aa1a126b`, explicitly extended across the **entire** native app. Prototype behavior uses sample data and does not prove Android/LSPosed functionality.
 
@@ -135,8 +135,8 @@ Separate **framework service** / **remote preferences** / **LSPosed scope** / **
 | `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | MERGED · hosted CI PASS / DEVICE + SOURCE GAPS PENDING |
 | `DX-02` | Guided Capture Sessions & Hook Discovery | Reproduction workflow, bounded collection, annotations, probe metadata, evidence bundle | DX-01 | MERGED · hosted CI PASS / DEVICE + SOURCE GAPS PENDING |
 | `DX-03` | Hook Health, Troubleshooting & Evidence Explorer | Source-aware health/status, failure analysis, collector gaps, capture-linked reports | DX-01, UI-05; DX-02 for capture links | MERGED · hosted CI PASS / DEVICE + SOURCE GAPS PENDING |
-| `UI-07` | Settings, Scope, MCC Control, About & Help Redesign | Remaining first-party screens in same language; independent permissions/confirmation retained | DS-01, UI-05 | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
-| `UI-08` | Accessibility, Regression, Performance & Legacy UI Retirement | Full app QA; replace old visual paths, reconcile tests/docs; safely adopt complete redesign | All above source-complete | PLANNED / PENDING |
+| `UI-07` | Settings, Scope, MCC Control, About & Help Redesign | Remaining first-party screens in same language; independent permissions/confirmation retained | DS-01, UI-05 | MERGED · required CI PASS / DEVICE PENDING |
+| `UI-08` | Accessibility, Regression, Performance & Legacy UI Retirement | Full app QA; replace old visual paths, reconcile tests/docs; safely adopt complete redesign | All above merged; DX-01/02 source gaps remain | SOURCE CANDIDATE · hosted CI/device/release pending |
 
 ### Mandatory promise/acceptance checklist, per overlay
 
@@ -309,3 +309,13 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - **Remediation source candidate:** `actions/setup-java@v6` Gradle dependency cache and bounded `scripts/ci_gradle_retry.sh` (max 3 attempts, 20s/60s backoff only when logs contain both dependency resolution failure and HTTP 429). Preserve `PIPESTATUS`, streamed stdout/stderr, original failure codes, and never retry compilation, test, lint, or unrelated authentication failures.
 - **No source semantics changed:** Android Java, LSPosed preferences, MCC root worker, signing, and repository origin untouched. No mirror substitution, no local Gradle, no force push, and no reapplication of UI-07.
 - **Acceptance:** F01 local shell negative/positive regression required; native Devtool exact-tree transaction, existing PR #21 update, fresh exact-head hosted Android CI, verified PR merge and device/runtime acceptance PENDING. Even successful CI does not qualify a physical device.
+
+## UI-08 · Accessibility, integration regressions and release gates (2026-11-23)
+
+- **Verified base:** `main` `90f749b84fac6a9adbb61a9d1a740e35f2b10391`, tree `d171aae24549662598ef60b0099873705df47be4`; UI-07 PR #21 head `22b08f6ba3dd546b75b52e54d1bf52c6a6771d90` with exact-head CI #45281725404 PASS; post-merge main CI #45282151819 PASS. This section is source candidate, not acceptance.
+- **UI08-P01:** remove unused `appCard` legacy pathway, retain HookGroupCatalog-only Hooks navigation, standardize all app/catalog section titles as accessible native Material headings, preserve FlatUi tokens.
+- **UI08-P02:** fail-closed migration of package-only saved state when more than one registered hook shares the package; existing stable hook IDs, framework preference writer and scope semantics remain untouched. JUnit and hosted QA source regressions are required.
+- **UI08-P03:** 48dp minimum touch targets, bundled day/night color contrast >=4.5 in a hosted source audit, deterministic 320/360/600/840dp layout tests, explicit navigation heading focus. **Actual** large-font, TalkBack, memory, performance and visual device tests remain PENDING.
+- **UI08-P04:** no signing or release operation is performed. Release is NOT_AUTHORIZED; if separately authorized, independently verify stable certificate fingerprint, APK source SHA, installed APK, package and version as a separate gate.
+- **UI08-P05:** versioned `docs/qa/hooklab-flat-ux-acceptance.md` accounts for all 38 promises. Source-only imported logs, incomplete DX-01/02 collectors, Android runtime/device and privacy limitations remain explicit. The source QA script is read-only.
+- **Status:** UI-08 source candidate only. Native Devtool check/apply/commit/session, exact-head hosted Android CI, guarded PR merge, installed-device/TalkBack/LSPosed/release evidence are separate PENDING gates. Do not promote any overlay to full acceptance from hosted CI alone.
