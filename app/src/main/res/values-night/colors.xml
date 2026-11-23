@@ -1,0 +1,10 @@
+<resources>
+    <color name="hooklab_canvas">#0d1214</color>
+    <color name="hooklab_surface">#151b1e</color>
+    <color name="hooklab_surface_2">#1e272a</color>
+    <color name="hooklab_on_surface">#f0f4f1</color>
+    <color name="hooklab_secondary">#9ca9a7</color>
+    <color name="hooklab_muted">#83938e</color>
+    <color name="hooklab_accent">#b7eccb</color>
+    <color name="hooklab_accent_ink">#183229</color>
+</resources>
