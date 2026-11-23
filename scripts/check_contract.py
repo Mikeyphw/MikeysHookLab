@@ -290,3 +290,25 @@ check('showGroup(HookGroupCatalog.Group group)' in main_ui05
 check('groupForHook' in route and 'return null;' in route
       and (r/'app/src/test/java/com/mikeyphw/hooklab/core/HookDetailRouteTest.java').is_file(),
       'UI-05 failed hook/group routes and same-package identity regression tests')
+
+# DX-01: imported provenance with bounded, redacted-only events; no root/logcat
+# collection or ordinary app permissions. SAF import/export and real UI integration.
+dx=read('app/src/main/java/com/mikeyphw/hooklab/diagnostics/DiagnosticTimeline.java')
+saf=read('app/src/main/java/com/mikeyphw/hooklab/diagnostics/DiagnosticSaf.java')
+appdx=read('app/src/main/java/com/mikeyphw/hooklab/HookLabApp.java')
+uidebug=read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+check('MAX_BYTES=2*1024*1024' in dx and 'MAX_EVENTS=4000' in dx
+      and 'DX01_IMPORT_EXCEEDS_LIMIT' in dx and 'raw third-party text' in dx
+      and 'ASSOCIATED' in dx and 'UNCLASSIFIED' in dx,
+      'DX-01 bounded non-authenticated redacted source timeline')
+check('openInputStream(uri)' in saf and 'openOutputStream(uri,"w")' in saf
+      and 'ZipOutputStream' in saf and 'events_sha256' in saf,
+      'DX-01 explicit SAF file import and redacted evidence export')
+check('public com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnostics()' in appdx
+      and 'diagnosticsTimelinePage();' in uidebug
+      and 'diagnosticImportLauncher.launch(' in uidebug
+      and 'diagnosticExportLauncher.launch(' in uidebug,
+      'DX-01 in-memory lifecycle and real Diagnostics screen integration')
+check('READ_LOGS' not in uidebug and 'Runtime.getRuntime().exec' not in saf
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/diagnostics/DiagnosticTimelineTest.java').is_file(),
+      'DX-01 no stealth/root collector; JVM provenance/privacy regression present')

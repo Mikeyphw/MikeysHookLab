@@ -1,0 +1,70 @@
+package com.mikeyphw.hooklab.diagnostics;
+
+import static org.junit.Assert.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import org.junit.Test;
+
+public final class DiagnosticTimelineTest {
+    private static ByteArrayInputStream stream(String text){return new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));}
+    @Test public void knownHookLabCodeIsAssociatedNotAuthenticated(){
+        DiagnosticTimeline t=new DiagnosticTimeline();
+        try{
+            t.importStream(stream("2026-11-23T19:00:00Z HookLabVerbose event=NEO_TAP"),"LSPOSED_MODULE");
+        }catch(IOException failure){throw new AssertionError(failure);}
+        DiagnosticTimeline.Event e=t.filtered(null).get(0);
+        assertEquals("NEO_TAP",e.code);assertEquals("ASSOCIATED",e.correlation);
+        assertEquals("neostore.obtainx.manual",e.hookId);
+        assertEquals("LSPOSED_MODULE",e.source);
+        assertTrue(e.utcMillis>0);
+    }
+    @Test public void arbitraryPrivateLinesNeverEnterOutput() throws Exception {
+        DiagnosticTimeline t=new DiagnosticTimeline();
+        t.importStream(stream("Bearer s3cr3t email a@b.com https://example.com/private\npassword=qwerty"),"LSPOSED_FRAMEWORK");
+        String json=DiagnosticTimeline.toJsonl(t.filtered(null));
+        assertFalse(json.contains("s3cr3t"));assertFalse(json.contains("qwerty"));
+        assertFalse(json.contains("a@b.com"));assertFalse(json.contains("example.com"));
+        assertEquals(2,t.size());
+    }
+    @Test public void crossFileSameTextIsNotDeduped() throws Exception {
+        DiagnosticTimeline t=new DiagnosticTimeline();
+        t.importStream(stream("scope warning"),"LSPOSED_FRAMEWORK");
+        t.importStream(stream("scope warning"),"LSPOSED_MODULE");
+        assertEquals(2,t.size());
+        assertFalse(t.filtered(null).get(0).id().equals(t.filtered(null).get(1).id()));
+    }
+    @Test public void unsafeCollectorIsRejected() throws Exception {
+        DiagnosticTimeline t=new DiagnosticTimeline();
+        try {t.importStream(stream("any"),"ROOT_LOGCAT");throw new AssertionError("accepted unknown source");}
+        catch(IllegalArgumentException expected){assertEquals(0,t.size());}
+    }
+    @Test public void oversizedImportIsAtomic() throws Exception {
+        DiagnosticTimeline t=new DiagnosticTimeline();
+        byte[] huge=new byte[DiagnosticTimeline.MAX_BYTES+1];
+        try {t.importStream(new ByteArrayInputStream(huge),"LSPOSED_MODULE");throw new AssertionError("oversized");}
+        catch(IOException expected){assertEquals(0,t.size());}
+    }
+    @Test public void filtersDoNotMutateOriginalStore() throws Exception {
+        DiagnosticTimeline t=new DiagnosticTimeline();
+        t.importStream(stream("HookLabVerbose event=MCC_BUTTON_ATTACHED\nother\nHookLabVerbose event=NEO_TAP"),"LSPOSED_MODULE");
+        DiagnosticTimeline.Filter f=new DiagnosticTimeline.Filter();f.hookId="mcc.diamond.control";
+        List<DiagnosticTimeline.Event> result=t.filtered(f);
+        assertEquals(1,result.size());assertEquals("MCC_BUTTON_ATTACHED",result.get(0).code);
+        assertEquals(3,t.size());
+    }
+    @Test public void unknownClockDoesNotInventTimestamp() throws Exception {
+        DiagnosticTimeline t=new DiagnosticTimeline();
+        t.importStream(stream("11-23 18:00:00.123 unknown message"),"ANDROID_LOGCAT_IMPORT");
+        assertTrue(t.filtered(null).get(0).utcMillis==0L);
+        assertEquals("",t.filtered(null).get(0).timestamp);
+    }
+    @Test public void outputDoesNotSerializeOriginalRawText() throws Exception {
+        DiagnosticTimeline t=new DiagnosticTimeline();
+        t.importStream(stream("2026-11-23T19:00:00Z HookLabVerbose event=DROID_TAP cookie=S3CR3T"),"LSPOSED_MODULE");
+        String out=DiagnosticTimeline.toJsonl(t.filtered(null));
+        assertTrue(out.contains("DROID_TAP"));assertFalse(out.contains("S3CR3T"));
+        assertTrue(out.contains("redacted"));
+    }
+}

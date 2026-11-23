@@ -2,9 +2,9 @@
 
 **Roadmap ID:** `HOOKLAB-FLAT-UX`  
 **Revision:** 1.0 · **Prepared:** 2026-11-23  
-**Status:** ADOPTED SOURCE ROADMAP — DS-01 and UI-04 merged with required hosted CI success; UI-05 source implementation under native delivery, independent device acceptance pending  
+**Status:** ADOPTED SOURCE ROADMAP — DS-01, UI-04 and UI-05 merged with required hosted CI success; DX-01 import-only source candidate, native/CI/device acceptance pending  
 **Repository home:** `docs/roadmaps/hooklab-flat-ux.md` (committed by DS-01)  
-**Verified UI-05 base:** `Mikeyphw/MikeysHookLab` `main` at `c3e2968eb506b35ff566afd18d512e1a362a187e` (merged PR #15, UI-04).  
+**Verified DX-01 base:** `Mikeyphw/MikeysHookLab` `main` at `e669c1d3949268623dbf341ea5c2efc2cd4bc66c` (merged PR #16, UI-05).  
 **Contract:** `/Agent Contracts/ai_agent_operating_contract_cg.md`; `AGENT-OPERATIONS-DEVTOOL` v1.15; SHA-256 `cb3963ba70dd90001d04b07eb11c12cb6f29fad3d9de5fb19dda3952e1596100`.  
 **Visual source of truth:** `hooklab_diagnostics_mock_cg.html`, SHA-256 `0d2d0050be230ee9d27529d711cdb48022b87046f076cc11dd883bb1aa1a126b`, explicitly extended across the **entire** native app. Prototype behavior uses sample data and does not prove Android/LSPosed functionality.
 
@@ -124,15 +124,15 @@ Separate **framework service** / **remote preferences** / **LSPosed scope** / **
 
 ## 6. Full overlay pipeline — proposed new work
 
-**Pipeline denominator: nine proposed NEW UX/DX overlays.** These are **not** a claim that HookLab's total cross-project roadmap has nine overlays. Within the nine-overlay tranche: **DS-01 merged with hosted CI PASS; 0/9 independently device-accepted**; UI-04 is a native source candidate; UI-04 and DX-01 retain their earlier proposed identifiers, but none is yet an adopted repository overlay. Each row has mandatory independent local source, native Devtool, hosted exact-head CI, device and release gates as applicable.
+**Pipeline denominator: nine proposed NEW UX/DX overlays.** These are **not** a claim that HookLab's total cross-project roadmap has nine overlays. Within the nine-overlay tranche: **DS-01, UI-04 and UI-05 merged with exact-head required hosted CI PASS; 0/9 independently device-accepted**; DX-01 is an unaccepted source candidate. The roadmap is adopted in the repository. Each row has mandatory independent local source, native Devtool, hosted exact-head CI, device and release gates as applicable.
 
 | ID | Complete name | Main delivery | Dependencies | Implementation / acceptance |
 |---|---|---|---|---|
 | `DS-01` | Flat Design System & Adaptive Native Shell | Tokens, themes, responsive navigation, surfaces, reusable typography and controls | Current UI-03 stable state | MERGED · hosted CI PASS / DEVICE PENDING |
 | `UI-04` | Hook Groups & Group/App Catalog | Catalog metadata, default Groups, By app, search and stable hook identity | DS-01 for final visuals; current `TweakCatalog` | MERGED · hosted CI PASS / DEVICE PENDING |
-| `UI-05` | Group/Hook Detail & Independent LSPosed Setup | Mini-module details, per-hook switches/scope/status, multi-hook same-app support | UI-04, UI-03 state authority | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
+| `UI-05` | Group/Hook Detail & Independent LSPosed Setup | Mini-module details, per-hook switches/scope/status, multi-hook same-app support | UI-04, UI-03 state authority | MERGED · hosted CI PASS / DEVICE PENDING |
 | `UI-06` | Home Dashboard, Readiness & Recent Activity | Flat Home, honest framework/readiness summary, quick actions, last actual event | DS-01, UI-04, DX-01 for live recent events | PLANNED / PENDING |
-| `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | PLANNED / PENDING |
+| `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
 | `DX-02` | Guided Capture Sessions & Hook Discovery | Reproduction workflow, bounded collection, annotations, probe metadata, evidence bundle | DX-01 | PLANNED / PENDING |
 | `DX-03` | Hook Health, Troubleshooting & Evidence Explorer | Source-aware health/status, failure analysis, collector gaps, capture-linked reports | DX-01, UI-05; DX-02 for capture links | PLANNED / PENDING |
 | `UI-07` | Settings, Scope, MCC Control, About & Help Redesign | Remaining first-party screens in same language; independent permissions/confirmation retained | DS-01, UI-05 | PLANNED / PENDING |
@@ -224,9 +224,9 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 
 ### Source and acceptance baseline (truthful)
 
-- **Proposed new UX/DX overlays:** `0/9` implementation complete; `0/9` independently accepted; `9/9` pending implementation.
+- **New UX/DX overlays:** `3/9` merged with required hosted CI; `0/9` independently accepted; DX-01 source candidate pending native and CI; five other overlays planned.
 - **Existing merged source:** five registered hook entries and prior UI/state source present. **Existing cross-project denominator and accepted counts:** `INCONCLUSIVE` until the canonical repository-wide roadmap and per-gate acceptance receipts are established.
-- **This deliverable:** roadmap design and proposed acceptance matrix only. **Repository mutation / new PR / Devtool native transaction / local tests / hosted CI / physical device / signing release:** `NOT PERFORMED`.
+- **This deliverable:** DX-01 import-first source candidate with local tests; previous DS-01/UI-04/UI-05 PRs merged and hosted CI successful. **DX-01 native/PR/hosted CI/device/release:** `NOT PERFORMED`.
 - **Next eligible implementation tranche once adopted:** `DS-01` + `UI-04`, followed by independent UI-05/UI-07 and DX-01 work as dependencies permit.
 
 
@@ -256,3 +256,12 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - Root cause: UI-04's test asserted `entry.spec.id.equals(selectedHookId)` after UI-05 deliberately replaced that loop with the verified `HookDetailRoute.hook(TweakCatalog.all(), selectedHookId)` call. The production route remains in place; the obsolete internal assertion is replaced with exact-path and missing-ID rejection guards.
 - Change scope: `scripts/check_contract.py` and this roadmap only. Existing hook IDs, framework readback, LSPosed scope, UI production code and Java routing tests are unchanged.
 - Native Devtool apply/commit, hosted exact-head CI, protected merge and Android/LSPosed/device acceptance remain **PENDING** until independently verified. Original UI-05 source must **not** be reapplied.
+
+
+### DX-01 source candidate — import-first diagnostics, exact source-bound
+
+- Preconditions verified: DS-01 PR #14 merged `7c963a49b0c83e71159e65d558e88ed20ae9c738`; UI-04 PR #15 merged `c3e2968eb506b35ff566afd18d512e1a362a187e`; UI-05 PR #16 merged `e669c1d3949268623dbf341ea5c2efc2cd4bc66c`, final PR CI run #45252300059 success. Device evidence still pending.
+- The `DX-01` new code stores only source-bound sanitised event codes/category/clock/line/hash, in process memory, bounded to 2 MiB per import, 10,000 lines per file and 4,000 retained events. Arbitrary raw imported lines are **not** retained, copied or exported. Imported log lines are never authenticated as actual hook execution, and unknown clocks stay unknown.
+- Existing opt-in `VerboseLogs` is the source of recognized HookLab code events. Actual LSPosed module/framework and previously authorized logcat export files are imported only through Android Storage Access Framework. Privileged/live logcat collectors are intentionally **unavailable** until a separate explicit capability-gated implementation can be proven safe; no new permissions/root or hidden collectors.
+- Diagnostic screen offers explicit import by source, source/severity/package/hook/query filters, bounded paging, per-event provenance inspector, copy-selected/filtered redacted JSONL, and SAF ZIP with `events.jsonl` and SHA-256 manifest. Selected imported evidence survives rotation in-process via `HookLabApp` but does not survive process death.
+- **Acceptance truth:** DX01-P01..P06 source candidate; only local JVM privacy/model guards if verified, native and hosted CI pending, device/LSPosed export round trip and crash-recovery UX pending. Missing live collectors, bounded persistence and group/time UI mean this is **NOT SOURCE COMPLETE / NOT ACCEPTED**. No assertion of runtime log access or fully functional DX-01.
