@@ -1,6 +1,7 @@
 package com.mikeyphw.hooklab.ui;
 
 import android.content.SharedPreferences;
+import com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline;
 import android.widget.FrameLayout;
 import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.navigationrail.NavigationRailView;
@@ -244,6 +245,186 @@ public final class MainActivity extends AppCompatActivity {
         renderCatalogResults();
     }
 
+
+    // DX-01: SAF import/export only. Imported log lines are immediately normalized
+    // into a bounded redacted in-memory store; no implicit log access or root.
+    private final java.util.concurrent.ExecutorService diagnosticWorker =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+    private com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Filter diagnosticFilter =
+            new com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Filter();
+    private LinearLayout diagnosticRows;
+    private int diagnosticPageIndex;
+    private String diagnosticImportSource = "LSPOSED_MODULE";
+    private static final int DX01_PAGE_SIZE = 30;
+    private final androidx.activity.result.ActivityResultLauncher<String[]> diagnosticImportLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+                    uri -> { if(uri != null) importDiagnosticDocument(uri); });
+    private final androidx.activity.result.ActivityResultLauncher<String> diagnosticExportLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
+                    uri -> { if(uri != null) exportDiagnosticDocument(uri); });
+
+    private com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnosticsStore() {
+        return ((HookLabApp)getApplication()).diagnostics();
+    }
+    private void importDiagnosticDocument(android.net.Uri uri) {
+        final String source = diagnosticImportSource;
+        diagnosticWorker.execute(() -> {
+            try {
+                com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.ImportReceipt r =
+                    com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.importDocument(
+                        getContentResolver(),uri,diagnosticsStore(),source);
+                runOnUiThread(() -> {
+                    if(isFinishing() || isDestroyed())return;
+                    diagnosticPageIndex=0;
+                    toast(getString(R.string.dx01_import_success, r.accepted));
+                    if(page==DIAGNOSTICS)renderDiagnosticRows();
+                });
+            }catch(java.io.IOException | IllegalArgumentException error){
+                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx01_import_failed);});
+            }
+        });
+    }
+    private void exportDiagnosticDocument(android.net.Uri uri) {
+        com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline store=diagnosticsStore();
+        final List<com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event> selected =
+                store.filtered(diagnosticFilter);
+        final int dropped=store.dropped();
+        diagnosticWorker.execute(() -> {
+            try {
+                com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.exportRedactedZip(
+                        getContentResolver(),uri,selected,dropped);
+                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx01_export_success);});
+            }catch(java.io.IOException | IllegalArgumentException error){
+                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx01_export_failed);});
+            }
+        });
+    }
+    private void copyDiagnosticText(String redacted) {
+        android.content.ClipboardManager clipboard=(android.content.ClipboardManager)
+                getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        if(clipboard==null) {toast(R.string.dx01_copy_failed);return;}
+        try {
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText(
+                    getString(R.string.dx01_export_redacted),redacted));
+            toast(R.string.dx01_copy_success);
+        }catch(RuntimeException failure){toast(R.string.dx01_copy_failed);}
+    }
+    private void showDiagnosticDetail(com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event e) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(e.code)
+            .setMessage(getString(R.string.dx01_inspector, e.source, e.collector,
+                    e.fileSha256, e.lineNumber, e.timestamp.isEmpty()?"unknown":e.timestamp,
+                    e.correlation, e.message))
+            .setNeutralButton(R.string.dx01_copy_event,
+                    (dialog,which) -> copyDiagnosticText(
+                        com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.toJson(e)))
+            .setPositiveButton(android.R.string.ok,null).show();
+    }
+    private void renderDiagnosticRows() {
+        if(diagnosticRows==null || page!=DIAGNOSTICS)return;
+        diagnosticRows.removeAllViews();
+        com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline store=diagnosticsStore();
+        List<com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event> visible =
+                store.filtered(diagnosticFilter);
+        diagnosticRows.addView(text(getString(R.string.dx01_event_counts,
+                visible.size(),store.size(),store.dropped()),14));
+        if(visible.isEmpty()) {
+            diagnosticRows.addView(text(getString(R.string.dx01_no_imports),16));
+            return;
+        }
+        int pages=(visible.size()+DX01_PAGE_SIZE-1)/DX01_PAGE_SIZE;
+        diagnosticPageIndex=Math.min(diagnosticPageIndex,pages-1);
+        int begin=diagnosticPageIndex*DX01_PAGE_SIZE;
+        int end=Math.min(visible.size(),begin+DX01_PAGE_SIZE);
+        for(int i=begin;i<end;i++){
+            com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event e=visible.get(i);
+            LinearLayout row=cardTo(diagnosticRows,e.code,e.severity+" · "+e.source+" · "+
+                (e.timestamp.isEmpty()?getString(R.string.dx01_clock_unknown):e.timestamp));
+            row.addView(text(e.message,14));
+            button(row,R.string.dx01_inspect,v -> showDiagnosticDetail(e));
+        }
+        LinearLayout pagination=new LinearLayout(this);
+        pagination.setOrientation(LinearLayout.HORIZONTAL);
+        com.google.android.material.button.MaterialButton previous=new com.google.android.material.button.MaterialButton(this);
+        previous.setText(R.string.dx01_previous);FlatUi.button(previous);
+        previous.setEnabled(diagnosticPageIndex>0);
+        previous.setOnClickListener(v -> {diagnosticPageIndex--;renderDiagnosticRows();});
+        pagination.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
+        com.google.android.material.button.MaterialButton next=new com.google.android.material.button.MaterialButton(this);
+        next.setText(R.string.dx01_next);FlatUi.button(next);
+        next.setEnabled(diagnosticPageIndex<pages-1);
+        next.setOnClickListener(v -> {diagnosticPageIndex++;renderDiagnosticRows();});
+        pagination.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
+        diagnosticRows.addView(pagination);
+    }
+    private android.widget.EditText diagnosticTextFilter(LinearLayout parent,int hint,
+            String initial,java.util.function.Consumer<String> update) {
+        android.widget.EditText search=new android.widget.EditText(this);
+        search.setSingleLine(true);search.setText(initial);search.setHint(hint);
+        search.setMinHeight(dp(48));search.setTextSize(14);
+        search.addTextChangedListener(new android.text.TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence s,int start,int before,int count){
+                update.accept(s.toString());diagnosticPageIndex=0;renderDiagnosticRows();
+            }
+            @Override public void afterTextChanged(android.text.Editable e){}
+        });
+        parent.addView(search,new LinearLayout.LayoutParams(-1,-2));return search;
+    }
+    private void diagnosticsTimelinePage() {
+        LinearLayout panel=card(getString(R.string.dx01_title),getString(R.string.dx01_import_only));
+        button(panel,R.string.dx01_import, v -> {
+            final String[] types={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
+            final String[] labels={getString(R.string.dx01_module),getString(R.string.dx01_framework),
+                getString(R.string.dx01_logcat_import)};
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.dx01_choose_source)
+                .setItems(labels,(dialog,which) -> {
+                    diagnosticImportSource=types[which];
+                    diagnosticImportLauncher.launch(new String[]{"text/plain","application/octet-stream"});
+                }).show();
+        });
+        button(panel,R.string.dx01_export_redacted,v ->
+                diagnosticExportLauncher.launch("hooklab-redacted-diagnostics.zip"));
+        button(panel,R.string.dx01_copy_filtered,v -> copyDiagnosticText(
+                com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.toJsonl(
+                        diagnosticsStore().filtered(diagnosticFilter))));
+        diagnosticTextFilter(panel,R.string.dx01_filter_search,diagnosticFilter.query,
+                s -> diagnosticFilter.query=s);
+        diagnosticTextFilter(panel,R.string.dx01_filter_package,diagnosticFilter.packageName,
+                s -> diagnosticFilter.packageName=s.trim());
+        diagnosticTextFilter(panel,R.string.dx01_filter_hook,diagnosticFilter.hookId,
+                s -> diagnosticFilter.hookId=s.trim());
+        com.google.android.material.chip.ChipGroup sources=new com.google.android.material.chip.ChipGroup(this);
+        sources.setSingleSelection(true);
+        final String[] ids={"","LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
+        final int[] names={R.string.dx01_all,R.string.dx01_module,R.string.dx01_framework,R.string.dx01_logcat_import};
+        for(int i=0;i<ids.length;i++){
+            final String value=ids[i];
+            com.google.android.material.chip.Chip chip=new com.google.android.material.chip.Chip(this);
+            FlatUi.chip(chip);chip.setCheckable(true);chip.setText(names[i]);
+            chip.setChecked(value.equals(diagnosticFilter.source));
+            chip.setOnClickListener(v -> {diagnosticFilter.source=value;diagnosticPageIndex=0;renderDiagnosticRows();});
+            sources.addView(chip);
+        }
+        panel.addView(sources);
+        com.google.android.material.chip.ChipGroup severity=new com.google.android.material.chip.ChipGroup(this);
+        severity.setSingleSelection(true);
+        final String[] levels={"","INFO","WARN","ERROR"};
+        for(String value:levels){
+            com.google.android.material.chip.Chip chip=new com.google.android.material.chip.Chip(this);
+            FlatUi.chip(chip);chip.setCheckable(true);
+            chip.setText(value.isEmpty()?getString(R.string.dx01_all):value);
+            chip.setChecked(value.equals(diagnosticFilter.severity));
+            chip.setOnClickListener(v -> {diagnosticFilter.severity=value;diagnosticPageIndex=0;renderDiagnosticRows();});
+            severity.addView(chip);
+        }
+        panel.addView(severity);
+        diagnosticRows=new LinearLayout(this);diagnosticRows.setOrientation(LinearLayout.VERTICAL);
+        body.addView(diagnosticRows,new LinearLayout.LayoutParams(-1,-2));
+        renderDiagnosticRows();
+    }
+
     private MaterialToolbar toolbar;
     private NavigationBarView navigation;
     private FrameworkStateStore stateStore;
@@ -422,6 +603,7 @@ public final class MainActivity extends AppCompatActivity {
         super.onStop();
     }
     @Override protected void onDestroy() {
+        diagnosticWorker.shutdownNow();
         stateStore.close();
         super.onDestroy();
     }
@@ -747,6 +929,7 @@ public final class MainActivity extends AppCompatActivity {
     /** Framework-truth diagnostics. Per-process events live only in Xposed logs. */
     private void diagnosticsPage() {
         heading(R.string.diagnostics);
+        diagnosticsTimelinePage();
         XposedService s = service();
         card(getString(R.string.status), connection(s));
         if (!ready(s)) {

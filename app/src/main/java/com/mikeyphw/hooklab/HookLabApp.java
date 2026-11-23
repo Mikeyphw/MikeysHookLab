@@ -10,6 +10,9 @@ import io.github.libxposed.service.XposedServiceHelper;
 /** Framework binder is the only activation evidence; never use module self-hooks to spoof it. */
 public final class HookLabApp extends Application implements XposedServiceHelper.OnServiceListener {
     private volatile XposedService service;
+    private final com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnosticTimeline =
+            new com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline();
+    public com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnostics() {return diagnosticTimeline;}
     private final CopyOnWriteArraySet<Runnable> observers = new CopyOnWriteArraySet<>();
     private final Handler ui = new Handler(Looper.getMainLooper());
 

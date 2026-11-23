@@ -124,4 +124,37 @@
     <string name="ui_dynamic_colors">Material You colors</string>
     <string name="ui_dynamic_colors_detail">Use wallpaper-derived colors on Android 12+. AMOLED black keeps its dedicated palette.</string>
     <string name="ui_saving">Saving preference in LSPosed…</string>
+    <string name="dx01_title">Imported diagnostics timeline</string>
+    <string name="dx01_import_only">Explicit file imports only. Hook events are reported by imported logs, not verified as executed. Root and live logcat collection are unavailable. Raw log messages are discarded before storage or export.</string>
+    <string name="dx01_import">Import exported logs</string>
+    <string name="dx01_export_redacted">Export filtered redacted ZIP</string>
+    <string name="dx01_copy_filtered">Copy filtered redacted events</string>
+    <string name="dx01_copy_event">Copy redacted event</string>
+    <string name="dx01_module">LSPosed module log</string>
+    <string name="dx01_framework">LSPosed framework log</string>
+    <string name="dx01_logcat_import">Previously authorized logcat file</string>
+    <string name="dx01_all">All</string>
+    <string name="dx01_choose_source">Select imported evidence source</string>
+    <string name="dx01_event_counts">%1$d matching · %2$d retained · %3$d evicted</string>
+    <string name="dx01_no_imports">No imported events match these filters. No runtime activity is inferred.</string>
+    <string name="dx01_filter_search">Search codes and redacted metadata</string>
+    <string name="dx01_filter_package">Exact package filter (optional)</string>
+    <string name="dx01_filter_hook">Exact hook ID filter (optional)</string>
+    <string name="dx01_import_success">Imported %1$d sanitized events.</string>
+    <string name="dx01_import_failed">Import refused or failed. Select an exported text log within the size limit.</string>
+    <string name="dx01_export_success">Redacted evidence ZIP written through system document picker.</string>
+    <string name="dx01_export_failed">Export failed or destination unavailable.</string>
+    <string name="dx01_copy_success">Redacted events copied.</string>
+    <string name="dx01_copy_failed">Clipboard unavailable.</string>
+    <string name="dx01_inspect">Inspect provenance</string>
+    <string name="dx01_inspector">Source: %1$s
+Collector: %2$s
+Import SHA-256: %3$s
+Source line: %4$d
+Clock: %5$s
+Association: %6$s
+%7$s</string>
+    <string name="dx01_clock_unknown">unknown source time</string>
+    <string name="dx01_previous">Previous</string>
+    <string name="dx01_next">Next</string>
 </resources>
