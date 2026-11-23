@@ -60,12 +60,13 @@ public class TweakEngineTest {
         for (TweakSpec registered : TweakCatalog.all()) packages.add(registered.packageName);
         assertEquals(new java.util.HashSet<>(Arrays.asList(
                 "br.art.code.meucronogramacapilar", "com.machiav3lli.fdroid",
-                "com.looker.droidify", "com.fugo.wowsolitaire")), packages);
+                "com.looker.droidify", "com.fugo.wowsolitaire", "com.openai.chatgpt")), packages);
         assertFalse(TweakCatalog.knowsPackage(HOST));
         assertTrue(TweakCatalog.knowsPackage("br.art.code.meucronogramacapilar"));
         assertTrue(TweakCatalog.knowsPackage("com.machiav3lli.fdroid"));
         assertTrue(TweakCatalog.knowsPackage("com.looker.droidify"));
         assertTrue(TweakCatalog.knowsPackage("com.fugo.wowsolitaire"));
+        assertTrue(TweakCatalog.knowsPackage("com.openai.chatgpt"));
         assertFalse(TweakCatalog.knowsPackage("dev.bikram.obtainx"));
     }
     @Test public void keyIsNamespaced() {

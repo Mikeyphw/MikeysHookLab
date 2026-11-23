@@ -6,12 +6,13 @@ import com.mikeyphw.hooklab.obtainx.ObtainXIds;
 import com.mikeyphw.hooklab.obtainx.NeoStoreHook;
 import com.mikeyphw.hooklab.obtainx.DroidifyHook;
 import com.mikeyphw.hooklab.wordmaster.WordMasterNightHook;
+import com.mikeyphw.hooklab.chatgpt.ChatGptCodeProbe;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** Four independently opted-in, exact-host API102 integrations. */
+/** Five independently opted-in, exact-host API102 integrations. */
 public final class TweakCatalog {
     private TweakCatalog() { }
 
@@ -45,7 +46,15 @@ public final class TweakCatalog {
                 "Word Master · Night filter (experimental)",
                 "Word Master 0.6.10 only. Dims the Unity gameplay view without " +
                 "recoloring in-game textures. Fully opt-in; restart the game to apply or remove.",
-                WordMasterNightHook::install)
+                WordMasterNightHook::install),
+            new TweakEngine.Entry<>(
+                new TweakSpec(ChatGptCodeProbe.TWEAK_ID, ChatGptCodeProbe.PACKAGE,
+                    ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE),
+                "ChatGPT · Code-block Copy parity probe (experimental)",
+                "Read-only, opt-in diagnostics for ChatGPT 1.2026.314/2631431. " +
+                "Compares code-block strings with clipboard Copy using session-only HMAC; " +
+                "no command execution, message storage, Termux dispatch or raw text logs.",
+                ChatGptCodeProbe::install)
         ));
 
     public static List<TweakEngine.Entry<HookContext>> entries() { return REGISTRY; }
