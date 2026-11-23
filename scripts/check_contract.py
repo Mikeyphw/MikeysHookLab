@@ -17,21 +17,32 @@ check(True, 'Android XML syntax')
 root = ET.parse(r/'app/src/main/AndroidManifest.xml').getroot()
 ns = '{http://schemas.android.com/apk/res/android}'
 app = root.find('application')
-check(not root.findall('uses-permission'), 'no dangerous app permissions')
+check([p.get(ns+'name') for p in root.findall('uses-permission')] ==
+      ['com.termux.permission.RUN_COMMAND'],
+      'only one user-granted Termux external-command permission')
 query_list = root.findall('queries')
 check(len(query_list)==1 and all(x.tag=='package' for x in query_list[0])
       and [x.get(ns+'name') for x in query_list[0]]==[
           'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
-          'com.looker.droidify','com.fugo.wowsolitaire','dev.bikram.obtainx'],
-      'exact MCC/Neo Store/Droid-ify/Word Master/ObtainX package visibility only')
+          'com.looker.droidify','com.fugo.wowsolitaire','dev.bikram.obtainx',
+          'com.termux'],
+      'exact hook host/ObtainX/Termux package visibility only')
 check(app.get(ns+'allowBackup')=='false' and app.get(ns+'name')=='.HookLabApp', 'lifecycle application')
 act = app.findall('activity')
-check(len(act)==2 and
-      {a.get(ns+'name') for a in act}=={'.ui.MainActivity','.mcc.MccControlActivity'}
-      and all(a.get(ns+'exported')=='true' for a in act)
+check(len(act)==3 and
+      {a.get(ns+'name') for a in act} == {
+          '.ui.MainActivity','.mcc.MccControlActivity','.termux.TermuxBridgeActivity'}
+      and all(a.get(ns+'exported')=='true' for a in act[:2])
       and len(act[0].findall('intent-filter'))==1
-      and len(act[1].findall('intent-filter'))==0,
-      'one launcher and one explicit-only MCC activity')
+      and len(act[1].findall('intent-filter'))==0
+      and act[2].get(ns+'exported')=='false'
+      and len(act[2].findall('intent-filter'))==0
+      and len(app.findall('activity-alias'))==1
+      and app.find('activity-alias').get(ns+'name')=='.termux.TermuxShareTarget'
+      and app.find('activity-alias').get(ns+'targetActivity')=='.termux.TermuxBridgeActivity'
+      and app.find('activity-alias').get(ns+'exported')=='true'
+      and len(app.find('activity-alias').findall('intent-filter'))==2,
+      'launcher, explicit MCC control, internal bridge and toggleable share alias')
 providers = app.findall('provider')
 check(len(providers)==1 and providers[0].get(ns+'name')=='io.github.libxposed.service.XposedProvider'
       and providers[0].get(ns+'authorities')=='${applicationId}.XposedService'
@@ -204,7 +215,7 @@ check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in ca
       'legacy automatic process cannot install or navigate')
 check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
       'module companion control and unverified-version notice')
-check('versionCode 8' in build and "versionName '0.6.1'" in build,
+check('versionCode 9' in build and "versionName '0.7.0'" in build,
       'bump versionCode for stable signing updates')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.java').is_file()
       and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccRefillCommandTest.java').is_file(),
@@ -236,3 +247,6 @@ subprocess.run(['python3','-B',str(r/'scripts/check_wordmaster_contract.py')],ch
 
 # MCC source/negative tests run in CI. APK binary is independently verified off-CI.
 subprocess.run(['python3','-B',str(r/'scripts/check_mcc_apk_contract.py')],check=True)
+
+# TB01 native-only share bridge; no hooks, background execution, root or automatic clipboard.
+subprocess.run(['python3','-B',str(r/'scripts/check_termux_bridge_contract.py')],check=True)

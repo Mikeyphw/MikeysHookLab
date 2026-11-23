@@ -86,3 +86,18 @@ patch IL2CPP, change rewards, or hook advertising or payment paths.
 in-game dark palette and cannot recolor Unity textures or text independently.
 Source APK is a base split requiring its ABI split. Dark palette acceptance
 is pending real-device tests. See `docs/WM01_ACCEPTANCE.md`.
+
+## TB01 — Native Termux Command Bridge (source candidate)
+
+HookLab adds an independent **HookLab · Run in Termux** Android `text/plain` share
+and selected-text target; it is native Android UI, **not an LSPosed hook**. Share
+commands from ChatGPT, review/edit multiline text, confirm execution, and launch a
+new foreground Zsh session through Termux `RUN_COMMAND`. Clipboard paste and
+configurable Termux-home working directory are available under HookLab Settings.
+
+The bridge **never** executes on share receipt or clipboard read, does not request
+root and does not fetch shell transcripts. Users must grant the Termux command
+permission and enable `allow-external-apps=true` in Termux. Start-service return
+only acknowledges dispatch, not command completion. See
+`docs/TB01_NATIVE_TERMUX_BRIDGE.md` for all setup, security and acceptance gates.
+
