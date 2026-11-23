@@ -59,6 +59,23 @@
     <string name="mcc_version_warning">MCC storage format last verified on app version 20.2609.3009. Newer versions are unverified. Restart MCC after changing the manual button switch.</string>
 
     <string name="apps">Apps</string>
+    <!-- UI-04: navigation/search are local-only; no group-wide enable or scope grant. -->
+    <string name="ui_hooks">Hooks</string>
+    <string name="ui_groups">Groups</string>
+    <string name="ui_by_app">By app</string>
+    <string name="ui_search_hooks">Search groups, apps or hooks</string>
+    <string name="ui_catalog_intro">Browse independently configured hooks; changing views never changes LSPosed permissions.</string>
+    <string name="ui_group_members">%1$d hooks · %2$d target apps</string>
+    <string name="ui_app_members">%1$d hooks</string>
+    <string name="ui_catalog_expand">Expand hooks</string>
+    <string name="ui_catalog_collapse">Collapse hooks</string>
+    <string name="ui_catalog_empty">No matching registered hooks</string>
+    <string name="ui_group_obtainx">ObtainX Integration</string>
+    <string name="ui_group_chatgpt">ChatGPT Code Diagnostics</string>
+    <string name="ui_group_mcc">MCC Diamond Control</string>
+    <string name="ui_group_wordmaster">Word Master Night Filter</string>
+    <string name="ui_group_no_toggle">Each hook has independent opt-in and scope; this group has no master toggle.</string>
+
     <string name="ui_overview">Overview</string>
     <string name="ui_overview_summary">%1$d available integrations · %2$s scoped</string>
     <string name="ui_integrations_heading">Integrations</string>

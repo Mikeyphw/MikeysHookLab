@@ -2,9 +2,9 @@
 
 **Roadmap ID:** `HOOKLAB-FLAT-UX`  
 **Revision:** 1.0 · **Prepared:** 2026-11-23  
-**Status:** FINAL PRODUCT/DESIGN ROADMAP — proposed for repository adoption; **not an implemented overlay or accepted release**  
-**Intended repository home:** `docs/roadmaps/hooklab-flat-ux.md` (not yet committed)  
-**Verified source:** `Mikeyphw/MikeysHookLab` `main` at `10903aa7340da5424dde76132aa19b64881a1beb` (merged PR #11 then #12).  
+**Status:** ADOPTED SOURCE ROADMAP — DS-01 merged with required hosted CI success; UI-04 source implementation under native delivery, independent device acceptance pending  
+**Repository home:** `docs/roadmaps/hooklab-flat-ux.md` (committed by DS-01)  
+**Verified UI-04 base:** `Mikeyphw/MikeysHookLab` `main` at `7c963a49b0c83e71159e65d558e88ed20ae9c738` (merged PR #14, DS-01).  
 **Contract:** `/Agent Contracts/ai_agent_operating_contract_cg.md`; `AGENT-OPERATIONS-DEVTOOL` v1.15; SHA-256 `cb3963ba70dd90001d04b07eb11c12cb6f29fad3d9de5fb19dda3952e1596100`.  
 **Visual source of truth:** `hooklab_diagnostics_mock_cg.html`, SHA-256 `0d2d0050be230ee9d27529d711cdb48022b87046f076cc11dd883bb1aa1a126b`, explicitly extended across the **entire** native app. Prototype behavior uses sample data and does not prove Android/LSPosed functionality.
 
@@ -124,12 +124,12 @@ Separate **framework service** / **remote preferences** / **LSPosed scope** / **
 
 ## 6. Full overlay pipeline — proposed new work
 
-**Pipeline denominator: nine proposed NEW UX/DX overlays.** These are **not** a claim that HookLab's total cross-project roadmap has nine overlays. Within this nine-overlay proposed tranche: **0/9 source-implemented; 0/9 independently accepted**; UI-04 and DX-01 retain their earlier proposed identifiers, but none is yet an adopted repository overlay. Each row has mandatory independent local source, native Devtool, hosted exact-head CI, device and release gates as applicable.
+**Pipeline denominator: nine proposed NEW UX/DX overlays.** These are **not** a claim that HookLab's total cross-project roadmap has nine overlays. Within the nine-overlay tranche: **DS-01 merged with hosted CI PASS; 0/9 independently device-accepted**; UI-04 is a native source candidate; UI-04 and DX-01 retain their earlier proposed identifiers, but none is yet an adopted repository overlay. Each row has mandatory independent local source, native Devtool, hosted exact-head CI, device and release gates as applicable.
 
 | ID | Complete name | Main delivery | Dependencies | Implementation / acceptance |
 |---|---|---|---|---|
-| `DS-01` | Flat Design System & Adaptive Native Shell | Tokens, themes, responsive navigation, surfaces, reusable typography and controls | Current UI-03 stable state | PLANNED / PENDING |
-| `UI-04` | Hook Groups & Group/App Catalog | Catalog metadata, default Groups, By app, search and stable hook identity | DS-01 for final visuals; current `TweakCatalog` | PLANNED / PENDING |
+| `DS-01` | Flat Design System & Adaptive Native Shell | Tokens, themes, responsive navigation, surfaces, reusable typography and controls | Current UI-03 stable state | MERGED · hosted CI PASS / DEVICE PENDING |
+| `UI-04` | Hook Groups & Group/App Catalog | Catalog metadata, default Groups, By app, search and stable hook identity | DS-01 for final visuals; current `TweakCatalog` | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
 | `UI-05` | Group/Hook Detail & Independent LSPosed Setup | Mini-module details, per-hook switches/scope/status, multi-hook same-app support | UI-04, UI-03 state authority | PLANNED / PENDING |
 | `UI-06` | Home Dashboard, Readiness & Recent Activity | Flat Home, honest framework/readiness summary, quick actions, last actual event | DS-01, UI-04, DX-01 for live recent events | PLANNED / PENDING |
 | `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | PLANNED / PENDING |
@@ -228,3 +228,12 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - **Existing merged source:** five registered hook entries and prior UI/state source present. **Existing cross-project denominator and accepted counts:** `INCONCLUSIVE` until the canonical repository-wide roadmap and per-gate acceptance receipts are established.
 - **This deliverable:** roadmap design and proposed acceptance matrix only. **Repository mutation / new PR / Devtool native transaction / local tests / hosted CI / physical device / signing release:** `NOT PERFORMED`.
 - **Next eligible implementation tranche once adopted:** `DS-01` + `UI-04`, followed by independent UI-05/UI-07 and DX-01 work as dependencies permit.
+
+
+### UI-04 source implementation inventory (not runtime acceptance)
+
+- `HookGroupCatalog`: reviewed stable hook-ID mapping, no group master switch, immutable members, unique target packages, strict unmapped-ID refusal, group cross-app membership.
+- `MainActivity`: Groups by default, persisted By app, search, expandable group and app rows, preserves search/IME focus, selects individual hook by stable ID (migrates legacy saved activity package once).
+- Source guard and pure Java JUnit tests check catalog coverage, duplicate/unmapped IDs, same-package hook independence, search, immutability and UI-only preference boundaries.
+- `UI04-P01..P04` remain pending hosted Android build/lint and device/LSPosed proof; no local Gradle was run.
+- DS-01 merged PR #14, hosted Android run #45234343946 PASS, source head `ea3d13cfeee2cf3548f9c5ce54d5a02465ceefe1`, merge commit `7c963a49b0c83e71159e65d558e88ed20ae9c738`; device/TalkBack not performed.

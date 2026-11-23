@@ -243,3 +243,21 @@ flat_ui = read('app/src/main/java/com/mikeyphw/hooklab/ui/FlatUi.java')
 check('MaterialColors.getColor(nav, androidx.appcompat.R.attr.colorPrimary)' in flat_ui
       and 'MaterialColors.getColor(nav, R.attr.colorPrimary)' not in flat_ui,
       'DS-01 AppCompat primary-color attribute resolves in hosted compile')
+
+# UI-04 catalog: every registered stable ID must have a reviewed grouping;
+# no UI-only view switch may call LSPosed preference or scope mutation.
+group_source = read('app/src/main/java/com/mikeyphw/hooklab/core/HookGroupCatalog.java')
+main_source = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+check(all(hook in group_source for hook in (
+    'mcc.diamond.control', 'neostore.obtainx.manual', 'droidify.obtainx.manual',
+    'wordmaster.night.filter', 'chatgpt.codeblock.copy.probe')),
+    'UI-04 every reviewed registered hook grouped')
+check('selectedHookId = entry.spec.id' in main_source
+    and 'entry.spec.id.equals(selectedHookId)' in main_source,
+    'UI-04 detail navigation uses independent hook ID')
+check('appearance.edit().putInt(UI04_VIEW_KEY, mode).apply()' in main_source
+    and 'appearance.edit().putString(UI04_QUERY_KEY, catalogQuery).apply()' in main_source
+    and 'HookGroupCatalog.groups(TweakCatalog.all())' in main_source,
+    'UI-04 local group/app persistence and catalog discovery')
+check((r/'app/src/test/java/com/mikeyphw/hooklab/core/HookGroupCatalogTest.java').is_file(),
+    'UI-04 pure Java catalog invariants tested in hosted CI')
