@@ -301,3 +301,11 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - UI07-P03: Settings retains theme and independently framework-backed verbose logging, adds real About/Help flows with installed package version, optional APK signer certificate SHA-256, API102 compatibility and explicit imported-log/clipboard/privacy limitations.
 - UI07-P04: native back navigation, saved Help route and accessible live MCC status; no local Gradle; JUnit tests for source authority, rotation/single-flight and identity.
 - **Acceptance pending:** native Devtool, exact-head hosted Android compilation/CI, physical device rotation, denied root/scope, accessibility/TalkBack and release-signing qualification. DX-01/02 have SAF import-only source gaps and no authenticated live hook execution.
+
+## UI-07-F01 · Hosted CI Maven Central rate-limit recovery (2026-11-23)
+
+- **Exact candidate:** PR #21 head `fec611844865534aa255bdd36ce31749a997ad68`, tree `f08d31d55e0ddfcbaab7d455ce5e388f6fd402f7`, base `main` `5d091ad9985dac6f81d9cb60b29f94880508712b`.
+- **Failure receipt:** Actions run `45278453969`, attempt 1, Android build job `138056285410`; source-contract PASS, Gradle `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` failed before project compilation while fetching AGP transitive dependencies from Maven Central (`HTTP 429 Too Many Requests`, 48 similar failures). APK stage skipped. Not an observed Java compile/test failure.
+- **Remediation source candidate:** `actions/setup-java@v6` Gradle dependency cache and bounded `scripts/ci_gradle_retry.sh` (max 3 attempts, 20s/60s backoff only when logs contain both dependency resolution failure and HTTP 429). Preserve `PIPESTATUS`, streamed stdout/stderr, original failure codes, and never retry compilation, test, lint, or unrelated authentication failures.
+- **No source semantics changed:** Android Java, LSPosed preferences, MCC root worker, signing, and repository origin untouched. No mirror substitution, no local Gradle, no force push, and no reapplication of UI-07.
+- **Acceptance:** F01 local shell negative/positive regression required; native Devtool exact-tree transaction, existing PR #21 update, fresh exact-head hosted Android CI, verified PR merge and device/runtime acceptance PENDING. Even successful CI does not qualify a physical device.
