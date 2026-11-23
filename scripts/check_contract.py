@@ -237,3 +237,9 @@ subprocess.run(['python3','-B',str(r/'scripts/check_cgt01_probe_contract.py')],c
 
 # MCC source/negative tests run in CI. APK binary is independently verified off-CI.
 subprocess.run(['python3','-B',str(r/'scripts/check_mcc_apk_contract.py')],check=True)
+
+# DS-01: catch resource-namespace drift before hosted Gradle compilation.
+flat_ui = read('app/src/main/java/com/mikeyphw/hooklab/ui/FlatUi.java')
+check('MaterialColors.getColor(nav, androidx.appcompat.R.attr.colorPrimary)' in flat_ui
+      and 'MaterialColors.getColor(nav, R.attr.colorPrimary)' not in flat_ui,
+      'DS-01 AppCompat primary-color attribute resolves in hosted compile')

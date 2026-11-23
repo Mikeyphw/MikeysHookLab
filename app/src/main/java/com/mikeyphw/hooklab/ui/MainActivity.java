@@ -1,6 +1,9 @@
 package com.mikeyphw.hooklab.ui;
 
 import android.content.SharedPreferences;
+import android.widget.FrameLayout;
+import com.google.android.material.navigation.NavigationBarView;
+import com.google.android.material.navigationrail.NavigationRailView;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import com.google.android.material.color.DynamicColors;
@@ -58,7 +61,7 @@ public final class MainActivity extends AppCompatActivity {
     private int page;
     private String selectedPackage;
     private MaterialToolbar toolbar;
-    private BottomNavigationView navigation;
+    private NavigationBarView navigation;
     private FrameworkStateStore stateStore;
     private FrameworkSnapshot snapshot = FrameworkSnapshot.loading();
     private final Set<String> pendingPreferences = new HashSet<>();
@@ -85,16 +88,35 @@ public final class MainActivity extends AppCompatActivity {
         selectedPackage = state == null ? null : state.getString("selectedPackage");
         if (page == APP_DETAIL && selectedEntry() == null) page = APPS;
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // DS-01: the same content/behavior on phone and tablet, with a native rail
+        // on wide windows. Never tie navigation choices to hook preference writes.
+        int widthDp = getResources().getConfiguration().screenWidthDp;
+        boolean wide = UiLayoutPolicy.useRail(widthDp);
         LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurface));
+        root.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+        root.setBackgroundColor(FlatUi.canvas(this));
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, w) -> {
             Insets i = w.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             v.setPadding(i.left, i.top, i.right, i.bottom);
             return w;
         });
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        if (wide) {
+            NavigationRailView rail = new NavigationRailView(this);
+            navigation = rail;
+            root.addView(rail, new LinearLayout.LayoutParams(dp(UiLayoutPolicy.RAIL_WIDTH_DP), -1));
+            FrameLayout center = new FrameLayout(this);
+            FrameLayout.LayoutParams centered = new FrameLayout.LayoutParams(
+                dp(UiLayoutPolicy.contentWidthDp(widthDp)), -1, android.view.Gravity.CENTER_HORIZONTAL);
+            center.addView(content, centered);
+            root.addView(center, new LinearLayout.LayoutParams(0, -1, 1));
+        } else {
+            root.addView(content, new LinearLayout.LayoutParams(-1, -1));
+        }
 
         toolbar = new MaterialToolbar(this);
+        FlatUi.toolbar(toolbar);
         toolbar.setTitle(R.string.app_name);
         toolbar.getMenu().add(Menu.NONE, MENU_SETTINGS, 0, R.string.settings)
                 .setIcon(R.drawable.ic_nav_settings).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -108,17 +130,18 @@ public final class MainActivity extends AppCompatActivity {
             return true;
         });
         toolbar.setNavigationOnClickListener(v -> navigateBack());
-        root.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(56)));
+        content.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(56)));
 
         scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(16), dp(12), dp(16), dp(32));
+        int insetDp = UiLayoutPolicy.contentInsetDp(widthDp);
+        body.setPadding(dp(insetDp), dp(12), dp(insetDp), dp(32));
         scroll.addView(body);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        content.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        navigation = new BottomNavigationView(this);
+        if (!wide) navigation = new BottomNavigationView(this);
         navigation.getMenu().add(Menu.NONE, NAV_HOME, 0, R.string.home).setIcon(R.drawable.ic_nav_home);
         navigation.getMenu().add(Menu.NONE, NAV_APPS, 1, R.string.apps).setIcon(R.drawable.ic_nav_apps);
         navigation.getMenu().add(Menu.NONE, NAV_DIAGNOSTICS, 2, R.string.diagnostics)
@@ -133,7 +156,8 @@ public final class MainActivity extends AppCompatActivity {
             goTo(target);
             return true;
         });
-        root.addView(navigation, new LinearLayout.LayoutParams(-1, -2));
+        FlatUi.navigation(navigation);
+        if (!wide) content.addView(navigation, new LinearLayout.LayoutParams(-1, -2));
         setContentView(root);
         ViewCompat.requestApplyInsets(root);
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -190,10 +214,11 @@ public final class MainActivity extends AppCompatActivity {
         return t;
     }
     private void heading(int id) {
-        TextView t = text(getString(id), 28); t.setAccessibilityHeading(true); body.addView(t);
+        TextView t = text(getString(id), 32); t.setTypeface(t.getTypeface(), android.graphics.Typeface.BOLD);
+        t.setAccessibilityHeading(true); body.addView(t);
     }
     private LinearLayout card(CharSequence title, CharSequence description) {
-        MaterialCardView card = new MaterialCardView(this); card.setRadius(dp(20));
+        MaterialCardView card = new MaterialCardView(this); FlatUi.section(card);
         LinearLayout inner = new LinearLayout(this); inner.setOrientation(LinearLayout.VERTICAL);
         inner.setPadding(dp(18), dp(18), dp(18), dp(18));
         inner.addView(text(title, 20));
@@ -205,6 +230,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private MaterialButton button(LinearLayout parent, int label, View.OnClickListener click) {
         MaterialButton b = new MaterialButton(this); b.setText(label); b.setMinHeight(dp(48));
+        FlatUi.button(b);
         b.setOnClickListener(click); parent.addView(b, new ViewGroup.LayoutParams(-1, -2));
         return b;
     }
@@ -472,6 +498,7 @@ public final class MainActivity extends AppCompatActivity {
         Chip chip = new Chip(this);
         chip.setText(label);
         chip.setCheckable(true);
+        FlatUi.chip(chip);
         chip.setChecked(mode == current);
         chip.setOnClickListener(v -> {
             if (mode == appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM))
