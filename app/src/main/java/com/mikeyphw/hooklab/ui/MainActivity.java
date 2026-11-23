@@ -37,6 +37,7 @@ import com.mikeyphw.hooklab.HookLabApp;
 import com.mikeyphw.hooklab.R;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakCatalog;
+import com.mikeyphw.hooklab.core.HookGroupCatalog;
 import com.mikeyphw.hooklab.core.TweakEngine;
 import com.mikeyphw.hooklab.core.TweakCompatibility;
 import com.mikeyphw.hooklab.core.TweakSpec;
@@ -59,7 +60,185 @@ public final class MainActivity extends AppCompatActivity {
     private static final int NAV_HOME = 201, NAV_APPS = 202, NAV_DIAGNOSTICS = 203;
     private static final int THEME_AMOLED = 100;
     private int page;
-    private String selectedPackage;
+    private String selectedHookId;
+    private static final String UI04_VIEW_KEY = "catalog.view";
+    private static final String UI04_QUERY_KEY = "catalog.search";
+    private static final String UI04_EXPANDED_GROUP_KEY = "catalog.expanded.group";
+    private static final String UI04_EXPANDED_APP_KEY = "catalog.expanded.app";
+    private static final int UI04_GROUPS = 0, UI04_BY_APP = 1;
+    private int catalogView = UI04_GROUPS;
+    private String catalogQuery = "";
+    private String expandedGroupId;
+    private String expandedAppPackage;
+    private LinearLayout catalogResults;
+
+    private LinearLayout cardTo(LinearLayout parent, CharSequence title, CharSequence description) {
+        MaterialCardView surface = new MaterialCardView(this);
+        FlatUi.section(surface);
+        LinearLayout inner = new LinearLayout(this);
+        inner.setOrientation(LinearLayout.VERTICAL);
+        inner.setPadding(dp(18), dp(18), dp(18), dp(18));
+        inner.addView(text(title, 20));
+        TextView detail = text(description, 14);
+        detail.setPadding(0, dp(8), 0, 0);
+        inner.addView(detail);
+        surface.addView(inner);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = dp(12);
+        parent.addView(surface, params);
+        return inner;
+    }
+    private String groupName(HookGroupCatalog.Group group) {
+        switch (group.id) {
+            case "group.obtainx": return getString(R.string.ui_group_obtainx);
+            case "group.chatgpt_termux": return getString(R.string.ui_group_chatgpt);
+            case "group.mcc": return getString(R.string.ui_group_mcc);
+            case "group.wordmaster": return getString(R.string.ui_group_wordmaster);
+            default: return group.title;
+        }
+    }
+    private TweakEngine.Entry<HookContext> entryForId(String id) {
+        if (id == null) return null;
+        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries())
+            if (id.equals(entry.spec.id)) return entry;
+        return null;
+    }
+    private void catalogCard(LinearLayout parent, TweakEngine.Entry<HookContext> entry) {
+        LinearLayout inner = cardTo(parent, entry.title,
+                statusText(eligibility(entry.spec, service())));
+        LinearLayout row = horizontal();
+        row.addView(hostIcon(entry.spec.packageName));
+        row.addView(text(entry.description, 14), new LinearLayout.LayoutParams(0, -2, 1));
+        inner.addView(row);
+        button(inner, R.string.ui_configure, v -> showApp(entry));
+    }
+    private Chip catalogChip(int label, int mode) {
+        Chip chip = new Chip(this);
+        chip.setText(label);
+        chip.setCheckable(true);
+        FlatUi.chip(chip);
+        chip.setChecked(catalogView == mode);
+        chip.setOnClickListener(v -> {
+            if (catalogView == mode) return;
+            catalogView = mode;
+            appearance.edit().putInt(UI04_VIEW_KEY, mode).apply();
+            render(); // UI-only state: never call stateStore or touch any scope/tweak preference.
+        });
+        return chip;
+    }
+    private void renderCatalogResults() {
+        if (catalogResults == null) return;
+        catalogResults.removeAllViews();
+        int visible = 0;
+        if (catalogView == UI04_GROUPS) {
+            for (HookGroupCatalog.Group group : HookGroupCatalog.groups(TweakCatalog.all())) {
+                String name = groupName(group);
+                boolean groupMatch = HookGroupCatalog.matches(catalogQuery, name, group.description, group.id);
+                List<TweakEngine.Entry<HookContext>> matches = new java.util.ArrayList<>();
+                for (TweakSpec spec : group.members) {
+                    TweakEngine.Entry<HookContext> entry = entryForId(spec.id);
+                    if (entry == null) continue; // Only the live registered catalog owns UI entries.
+                    if (groupMatch || HookGroupCatalog.matches(catalogQuery,
+                            entry.title, entry.description, spec.packageName, spec.id))
+                        matches.add(entry);
+                }
+                if (matches.isEmpty()) continue;
+                visible++;
+                java.util.Set<String> matchingPackages = new java.util.HashSet<>();
+                for (TweakEngine.Entry<HookContext> item : matches)
+                    matchingPackages.add(item.spec.packageName);
+                LinearLayout card = cardTo(catalogResults, name,
+                        getString(R.string.ui_group_members,
+                                matches.size(), matchingPackages.size()));
+                card.addView(text(getString(R.string.ui_group_no_toggle), 12));
+                boolean searching = !catalogQuery.trim().isEmpty();
+                boolean expanded = searching || group.id.equals(expandedGroupId);
+                if (!searching) button(card, expanded ? R.string.ui_catalog_collapse : R.string.ui_catalog_expand,
+                        v -> {
+                            expandedGroupId = group.id.equals(expandedGroupId) ? null : group.id;
+                            appearance.edit().putString(UI04_EXPANDED_GROUP_KEY, expandedGroupId).apply();
+                            renderCatalogResults();
+                        });
+                if (expanded) for (TweakEngine.Entry<HookContext> entry : matches)
+                    catalogCard(card, entry);
+            }
+        } else {
+            java.util.Map<String,List<TweakSpec>> byPackage =
+                    new java.util.TreeMap<>(HookGroupCatalog.byPackage(TweakCatalog.all()));
+            for (java.util.Map.Entry<String,List<TweakSpec>> group : byPackage.entrySet()) {
+                List<TweakEngine.Entry<HookContext>> matches = new java.util.ArrayList<>();
+                String pkg = group.getKey();
+                boolean pkgMatch = HookGroupCatalog.matches(catalogQuery, pkg);
+                TweakEngine.Entry<HookContext> first = null;
+                for (TweakSpec spec : group.getValue()) {
+                    TweakEngine.Entry<HookContext> entry = entryForId(spec.id);
+                    if (entry == null) continue;
+                    if (first == null) first = entry;
+                    if (pkgMatch || HookGroupCatalog.matches(catalogQuery,
+                            entry.title, entry.description, entry.spec.id))
+                        matches.add(entry);
+                }
+                if (matches.isEmpty() || first == null) continue;
+                visible++;
+                String title = first.title;
+                int delimiter = title.indexOf(" · ");
+                String appName = delimiter > 0 ? title.substring(0, delimiter) : pkg;
+                LinearLayout card = cardTo(catalogResults, appName,
+                        pkg + " · " + getString(R.string.ui_app_members, matches.size()));
+                boolean searching = !catalogQuery.trim().isEmpty();
+                boolean expanded = searching || pkg.equals(expandedAppPackage);
+                if (!searching) button(card, expanded ? R.string.ui_catalog_collapse : R.string.ui_catalog_expand,
+                        v -> {
+                            expandedAppPackage = pkg.equals(expandedAppPackage) ? null : pkg;
+                            appearance.edit().putString(UI04_EXPANDED_APP_KEY, expandedAppPackage).apply();
+                            renderCatalogResults();
+                        });
+                if (expanded) for (TweakEngine.Entry<HookContext> entry : matches)
+                    catalogCard(card, entry);
+            }
+        }
+        if (visible == 0) catalogResults.addView(text(getString(R.string.ui_catalog_empty), 16));
+    }
+    private void hooksCatalog() {
+        heading(R.string.ui_hooks);
+        body.addView(text(getString(R.string.ui_catalog_intro), 14));
+        ChipGroup modes = new ChipGroup(this);
+        modes.setSingleSelection(true);
+        modes.addView(catalogChip(R.string.ui_groups, UI04_GROUPS));
+        modes.addView(catalogChip(R.string.ui_by_app, UI04_BY_APP));
+        body.addView(modes);
+        android.widget.EditText search = new android.widget.EditText(this);
+        search.setSingleLine(true);
+        search.setHint(R.string.ui_search_hooks);
+        search.setText(catalogQuery);
+        search.setTextColor(MaterialColors.getColor(search, com.google.android.material.R.attr.colorOnSurface));
+        search.setHintTextColor(MaterialColors.getColor(search,
+                com.google.android.material.R.attr.colorOnSurfaceVariant));
+        android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
+        background.setColor(MaterialColors.getColor(search,
+                com.google.android.material.R.attr.colorSurfaceContainer));
+        background.setCornerRadius(dp(12));
+        search.setBackground(background);
+        search.setPadding(dp(16), dp(10), dp(16), dp(10));
+        search.setMinHeight(dp(48));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(8);
+        body.addView(search, lp);
+        catalogResults = new LinearLayout(this);
+        catalogResults.setOrientation(LinearLayout.VERTICAL);
+        body.addView(catalogResults, new LinearLayout.LayoutParams(-1, -2));
+        search.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                catalogQuery = s.toString();
+                appearance.edit().putString(UI04_QUERY_KEY, catalogQuery).apply();
+                renderCatalogResults(); // No full render: focus, cursor, and IME remain stable.
+            }
+            @Override public void afterTextChanged(android.text.Editable editable) { }
+        });
+        renderCatalogResults();
+    }
+
     private MaterialToolbar toolbar;
     private NavigationBarView navigation;
     private FrameworkStateStore stateStore;
@@ -85,7 +264,24 @@ public final class MainActivity extends AppCompatActivity {
         }
         stateStore = new FrameworkStateStore((HookLabApp) getApplication());
         page = state == null ? HOME : Math.max(HOME, Math.min(APP_DETAIL, state.getInt("page")));
-        selectedPackage = state == null ? null : state.getString("selectedPackage");
+        selectedHookId = state == null ? null : state.getString("selectedHookId");
+        // Migrate a pre-UI-04 activity state by package once; never use the
+        // package as the permanent selection key (multiple hooks may share it).
+        if (selectedHookId == null && state != null) {
+            String oldPackage = state.getString("selectedPackage");
+            for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) {
+                if (oldPackage != null && oldPackage.equals(entry.spec.packageName)) {
+                    selectedHookId = entry.spec.id;
+                    break;
+                }
+            }
+        }
+        catalogView = appearance.getInt(UI04_VIEW_KEY, UI04_GROUPS) == UI04_BY_APP
+                ? UI04_BY_APP : UI04_GROUPS;
+        catalogQuery = appearance.getString(UI04_QUERY_KEY, "");
+        if (catalogQuery == null) catalogQuery = "";
+        expandedGroupId = appearance.getString(UI04_EXPANDED_GROUP_KEY, null);
+        expandedAppPackage = appearance.getString(UI04_EXPANDED_APP_KEY, null);
         if (page == APP_DETAIL && selectedEntry() == null) page = APPS;
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         // DS-01: the same content/behavior on phone and tablet, with a native rail
@@ -143,7 +339,7 @@ public final class MainActivity extends AppCompatActivity {
 
         if (!wide) navigation = new BottomNavigationView(this);
         navigation.getMenu().add(Menu.NONE, NAV_HOME, 0, R.string.home).setIcon(R.drawable.ic_nav_home);
-        navigation.getMenu().add(Menu.NONE, NAV_APPS, 1, R.string.apps).setIcon(R.drawable.ic_nav_apps);
+        navigation.getMenu().add(Menu.NONE, NAV_APPS, 1, R.string.ui_hooks).setIcon(R.drawable.ic_nav_apps);
         navigation.getMenu().add(Menu.NONE, NAV_DIAGNOSTICS, 2, R.string.diagnostics)
                 .setIcon(R.drawable.ic_nav_diagnostics);
         navigation.setLabelVisibilityMode(
@@ -186,7 +382,10 @@ public final class MainActivity extends AppCompatActivity {
             if (isFinishing() || isDestroyed() || snapshot.equals(next)) return;
             int previousScroll = scroll.getScrollY();
             snapshot = next;
-            render(); // Only rebuild the current page; toolbar and tabs remain attached.
+            // On the Hooks catalog, update only results so a framework status
+            // refresh cannot steal search keyboard focus or cursor position.
+            if (page == APPS && catalogResults != null) renderCatalogResults();
+            else render();
             scroll.post(() -> scroll.scrollTo(0, previousScroll));
         });
     }
@@ -200,7 +399,7 @@ public final class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
     @Override protected void onSaveInstanceState(Bundle out) {
-        out.putInt("page", page); out.putString("selectedPackage", selectedPackage);
+        out.putInt("page", page); out.putString("selectedHookId", selectedHookId);
         super.onSaveInstanceState(out);
     }
     private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
@@ -254,7 +453,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private TweakEngine.Entry<HookContext> selectedEntry() {
         for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) {
-            if (entry.spec.packageName.equals(selectedPackage)) return entry;
+            if (entry.spec.id.equals(selectedHookId)) return entry;
         }
         return null;
     }
@@ -298,7 +497,7 @@ public final class MainActivity extends AppCompatActivity {
         return icon;
     }
     private void showApp(TweakEngine.Entry<HookContext> entry) {
-        selectedPackage = entry.spec.packageName;
+        selectedHookId = entry.spec.id;
         goTo(APP_DETAIL);
     }
     private void appCard(TweakEngine.Entry<HookContext> entry) {
@@ -311,9 +510,7 @@ public final class MainActivity extends AppCompatActivity {
         button(inner, R.string.ui_configure, v -> showApp(entry));
     }
     private void apps() {
-        heading(R.string.apps);
-        body.addView(text(getString(R.string.ui_apps_intro), 14));
-        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) appCard(entry);
+        hooksCatalog();
     }
     private void appDetail() {
         TweakEngine.Entry<HookContext> entry = selectedEntry();
@@ -573,7 +770,7 @@ public final class MainActivity extends AppCompatActivity {
             toolbar.setNavigationIcon((android.graphics.drawable.Drawable) null);
         }
         switch (page) {
-            case APPS: toolbar.setTitle(R.string.apps); break;
+            case APPS: toolbar.setTitle(R.string.ui_hooks); break;
             case DIAGNOSTICS: toolbar.setTitle(R.string.diagnostics); break;
             case SETTINGS: toolbar.setTitle(R.string.settings); break;
             case ABOUT: toolbar.setTitle(R.string.about); break;
