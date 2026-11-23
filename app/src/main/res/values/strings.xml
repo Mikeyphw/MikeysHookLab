@@ -157,4 +157,26 @@ Association: %6$s
     <string name="dx01_clock_unknown">unknown source time</string>
     <string name="dx01_previous">Previous</string>
     <string name="dx01_next">Next</string>
+    <string name="ui06_overview">Registered integrations</string>
+    <string name="ui06_counts">%1$d hooks · %2$d groups · %3$d target apps</string>
+    <string name="ui06_scoped">Framework-approved target apps: %1$s</string>
+    <string name="ui06_readiness">Configuration readiness</string>
+    <string name="ui06_readiness_counts">Eligible configuration: %1$d · Needs attention: %2$d · Disabled: %3$d · Unknown: %4$d</string>
+    <string name="ui06_not_runtime">Eligibility does not prove a hook ran. Unknown framework, scope or target version is never treated as active.</string>
+    <string name="ui06_needs_attention">Configuration needs attention</string>
+    <string name="ui06_review_hook">Inspect this hook</string>
+    <string name="ui06_unknown_title">Framework evidence unavailable</string>
+    <string name="ui06_unknown_detail">Connect LSPosed and refresh scope, preferences and target-version evidence before interpreting readiness.</string>
+    <string name="ui06_recent">Latest imported diagnostic evidence</string>
+    <string name="ui06_no_imports">No imported diagnostics available. This is not evidence that hooks did or did not run.</string>
+    <string name="ui06_recent_format">Source: %1$s
+Code: %2$s
+Correlation: %3$s
+Reported clock: %4$s</string>
+    <string name="ui06_import_warning">Imported logs are not authenticated runtime execution. Association does not establish that a hook ran.</string>
+    <string name="ui06_import_retention">Retained: %1$d · Evicted: %2$d</string>
+    <string name="ui06_quick_actions">Quick actions</string>
+    <string name="ui06_quick_help">Navigation only. These buttons never enable hooks or grant scope.</string>
+    <string name="ui06_browse_hooks">Browse hook groups</string>
+    <string name="ui06_open_diagnostics">Open diagnostics timeline</string>
 </resources>

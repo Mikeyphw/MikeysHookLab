@@ -2,9 +2,9 @@
 
 **Roadmap ID:** `HOOKLAB-FLAT-UX`  
 **Revision:** 1.0 · **Prepared:** 2026-11-23  
-**Status:** ADOPTED SOURCE ROADMAP — DS-01, UI-04 and UI-05 merged with required hosted CI success; DX-01 import-only source candidate, native/CI/device acceptance pending  
+**Status:** ADOPTED ROADMAP — DS-01, UI-04, UI-05 and DX-01 merged with required hosted CI success; UI-06 source candidate pending native/hosted CI/device verification  
 **Repository home:** `docs/roadmaps/hooklab-flat-ux.md` (committed by DS-01)  
-**Verified DX-01 base:** `Mikeyphw/MikeysHookLab` `main` at `e669c1d3949268623dbf341ea5c2efc2cd4bc66c` (merged PR #16, UI-05).  
+**Verified UI-06 base:** `Mikeyphw/MikeysHookLab` `main` at `703be7363ac2cc9dadfd92975e8164c67b37a907` (merged PR #17, DX-01).  
 **Contract:** `/Agent Contracts/ai_agent_operating_contract_cg.md`; `AGENT-OPERATIONS-DEVTOOL` v1.15; SHA-256 `cb3963ba70dd90001d04b07eb11c12cb6f29fad3d9de5fb19dda3952e1596100`.  
 **Visual source of truth:** `hooklab_diagnostics_mock_cg.html`, SHA-256 `0d2d0050be230ee9d27529d711cdb48022b87046f076cc11dd883bb1aa1a126b`, explicitly extended across the **entire** native app. Prototype behavior uses sample data and does not prove Android/LSPosed functionality.
 
@@ -131,8 +131,8 @@ Separate **framework service** / **remote preferences** / **LSPosed scope** / **
 | `DS-01` | Flat Design System & Adaptive Native Shell | Tokens, themes, responsive navigation, surfaces, reusable typography and controls | Current UI-03 stable state | MERGED · hosted CI PASS / DEVICE PENDING |
 | `UI-04` | Hook Groups & Group/App Catalog | Catalog metadata, default Groups, By app, search and stable hook identity | DS-01 for final visuals; current `TweakCatalog` | MERGED · hosted CI PASS / DEVICE PENDING |
 | `UI-05` | Group/Hook Detail & Independent LSPosed Setup | Mini-module details, per-hook switches/scope/status, multi-hook same-app support | UI-04, UI-03 state authority | MERGED · hosted CI PASS / DEVICE PENDING |
-| `UI-06` | Home Dashboard, Readiness & Recent Activity | Flat Home, honest framework/readiness summary, quick actions, last actual event | DS-01, UI-04, DX-01 for live recent events | PLANNED / PENDING |
-| `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
+| `UI-06` | Home Dashboard, Readiness & Recent Activity | Flat Home, honest framework/readiness summary, quick actions, last imported evidence (explicitly unauthenticated) | DS-01, UI-04, DX-01 for imported event provenance | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
+| `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | MERGED · hosted CI PASS / DEVICE + SOURCE GAPS PENDING |
 | `DX-02` | Guided Capture Sessions & Hook Discovery | Reproduction workflow, bounded collection, annotations, probe metadata, evidence bundle | DX-01 | PLANNED / PENDING |
 | `DX-03` | Hook Health, Troubleshooting & Evidence Explorer | Source-aware health/status, failure analysis, collector gaps, capture-linked reports | DX-01, UI-05; DX-02 for capture links | PLANNED / PENDING |
 | `UI-07` | Settings, Scope, MCC Control, About & Help Redesign | Remaining first-party screens in same language; independent permissions/confirmation retained | DS-01, UI-05 | PLANNED / PENDING |
@@ -265,3 +265,12 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - Existing opt-in `VerboseLogs` is the source of recognized HookLab code events. Actual LSPosed module/framework and previously authorized logcat export files are imported only through Android Storage Access Framework. Privileged/live logcat collectors are intentionally **unavailable** until a separate explicit capability-gated implementation can be proven safe; no new permissions/root or hidden collectors.
 - Diagnostic screen offers explicit import by source, source/severity/package/hook/query filters, bounded paging, per-event provenance inspector, copy-selected/filtered redacted JSONL, and SAF ZIP with `events.jsonl` and SHA-256 manifest. Selected imported evidence survives rotation in-process via `HookLabApp` but does not survive process death.
 - **Acceptance truth:** DX01-P01..P06 source candidate; only local JVM privacy/model guards if verified, native and hosted CI pending, device/LSPosed export round trip and crash-recovery UX pending. Missing live collectors, bounded persistence and group/time UI mean this is **NOT SOURCE COMPLETE / NOT ACCEPTED**. No assertion of runtime log access or fully functional DX-01.
+
+## UI-06 · Consolidated Home Dashboard source candidate (2026-11-23)
+
+- **Base:** `main` at `703be7363ac2cc9dadfd92975e8164c67b37a907`, DX-01 PR #17 merge; PR-head required CI #45258951146 and post-merge main CI #45259364441 passed. Device validation pending.
+- UI06-P01: unique hook/group/target-package and approved scope counts from `TweakCatalog`, `HookGroupCatalog` and `FrameworkSnapshot`. Duplicate group membership fails closed.
+- UI06-P02: framework readiness never equates eligible configuration with executed hooks. Latest DX-01 imported event is labeled as reported imported evidence and retains source/correlation/clock; no imports = explicitly unknown.
+- UI06-P03: working navigation to registered hook detail, Groups, Diagnostics and Scope; no write/toggle or invented Capture button.
+- **Source handoff only:** UI-06 Android CI, physical LSPosed and device UI verification pending. DX-01 import-only model lacks authenticated live execution and process-death retention; do not conflate a successful merge with full DX-01 acceptance.
+- **Other pending overlays:** DX-02 Guided Capture Sessions & Hook Discovery; DX-03 Hook Health, Troubleshooting & Evidence Explorer; UI-07 Settings, Scope, MCC Control, About & Help Redesign; UI-08 Accessibility, Regression, Performance & Legacy UI Retirement.

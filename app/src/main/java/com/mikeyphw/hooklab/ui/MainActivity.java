@@ -36,6 +36,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textview.MaterialTextView;
 import com.mikeyphw.hooklab.HookLabApp;
 import com.mikeyphw.hooklab.R;
+import com.mikeyphw.hooklab.ui.HomeDashboardModel;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.HookGroupCatalog;
@@ -858,24 +859,50 @@ public final class MainActivity extends AppCompatActivity {
     private void home() {
         heading(R.string.app_name);
         body.addView(text(getString(R.string.tagline), 18));
-        XposedService s = service();
-        LinearLayout status = card(getString(R.string.status), connection(s));
-        if (!ready(s)) {
-            status.addView(text(getString(R.string.ui_framework_help), 14));
-        }
-        int scoped = 0;
-        Set<String> approved = scopedPackages(s);
-        if (approved != null) {
-            for (TweakSpec spec : TweakCatalog.all()) {
-                if (approved.contains(spec.packageName)) scoped++;
+        // UI-06: truthful projection of the framework snapshot and DX-01 imports.
+        // No read or write path here can install, toggle, scope or start hooks.
+        HomeDashboardModel.Summary summary = HomeDashboardModel.project(
+                TweakCatalog.all(), HookGroupCatalog.groups(TweakCatalog.all()),
+                snapshot, diagnosticsStore());
+        card(getString(R.string.ui06_overview), getString(R.string.ui06_counts,
+                summary.hookCount, summary.groupCount, summary.packageCount)
+                + "\n" + getString(R.string.ui06_scoped,
+                    summary.scopedPackageCount < 0 ? getString(R.string.ui_unknown)
+                        : Integer.toString(summary.scopedPackageCount)));
+        LinearLayout readiness = card(getString(R.string.ui06_readiness),
+                connection(service()) + "\n" + getString(R.string.ui06_readiness_counts,
+                    summary.eligibleConfigurations, summary.problems,
+                    summary.disabled, summary.unknown));
+        readiness.addView(text(getString(R.string.ui06_not_runtime), 14));
+        if (!ready(service()))
+            readiness.addView(text(getString(R.string.ui_framework_help), 14));
+        if (summary.attentionHookId != null) {
+            TweakEngine.Entry<HookContext> attention = entryForId(summary.attentionHookId);
+            if (attention != null) {
+                LinearLayout issue = card(getString(R.string.ui06_needs_attention),
+                        attention.title + ": " + statusText(eligibility(attention.spec, service())));
+                button(issue, R.string.ui06_review_hook, v -> showApp(attention));
             }
+        } else if (summary.unknown > 0) {
+            card(getString(R.string.ui06_unknown_title), getString(R.string.ui06_unknown_detail));
         }
-        card(getString(R.string.ui_overview), getString(R.string.ui_overview_summary,
-                TweakCatalog.all().size(), approved == null ? "?" :
-                        Integer.toString(scoped)));
-        body.addView(text(getString(R.string.ui_status_caution), 14));
-        body.addView(text(getString(R.string.ui_integrations_heading), 20));
-        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) appCard(entry);
+        if (summary.latestImported == null) {
+            card(getString(R.string.ui06_recent), getString(R.string.ui06_no_imports));
+        } else {
+            com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event event = summary.latestImported;
+            String when = event.timestamp.isEmpty() ? getString(R.string.dx01_clock_unknown) : event.timestamp;
+            LinearLayout recent = card(getString(R.string.ui06_recent),
+                    getString(R.string.ui06_recent_format, event.source, event.code, event.correlation, when));
+            recent.addView(text(getString(R.string.ui06_import_warning), 14));
+            recent.addView(text(getString(R.string.ui06_import_retention,
+                    summary.importedCount, summary.evictedCount), 14));
+        }
+        LinearLayout shortcuts = card(getString(R.string.ui06_quick_actions),
+                getString(R.string.ui06_quick_help));
+        button(shortcuts, R.string.ui06_browse_hooks, v -> goTo(APPS));
+        button(shortcuts, R.string.ui06_open_diagnostics, v -> goTo(DIAGNOSTICS));
+        button(shortcuts, R.string.scope, v -> goTo(SCOPE));
+        // DX-02 capture is not shipped: do not render a nonfunctional capture CTA.
     }
     private void saveTweak(XposedService s, String id, boolean enabled) {
         if (!ready(s) || !pendingPreferences.add(id)) return;

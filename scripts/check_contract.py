@@ -312,3 +312,23 @@ check('public com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnostics()'
 check('READ_LOGS' not in uidebug and 'Runtime.getRuntime().exec' not in saf
       and (r/'app/src/test/java/com/mikeyphw/hooklab/diagnostics/DiagnosticTimelineTest.java').is_file(),
       'DX-01 no stealth/root collector; JVM provenance/privacy regression present')
+
+# UI-06: all Home information is a read-only projection of registered hooks,
+# framework state and imported (non-authenticated) diagnostic evidence.
+home_model = read('app/src/main/java/com/mikeyphw/hooklab/ui/HomeDashboardModel.java')
+home_activity = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+check('Set<String> ids=new HashSet<>()' in home_model
+      and 'state.eligibility(spec)' in home_model
+      and 'scoped=0;' in home_model and 'for(String pkg:packages)' in home_model
+      and 'e.ordinal>latest.ordinal' in home_model,
+      'UI-06 unique counts, unknown readiness and imported evidence projection')
+check('HomeDashboardModel.project(' in home_activity
+      and 'diagnosticsStore()' in home_activity
+      and 'summary.latestImported == null' in home_activity
+      and 'R.string.ui06_import_warning' in home_activity
+      and 'goTo(DIAGNOSTICS)' in home_activity
+      and 'goTo(APPS)' in home_activity,
+      'UI-06 real Home routes and explicit imported-event provenance')
+check('DX-02 capture is not shipped' in home_activity
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/HomeDashboardModelTest.java').is_file(),
+      'UI-06 no fictional capture route and standalone model regression tests')
