@@ -359,3 +359,32 @@ check('getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE)' in capture_ap
       and 'captureApp().closeCapture()' in capture_ui
       and (r/'app/src/test/java/com/mikeyphw/hooklab/diagnostics/CaptureSessionTest.java').is_file(),
       'DX-02 process loss and pending-import safety with Java tests')
+
+# DX-03: five independent framework axes, exact hook attribution, no false
+# execution; UI actions are navigation/copy only, not scope or opt-in writes.
+health_model=read('app/src/main/java/com/mikeyphw/hooklab/ui/HookHealthModel.java')
+health_ui=read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+check('snapshot.inScope(spec.packageName)' in health_model
+      and 'snapshot.flag(spec.id)' in health_model
+      and 'flag.installedVersion' in health_model
+      and 'snapshot.eligibility(spec)' in health_model
+      and 'Axis.OPTED_OUT' in health_model,
+      'DX-03 independent connection/scope/opt-in/lock/version model')
+check('spec.id.equals(event.hookId)' in health_model
+      and 'event.fileSha256' in health_ui
+      and 'event.lineNumber' in health_ui
+      and 'unrelatedErrors' in health_model
+      and 'retainedDropped' in health_model,
+      'DX-03 exact-ID source/error attribution and collector-gap disclosure')
+check('v->goTo(CAPTURE)' in health_ui
+      and 'openHookHealth(TweakSpec spec)' in health_ui
+      and 'goTo(DIAGNOSTICS); // Read-only route' in health_ui
+      and 'showApp(entry)' in health_ui
+      and 'copyDiagnosticText(HookHealthModel.redactedJson(report))' in health_ui,
+      'DX-03 real safe setup/capture/evidence navigation and redacted copy')
+check('public boolean executionVerified(){return false;}' in health_model
+      and 'runtime_execution_verified' in health_model
+      and 'imported_evidence_authenticated' in health_model
+      and 'NO_EXACT_HOOK_ASSOCIATION' in health_model
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/HookHealthModelTest.java').is_file(),
+      'DX-03 no claimed ACTIVE status and Java negative evidence regressions')
