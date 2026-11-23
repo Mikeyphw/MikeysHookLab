@@ -51,7 +51,7 @@ public final class FlatUi {
     public static void navigation(NavigationBarView nav) {
         nav.setBackgroundColor(MaterialColors.getColor(nav, R.attr.colorSurface));
         nav.setElevation(0f);
-        int on = MaterialColors.getColor(nav, R.attr.colorPrimary);
+        int on = MaterialColors.getColor(nav, androidx.appcompat.R.attr.colorPrimary);
         int off = MaterialColors.getColor(nav, R.attr.colorOnSurfaceVariant);
         ColorStateList tint = new ColorStateList(
             new int[][] { new int[]{android.R.attr.state_checked}, new int[]{} },
