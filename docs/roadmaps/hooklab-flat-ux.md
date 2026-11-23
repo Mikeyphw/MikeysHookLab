@@ -247,3 +247,12 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - The group is categorically not an authorization or enablement unit; existing `TweakCatalog` hook IDs and version/process guards are unchanged.
 - `UI05-P01..P04`: source-bound regression suite and hosted JUnit pending native Android CI; LSPosed/device runtime and deep-link behavior remain pending.
 - UI-04 PR #15 merged `c3e2968eb506b35ff566afd18d512e1a362a187e` with Android CI run #45242448541 successful for PR head `859c7be780a0d91fd4adb1dde2c955cebe08f55b`; device evidence not collected.
+
+
+### UI-05-F01 — Hosted CI source-contract regression correction
+
+- Original UI-05 source commit: `7dbce69623245d74f6708b85d8598f1c7fdcafaf` on PR #16.
+- Required Android CI run #45248242365, job #137950625526: `CONTRACT_FAIL UI-04 detail navigation uses independent hook ID` during `scripts/check_contract.py`, before Android compilation.
+- Root cause: UI-04's test asserted `entry.spec.id.equals(selectedHookId)` after UI-05 deliberately replaced that loop with the verified `HookDetailRoute.hook(TweakCatalog.all(), selectedHookId)` call. The production route remains in place; the obsolete internal assertion is replaced with exact-path and missing-ID rejection guards.
+- Change scope: `scripts/check_contract.py` and this roadmap only. Existing hook IDs, framework readback, LSPosed scope, UI production code and Java routing tests are unchanged.
+- Native Devtool apply/commit, hosted exact-head CI, protected merge and Android/LSPosed/device acceptance remain **PENDING** until independently verified. Original UI-05 source must **not** be reapplied.

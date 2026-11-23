@@ -253,8 +253,11 @@ check(all(hook in group_source for hook in (
     'wordmaster.night.filter', 'chatgpt.codeblock.copy.probe')),
     'UI-04 every reviewed registered hook grouped')
 check('selectedHookId = entry.spec.id' in main_source
-    and 'entry.spec.id.equals(selectedHookId)' in main_source,
-    'UI-04 detail navigation uses independent hook ID')
+    and 'HookDetailRoute.hook(TweakCatalog.all(), selectedHookId)' in main_source
+    and 'return verified == null ? null : entryForId(verified.id);' in main_source
+    and 'HookDetailRoute.hook(TweakCatalog.all(), requested) != null' in main_source
+    and (r/'app/src/test/java/com/mikeyphw/hooklab/core/HookDetailRouteTest.java').is_file(),
+    'UI-04/UI-05 independent hook-ID routing and invalid-selection rejection')
 check('appearance.edit().putInt(UI04_VIEW_KEY, mode).apply()' in main_source
     and 'appearance.edit().putString(UI04_QUERY_KEY, catalogQuery).apply()' in main_source
     and 'HookGroupCatalog.groups(TweakCatalog.all())' in main_source,
