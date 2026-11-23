@@ -2,9 +2,9 @@
 
 **Roadmap ID:** `HOOKLAB-FLAT-UX`  
 **Revision:** 1.0 · **Prepared:** 2026-11-23  
-**Status:** ADOPTED ROADMAP — DS-01, UI-04, UI-05 and DX-01 merged with required hosted CI success; UI-06 source candidate pending native/hosted CI/device verification  
+**Status:** ADOPTED ROADMAP — DS-01, UI-04, UI-05, DX-01 and UI-06 merged with hosted CI PASS; DX-02 explicit import-only capture source candidate, native/CI/device acceptance pending  
 **Repository home:** `docs/roadmaps/hooklab-flat-ux.md` (committed by DS-01)  
-**Verified UI-06 base:** `Mikeyphw/MikeysHookLab` `main` at `703be7363ac2cc9dadfd92975e8164c67b37a907` (merged PR #17, DX-01).  
+**Verified DX-02 base:** `Mikeyphw/MikeysHookLab` `main` at `090a97f9bc5e7bc092df2e69f2b8ea1cad47447c` (merged PR #18, UI-06).  
 **Contract:** `/Agent Contracts/ai_agent_operating_contract_cg.md`; `AGENT-OPERATIONS-DEVTOOL` v1.15; SHA-256 `cb3963ba70dd90001d04b07eb11c12cb6f29fad3d9de5fb19dda3952e1596100`.  
 **Visual source of truth:** `hooklab_diagnostics_mock_cg.html`, SHA-256 `0d2d0050be230ee9d27529d711cdb48022b87046f076cc11dd883bb1aa1a126b`, explicitly extended across the **entire** native app. Prototype behavior uses sample data and does not prove Android/LSPosed functionality.
 
@@ -131,9 +131,9 @@ Separate **framework service** / **remote preferences** / **LSPosed scope** / **
 | `DS-01` | Flat Design System & Adaptive Native Shell | Tokens, themes, responsive navigation, surfaces, reusable typography and controls | Current UI-03 stable state | MERGED · hosted CI PASS / DEVICE PENDING |
 | `UI-04` | Hook Groups & Group/App Catalog | Catalog metadata, default Groups, By app, search and stable hook identity | DS-01 for final visuals; current `TweakCatalog` | MERGED · hosted CI PASS / DEVICE PENDING |
 | `UI-05` | Group/Hook Detail & Independent LSPosed Setup | Mini-module details, per-hook switches/scope/status, multi-hook same-app support | UI-04, UI-03 state authority | MERGED · hosted CI PASS / DEVICE PENDING |
-| `UI-06` | Home Dashboard, Readiness & Recent Activity | Flat Home, honest framework/readiness summary, quick actions, last imported evidence (explicitly unauthenticated) | DS-01, UI-04, DX-01 for imported event provenance | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
+| `UI-06` | Home Dashboard, Readiness & Recent Activity | Flat Home, honest framework/readiness summary, quick actions, last imported evidence (explicitly unauthenticated) | DS-01, UI-04, DX-01 for imported event provenance | MERGED · hosted CI PASS / DEVICE PENDING |
 | `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | MERGED · hosted CI PASS / DEVICE + SOURCE GAPS PENDING |
-| `DX-02` | Guided Capture Sessions & Hook Discovery | Reproduction workflow, bounded collection, annotations, probe metadata, evidence bundle | DX-01 | PLANNED / PENDING |
+| `DX-02` | Guided Capture Sessions & Hook Discovery | Reproduction workflow, bounded collection, annotations, probe metadata, evidence bundle | DX-01 | SOURCE CANDIDATE · native/hosted CI/device pending; import-only |
 | `DX-03` | Hook Health, Troubleshooting & Evidence Explorer | Source-aware health/status, failure analysis, collector gaps, capture-linked reports | DX-01, UI-05; DX-02 for capture links | PLANNED / PENDING |
 | `UI-07` | Settings, Scope, MCC Control, About & Help Redesign | Remaining first-party screens in same language; independent permissions/confirmation retained | DS-01, UI-05 | PLANNED / PENDING |
 | `UI-08` | Accessibility, Regression, Performance & Legacy UI Retirement | Full app QA; replace old visual paths, reconcile tests/docs; safely adopt complete redesign | All above source-complete | PLANNED / PENDING |
@@ -274,3 +274,12 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - UI06-P03: working navigation to registered hook detail, Groups, Diagnostics and Scope; no write/toggle or invented Capture button.
 - **Source handoff only:** UI-06 Android CI, physical LSPosed and device UI verification pending. DX-01 import-only model lacks authenticated live execution and process-death retention; do not conflate a successful merge with full DX-01 acceptance.
 - **Other pending overlays:** DX-02 Guided Capture Sessions & Hook Discovery; DX-03 Hook Health, Troubleshooting & Evidence Explorer; UI-07 Settings, Scope, MCC Control, About & Help Redesign; UI-08 Accessibility, Regression, Performance & Legacy UI Retirement.
+
+## DX-02 · Explicit Guided Capture source candidate (2026-11-23)
+
+- **Base:** `main` at `090a97f9bc5e7bc092df2e69f2b8ea1cad47447c`; UI-06 PR #18 source `ae90895ad1cc8ccd9d5e9eaffbd3a35eef8d405a`, hosted required CI #45263005786 PASS; merge `090a97f9bc5e7bc092df2e69f2b8ea1cad47447c`, post-merge CI #45263756545 PASS.
+- DX02-P01: one user-directed SAF-import-only session at a time, 10-minute cap, 64 fixed action markers, explicit stop/cancel and process-loss interruption marker (without replaying in-memory log events). No root/hidden access.
+- DX02-P02: marker elapsed time and import ordinal, source-restricted event correlation and retention-loss note; imported evidence never claims actual execution.
+- DX02-P03: reviewed hook spec and research-only package metadata; no class/method reflection, hook discovery injection or scope changes.
+- DX02-P04: explicit Android SAF redacted ZIP report with events/markers JSONL hashes and provenance; requires hosted test and real device import/export verification.
+- **Acceptance pending:** native PR/CI, Android install, reboot/process-death, permission denial, timeout, actual target reproduction test. DX-01 remains import-only; no live collectors are represented as installed.
