@@ -2,9 +2,9 @@
 
 **Roadmap ID:** `HOOKLAB-FLAT-UX`  
 **Revision:** 1.0 · **Prepared:** 2026-11-23  
-**Status:** ADOPTED ROADMAP — DS-01, UI-04, UI-05, DX-01, UI-06 and DX-02 merged with hosted CI PASS; DX-03 health/evidence source candidate pending native/CI/device acceptance  
+**Status:** ADOPTED ROADMAP — DS-01, UI-04, UI-05, DX-01, UI-06, DX-02 and DX-03 merged with required hosted CI PASS; UI-07 source candidate pending native/CI/device acceptance  
 **Repository home:** `docs/roadmaps/hooklab-flat-ux.md` (committed by DS-01)  
-**Verified DX-03 base:** `Mikeyphw/MikeysHookLab` `main` at `58ac1d335779526818355c9b0ebdf8fc7c943e9c` (merged PR #19, DX-02).  
+**Verified UI-07 base:** `Mikeyphw/MikeysHookLab` `main` at `5d091ad9985dac6f81d9cb60b29f94880508712b` (merged PR #20, DX-03).  
 **Contract:** `/Agent Contracts/ai_agent_operating_contract_cg.md`; `AGENT-OPERATIONS-DEVTOOL` v1.15; SHA-256 `cb3963ba70dd90001d04b07eb11c12cb6f29fad3d9de5fb19dda3952e1596100`.  
 **Visual source of truth:** `hooklab_diagnostics_mock_cg.html`, SHA-256 `0d2d0050be230ee9d27529d711cdb48022b87046f076cc11dd883bb1aa1a126b`, explicitly extended across the **entire** native app. Prototype behavior uses sample data and does not prove Android/LSPosed functionality.
 
@@ -134,8 +134,8 @@ Separate **framework service** / **remote preferences** / **LSPosed scope** / **
 | `UI-06` | Home Dashboard, Readiness & Recent Activity | Flat Home, honest framework/readiness summary, quick actions, last imported evidence (explicitly unauthenticated) | DS-01, UI-04, DX-01 for imported event provenance | MERGED · hosted CI PASS / DEVICE PENDING |
 | `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | MERGED · hosted CI PASS / DEVICE + SOURCE GAPS PENDING |
 | `DX-02` | Guided Capture Sessions & Hook Discovery | Reproduction workflow, bounded collection, annotations, probe metadata, evidence bundle | DX-01 | MERGED · hosted CI PASS / DEVICE + SOURCE GAPS PENDING |
-| `DX-03` | Hook Health, Troubleshooting & Evidence Explorer | Source-aware health/status, failure analysis, collector gaps, capture-linked reports | DX-01, UI-05; DX-02 for capture links | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
-| `UI-07` | Settings, Scope, MCC Control, About & Help Redesign | Remaining first-party screens in same language; independent permissions/confirmation retained | DS-01, UI-05 | PLANNED / PENDING |
+| `DX-03` | Hook Health, Troubleshooting & Evidence Explorer | Source-aware health/status, failure analysis, collector gaps, capture-linked reports | DX-01, UI-05; DX-02 for capture links | MERGED · hosted CI PASS / DEVICE + SOURCE GAPS PENDING |
+| `UI-07` | Settings, Scope, MCC Control, About & Help Redesign | Remaining first-party screens in same language; independent permissions/confirmation retained | DS-01, UI-05 | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
 | `UI-08` | Accessibility, Regression, Performance & Legacy UI Retirement | Full app QA; replace old visual paths, reconcile tests/docs; safely adopt complete redesign | All above source-complete | PLANNED / PENDING |
 
 ### Mandatory promise/acceptance checklist, per overlay
@@ -292,3 +292,12 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - DX03-P03: functional read-only navigation to hook setup, filtered Diagnostics, and existing SAF guided capture; redacted JSON evidence clipboard, no side effects or extra permissions.
 - DX03-P04: no ACTIVE or proof of runtime execution from imported logs, even on eligible configuration. Source and Java negative tests require hosted Android CI and physical-device verification.
 - **Pending:** native Devtool delivery, required CI, Android lifecycle/rotation and real device/runtime acceptance. DX-01 and DX-02 remain intentionally import-only; privileged live collectors are not claimed.
+
+## UI-07 · Native Settings, Scope, MCC, About & Help candidate (2026-11-23)
+
+- **Base:** `main` 5d091ad9985dac6f81d9cb60b29f94880508712b; DX-03 PR #20 exact head `90dc58108a8f113d7150e0923806ece7a21161a1`, required CI #45273304125 PASS, merge `5d091ad9985dac6f81d9cb60b29f94880508712b`, post-merge CI #45273688643 PASS.
+- UI07-P01: deduped, framework-snapshot-owned scope rows with verified unknown/pending states; per-target request and confirmed removal uses existing `FrameworkStateStore`; unrelated approved packages counted but never modified.
+- UI07-P02: native MCC panel preserves manual inspect and explicitly confirmed root write. Process-local single-flight worker survives Activity rotation, avoids duplicate writes and never runs in `onCreate`; result codes sanitized, no new root path.
+- UI07-P03: Settings retains theme and independently framework-backed verbose logging, adds real About/Help flows with installed package version, optional APK signer certificate SHA-256, API102 compatibility and explicit imported-log/clipboard/privacy limitations.
+- UI07-P04: native back navigation, saved Help route and accessible live MCC status; no local Gradle; JUnit tests for source authority, rotation/single-flight and identity.
+- **Acceptance pending:** native Devtool, exact-head hosted Android compilation/CI, physical device rotation, denied root/scope, accessibility/TalkBack and release-signing qualification. DX-01/02 have SAF import-only source gaps and no authenticated live hook execution.
