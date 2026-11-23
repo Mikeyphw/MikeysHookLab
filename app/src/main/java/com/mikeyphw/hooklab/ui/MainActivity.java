@@ -36,6 +36,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textview.MaterialTextView;
 import com.mikeyphw.hooklab.HookLabApp;
 import com.mikeyphw.hooklab.R;
+import com.mikeyphw.hooklab.diagnostics.CaptureSession;
 import com.mikeyphw.hooklab.ui.HomeDashboardModel;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakCatalog;
@@ -58,7 +59,7 @@ public final class MainActivity extends AppCompatActivity {
     private ScrollView scroll;
     private SharedPreferences appearance;
     private static final int HOME = 0, APPS = 1, DIAGNOSTICS = 2;
-    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7;
+    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7, CAPTURE = 8;
     private static final int MENU_SETTINGS = 100, MENU_SCOPE = 101, MENU_ABOUT = 102;
     private static final int NAV_HOME = 201, NAV_APPS = 202, NAV_DIAGNOSTICS = 203;
     private static final int THEME_AMOLED = 100;
@@ -264,25 +265,189 @@ public final class MainActivity extends AppCompatActivity {
             registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
                     uri -> { if(uri != null) exportDiagnosticDocument(uri); });
 
+    // DX-02: explicit bounded reproduction. Only SAF imported files can add events.
+    private static final int DX02_MAX_CHOICES=32;
+    private final android.os.Handler captureDeadlineHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable captureDeadlineRefresh = () -> {
+        if(page==CAPTURE && !isFinishing() && !isDestroyed())render();
+    };
+    private final androidx.activity.result.ActivityResultLauncher<String> captureExportLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
+                    uri -> { if(uri!=null) exportCaptureDocument(uri); });
+    private HookLabApp captureApp(){return (HookLabApp)getApplication();}
+    private long captureClock(){return android.os.SystemClock.elapsedRealtime();}
+    private void selectCaptureSource(TweakSpec hook,String researchPackage){
+        final String[] ids={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
+        final String[] labels={getString(R.string.dx01_module),getString(R.string.dx01_framework),
+                getString(R.string.dx01_logcat_import)};
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle(R.string.dx02_choose_source)
+            .setItems(labels,(dialog,which) -> {
+                if(which<0 || which>=ids.length)return;
+                com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline timeline=diagnosticsStore();
+                long mark=com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(timeline);
+                long elapsed=captureClock(),wall=System.currentTimeMillis();
+                com.mikeyphw.hooklab.diagnostics.CaptureSession next;
+                try {
+                    next=hook!=null
+                        ? com.mikeyphw.hooklab.diagnostics.CaptureSession.forHook(hook,ids[which],elapsed,wall,mark,timeline.dropped())
+                        : com.mikeyphw.hooklab.diagnostics.CaptureSession.forResearch(researchPackage,ids[which],elapsed,wall,mark,timeline.dropped());
+                }catch(IllegalArgumentException rejected){toast(R.string.dx02_target_invalid);return;}
+                if(!captureApp().startCapture(next)){toast(R.string.dx02_active_exists);return;}
+                goTo(CAPTURE);
+            }).show();
+    }
+    private void selectCaptureTarget(){
+        final List<TweakSpec> specs=TweakCatalog.all();
+        if(specs.size()>DX02_MAX_CHOICES) {toast(R.string.dx02_target_invalid);return;}
+        final String[] titles=new String[specs.size()+1];
+        for(int i=0;i<specs.size();i++){
+            final TweakSpec spec=specs.get(i);
+            TweakEngine.Entry<HookContext> entry=entryForId(spec.id);
+            titles[i]=(entry==null?spec.id:entry.title)+" · "+spec.packageName;
+        }
+        titles[specs.size()]=getString(R.string.dx02_research_target);
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle(R.string.dx02_choose_target)
+            .setItems(titles,(dialog,index) -> {
+                if(index<specs.size()) {selectCaptureSource(specs.get(index),null);return;}
+                android.widget.EditText input=new android.widget.EditText(this);
+                input.setSingleLine(true);input.setHint(R.string.dx02_package_hint);
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.dx02_research_target)
+                    .setView(input)
+                    .setNegativeButton(android.R.string.cancel,null)
+                    .setPositiveButton(android.R.string.ok,(confirm,button) -> {
+                        String pkg=input.getText().toString().trim();
+                        if(TweakCatalog.knowsPackage(pkg)){
+                            toast(R.string.dx02_research_registered);return;
+                        }
+                        if(!pkg.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")){
+                            toast(R.string.dx02_target_invalid);return;
+                        }
+                        selectCaptureSource(null,pkg);
+                    }).show();
+            }).show();
+    }
+    private void captureMarker(com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode code){
+        com.mikeyphw.hooklab.diagnostics.CaptureSession capture=captureApp().capture();
+        if(capture==null)return;
+        try {capture.mark(code,captureClock(),
+                    com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(diagnosticsStore()));
+            render();
+        }catch(IllegalArgumentException | IllegalStateException rejected){toast(R.string.dx02_marker_refused);}
+    }
+    private void exportCaptureDocument(android.net.Uri uri){
+        com.mikeyphw.hooklab.diagnostics.CaptureSession capture=captureApp().capture();
+        if(capture==null){toast(R.string.dx02_export_failed);return;}
+        final com.mikeyphw.hooklab.diagnostics.CaptureSession.Report report;
+        try {report=capture.report(diagnosticsStore(),captureClock());}
+        catch(IllegalStateException | IllegalArgumentException rejected){toast(R.string.dx02_export_failed);return;}
+        diagnosticWorker.execute(() -> {
+            try {com.mikeyphw.hooklab.diagnostics.CaptureSaf.export(getContentResolver(),uri,report);
+                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx02_exported);});
+            }catch(java.io.IOException | IllegalArgumentException rejected){
+                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx02_export_failed);});
+            }
+        });
+    }
+    private void capturePage(){
+        heading(R.string.dx02_title);
+        body.addView(text(getString(R.string.dx02_disclaimer),14));
+        com.mikeyphw.hooklab.diagnostics.CaptureSession capture=captureApp().capture();
+        if(capture==null){
+            if(captureApp().interruptedCapture())
+                card(getString(R.string.dx02_interrupted),getString(R.string.dx02_process_loss));
+            button(card(getString(R.string.dx02_new),getString(R.string.dx02_instruction)),
+                    R.string.dx02_choose_target,v -> selectCaptureTarget());
+            return;
+        }
+        long now=captureClock();
+        com.mikeyphw.hooklab.diagnostics.CaptureSession.State state=capture.expireIfNeeded(
+                now,com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(diagnosticsStore()));
+        if(state!=com.mikeyphw.hooklab.diagnostics.CaptureSession.State.ACTIVE)captureApp().closeCapture();
+        LinearLayout header=card(capture.targetHookId.isEmpty()?capture.targetPackage:capture.targetHookId,
+                getString(R.string.dx02_state,capture.state().name(),capture.source,
+                        capture.elapsed(now)/1000));
+        header.addView(text(capture.probeSummary(),13));
+        header.addView(text(getString(R.string.dx02_metadata_only),14));
+        captureDeadlineHandler.removeCallbacks(captureDeadlineRefresh);
+        if(state==com.mikeyphw.hooklab.diagnostics.CaptureSession.State.ACTIVE){
+            long delay=Math.max(1,com.mikeyphw.hooklab.diagnostics.CaptureSession.MAX_DURATION_MS-capture.elapsed(now));
+            captureDeadlineHandler.postDelayed(captureDeadlineRefresh,delay);
+            button(header,R.string.dx02_import,v -> {
+                if(captureApp().captureImportRunning()){toast(R.string.dx02_import_pending);return;}
+                diagnosticImportSource=capture.source;
+                diagnosticImportLauncher.launch(new String[]{"text/plain","application/octet-stream"});
+            });
+            button(header,R.string.dx02_mark_repro,v -> captureMarker(
+                com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.REPRODUCE_ACTION));
+            button(header,R.string.dx02_mark_problem,v -> captureMarker(
+                com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.OBSERVED_PROBLEM));
+            button(header,R.string.dx02_mark_restart,v -> captureMarker(
+                com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.APP_RESTARTED));
+            button(header,R.string.dx02_mark_permission,v -> captureMarker(
+                com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.PERMISSION_PROMPT));
+            button(header,R.string.dx02_stop,v -> {
+                if(captureApp().captureImportRunning()){toast(R.string.dx02_import_pending);return;}
+                capture.stop(captureClock(),com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(diagnosticsStore()));
+                captureApp().closeCapture();render();
+            }).setEnabled(!captureApp().captureImportRunning());
+            button(header,R.string.dx02_cancel,v ->
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.dx02_cancel).setMessage(R.string.dx02_cancel_warning)
+                    .setNegativeButton(android.R.string.cancel,null)
+                    .setPositiveButton(android.R.string.ok,(dialog,which)->{
+                        if(captureApp().captureImportRunning()){toast(R.string.dx02_import_pending);return;}
+                        capture.cancel();captureApp().closeCapture();render();
+                    }).show());
+        } else if(state!=com.mikeyphw.hooklab.diagnostics.CaptureSession.State.CANCELLED){
+            com.mikeyphw.hooklab.diagnostics.CaptureSession.Report report=capture.report(diagnosticsStore(),now);
+            card(getString(R.string.dx02_summary),getString(R.string.dx02_summary_count,
+                    report.observed,capture.markersCount(),report.missingDueToRetention));
+            button(header,R.string.dx02_export,v -> captureExportLauncher.launch("hooklab-capture-redacted.zip"));
+        }else card(getString(R.string.dx02_cancel),getString(R.string.dx02_cancelled));
+        button(card(getString(R.string.dx02_next),getString(R.string.dx02_post_capture)),
+                R.string.dx02_new,v -> {
+                    if(captureApp().captureImportRunning()){toast(R.string.dx02_import_pending);return;}
+                    if(capture.state()==com.mikeyphw.hooklab.diagnostics.CaptureSession.State.ACTIVE){
+                        toast(R.string.dx02_active_exists);return;
+                    }
+                    selectCaptureTarget();
+                });
+    }
+
     private com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnosticsStore() {
         return ((HookLabApp)getApplication()).diagnostics();
     }
     private void importDiagnosticDocument(android.net.Uri uri) {
         final String source = diagnosticImportSource;
+        final boolean requestedCapture = page==CAPTURE;
+        final boolean captured = requestedCapture && captureApp().beginCaptureImport();
+        if(requestedCapture && !captured){toast(R.string.dx02_import_pending);return;}
+        final com.mikeyphw.hooklab.diagnostics.CaptureSession currentCapture =
+                captured ? captureApp().capture() : null;
+        final long capturePriorOrdinal = captured ?
+                com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(diagnosticsStore()) : 0;
         diagnosticWorker.execute(() -> {
             try {
                 com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.ImportReceipt r =
                     com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.importDocument(
                         getContentResolver(),uri,diagnosticsStore(),source);
+                if(captured && currentCapture!=null){
+                    boolean counted=currentCapture.registerImport(source,capturePriorOrdinal,
+                            com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(diagnosticsStore()),captureClock());
+                    if(!counted)captureApp().closeCapture();
+                }
                 runOnUiThread(() -> {
                     if(isFinishing() || isDestroyed())return;
                     diagnosticPageIndex=0;
                     toast(getString(R.string.dx01_import_success, r.accepted));
                     if(page==DIAGNOSTICS)renderDiagnosticRows();
+                    if(page==CAPTURE)render();
                 });
-            }catch(java.io.IOException | IllegalArgumentException error){
+            }catch(java.io.IOException | IllegalArgumentException | IllegalStateException error){
                 runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx01_import_failed);});
-            }
+            }finally {if(captured)captureApp().endCaptureImport();}
         });
     }
     private void exportDiagnosticDocument(android.net.Uri uri) {
@@ -374,6 +539,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private void diagnosticsTimelinePage() {
         LinearLayout panel=card(getString(R.string.dx01_title),getString(R.string.dx01_import_only));
+        button(panel,R.string.dx02_capture,v -> goTo(CAPTURE));
         button(panel,R.string.dx01_import, v -> {
             final String[] types={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
             final String[] labels={getString(R.string.dx01_module),getString(R.string.dx01_framework),
@@ -450,7 +616,7 @@ public final class MainActivity extends AppCompatActivity {
             catch (RuntimeException ignored) { /* Fallback to packaged Material 3 palette. */ }
         }
         stateStore = new FrameworkStateStore((HookLabApp) getApplication());
-        page = state == null ? HOME : Math.max(HOME, Math.min(GROUP_DETAIL, state.getInt("page")));
+        page = state == null ? HOME : Math.max(HOME, Math.min(CAPTURE, state.getInt("page")));
         selectedHookId = state == null ? null : state.getString("selectedHookId");
         selectedGroupId = state == null ? null : state.getString("selectedGroupId");
         detailReturnPage = state == null ? APPS : state.getInt("detailReturnPage", APPS);
@@ -574,7 +740,7 @@ public final class MainActivity extends AppCompatActivity {
             int destination = detailReturnPage == GROUP_DETAIL && selectedGroup() == null
                     ? APPS : detailReturnPage;
             goTo(destination);
-        } else goTo(page == GROUP_DETAIL ? APPS : HOME);
+        } else goTo(page == CAPTURE ? DIAGNOSTICS : page == GROUP_DETAIL ? APPS : HOME);
     }
     private void goTo(int target) {
         if (target == page) return;
@@ -599,12 +765,14 @@ public final class MainActivity extends AppCompatActivity {
         });
     }
     @Override protected void onStop() {
+        captureDeadlineHandler.removeCallbacks(captureDeadlineRefresh);
         ((HookLabApp) getApplication()).removeObserver(frameworkObserver);
         stateStore.stop();
         super.onStop();
     }
     @Override protected void onDestroy() {
-        diagnosticWorker.shutdownNow();
+        // Let an already selected SAF import finish and clear the app-level import gate.
+        diagnosticWorker.shutdown();
         stateStore.close();
         super.onDestroy();
     }
@@ -902,7 +1070,7 @@ public final class MainActivity extends AppCompatActivity {
         button(shortcuts, R.string.ui06_browse_hooks, v -> goTo(APPS));
         button(shortcuts, R.string.ui06_open_diagnostics, v -> goTo(DIAGNOSTICS));
         button(shortcuts, R.string.scope, v -> goTo(SCOPE));
-        // DX-02 capture is not shipped: do not render a nonfunctional capture CTA.
+        // DX-02 capture exists under Diagnostics; Home quick actions remain navigation-only.
     }
     private void saveTweak(XposedService s, String id, boolean enabled) {
         if (!ready(s) || !pendingPreferences.add(id)) return;
@@ -1075,7 +1243,7 @@ public final class MainActivity extends AppCompatActivity {
     private void render() {
         if (body == null) return;
         int navId = page == APP_DETAIL || page == APPS || page == GROUP_DETAIL ? NAV_APPS
-                : page == DIAGNOSTICS ? NAV_DIAGNOSTICS : NAV_HOME;
+                : (page == DIAGNOSTICS || page == CAPTURE) ? NAV_DIAGNOSTICS : NAV_HOME;
         navigation.getMenu().findItem(navId).setChecked(true);
         boolean secondary = page >= SETTINGS;
         if (secondary) {
@@ -1087,6 +1255,7 @@ public final class MainActivity extends AppCompatActivity {
         switch (page) {
             case APPS: toolbar.setTitle(R.string.ui_hooks); break;
             case DIAGNOSTICS: toolbar.setTitle(R.string.diagnostics); break;
+            case CAPTURE: toolbar.setTitle(R.string.dx02_title); break;
             case SETTINGS: toolbar.setTitle(R.string.settings); break;
             case ABOUT: toolbar.setTitle(R.string.about); break;
             case SCOPE: toolbar.setTitle(R.string.scope); break;
@@ -1104,6 +1273,7 @@ public final class MainActivity extends AppCompatActivity {
         switch (page) {
             case APPS: apps(); break;
             case DIAGNOSTICS: diagnosticsPage(); break;
+            case CAPTURE: capturePage(); break;
             case SETTINGS: settings(); break;
             case ABOUT:
                 heading(R.string.about);

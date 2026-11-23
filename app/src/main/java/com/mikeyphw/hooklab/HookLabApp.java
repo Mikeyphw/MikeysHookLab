@@ -13,6 +13,29 @@ public final class HookLabApp extends Application implements XposedServiceHelper
     private final com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnosticTimeline =
             new com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline();
     public com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnostics() {return diagnosticTimeline;}
+    // DX-02: only user-directed, redacted SAF imports are associated with a session.
+    // A stale process-death marker reports interruption, never invents old events.
+    private volatile com.mikeyphw.hooklab.diagnostics.CaptureSession captureSession;
+    private final java.util.concurrent.atomic.AtomicBoolean captureImportRunning =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+    public com.mikeyphw.hooklab.diagnostics.CaptureSession capture() {return captureSession;}
+    public boolean captureImportRunning(){return captureImportRunning.get();}
+    public boolean beginCaptureImport(){return captureImportRunning.compareAndSet(false,true);}
+    public void endCaptureImport(){captureImportRunning.set(false);}
+    public synchronized boolean startCapture(com.mikeyphw.hooklab.diagnostics.CaptureSession next){
+        if(next==null || (captureSession!=null &&
+                captureSession.state()==com.mikeyphw.hooklab.diagnostics.CaptureSession.State.ACTIVE))return false;
+        captureSession=next;
+        getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE).edit().putBoolean("unfinished",true).apply();
+        return true;
+    }
+    public void closeCapture(){
+        getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE).edit().putBoolean("unfinished",false).apply();
+    }
+    public boolean interruptedCapture(){
+        return captureSession==null && getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE)
+                .getBoolean("unfinished",false);
+    }
     private final CopyOnWriteArraySet<Runnable> observers = new CopyOnWriteArraySet<>();
     private final Handler ui = new Handler(Looper.getMainLooper());
 

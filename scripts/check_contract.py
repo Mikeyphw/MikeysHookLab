@@ -329,6 +329,33 @@ check('HomeDashboardModel.project(' in home_activity
       and 'goTo(DIAGNOSTICS)' in home_activity
       and 'goTo(APPS)' in home_activity,
       'UI-06 real Home routes and explicit imported-event provenance')
-check('DX-02 capture is not shipped' in home_activity
+check('capturePage()' in home_activity and 'R.string.dx02_capture' in home_activity
       and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/HomeDashboardModelTest.java').is_file(),
       'UI-06 no fictional capture route and standalone model regression tests')
+
+# DX-02: bounded, explicit SAF import-only capture. Host runtime instrumentation,
+# unreviewed probes and automatic scope/opt-in writes remain absent.
+capture = read('app/src/main/java/com/mikeyphw/hooklab/diagnostics/CaptureSession.java')
+capture_saf = read('app/src/main/java/com/mikeyphw/hooklab/diagnostics/CaptureSaf.java')
+capture_app = read('app/src/main/java/com/mikeyphw/hooklab/HookLabApp.java')
+capture_ui = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+check('MAX_DURATION_MS=10*60*1000L' in capture and 'MAX_MARKERS=64' in capture
+      and 'expireIfNeeded' in capture and 'State.INTERRUPTED' in capture
+      and 'captureApp().interruptedCapture()' in capture_ui,
+      'DX-02 bounded stop, timeout, interruption, cancellation')
+check('MarkerCode' in capture and 'REPRODUCE_ACTION' in capture_ui
+      and 'OBSERVED_PROBLEM' in capture_ui and 'source.equals(e.source)' in capture
+      and 'acceptedImportRanges' in capture and 'currentCapture.registerImport(' in capture_ui,
+      'DX-02 fixed action markers and source/ordinal evidence attribution')
+check('runtime_methods=NOT_ACCESSED; injection=DISABLED' in capture
+      and 'researchOnly' in capture and 'TweakCatalog.knowsPackage(pkg)' in capture_ui,
+      'DX-02 metadata-only safe discovery; no implicit hook installation')
+check('events_sha256' in capture and 'markers_sha256' in capture
+      and 'ZipOutputStream' in capture_saf and '"content".equals(uri.getScheme())' in capture_saf
+      and 'captureExportLauncher.launch(' in capture_ui,
+      'DX-02 explicit SAF redacted capture export with content hashes')
+check('getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE)' in capture_app
+      and 'captureImportRunning()' in capture_ui
+      and 'captureApp().closeCapture()' in capture_ui
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/diagnostics/CaptureSessionTest.java').is_file(),
+      'DX-02 process loss and pending-import safety with Java tests')
