@@ -36,6 +36,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textview.MaterialTextView;
 import com.mikeyphw.hooklab.HookLabApp;
 import com.mikeyphw.hooklab.R;
+import com.mikeyphw.hooklab.ui.HookHealthModel;
 import com.mikeyphw.hooklab.diagnostics.CaptureSession;
 import com.mikeyphw.hooklab.ui.HomeDashboardModel;
 import com.mikeyphw.hooklab.core.HookContext;
@@ -66,6 +67,7 @@ public final class MainActivity extends AppCompatActivity {
     private int page;
     private static final String ACTION_OPEN_HOOK = "com.mikeyphw.hooklab.action.OPEN_HOOK";
     private String selectedHookId;
+    private String healthFocusHookId;
     private String selectedGroupId;
     private int detailReturnPage = APPS;
     private static final String UI04_VIEW_KEY = "catalog.view";
@@ -618,6 +620,12 @@ public final class MainActivity extends AppCompatActivity {
         stateStore = new FrameworkStateStore((HookLabApp) getApplication());
         page = state == null ? HOME : Math.max(HOME, Math.min(CAPTURE, state.getInt("page")));
         selectedHookId = state == null ? null : state.getString("selectedHookId");
+        healthFocusHookId = state == null ? null : state.getString("healthFocusHookId");
+        if(healthFocusHookId!=null){
+            if(HookDetailRoute.hook(TweakCatalog.all(),healthFocusHookId)!=null)
+                diagnosticFilter.hookId=healthFocusHookId;
+            else healthFocusHookId=null;
+        }
         selectedGroupId = state == null ? null : state.getString("selectedGroupId");
         detailReturnPage = state == null ? APPS : state.getInt("detailReturnPage", APPS);
         if (detailReturnPage != APPS && detailReturnPage != HOME
@@ -720,6 +728,7 @@ public final class MainActivity extends AppCompatActivity {
                     : item.getItemId() == NAV_APPS ? APPS
                     : item.getItemId() == NAV_DIAGNOSTICS ? DIAGNOSTICS : -1;
             if (target < 0) return false;
+            if(target==DIAGNOSTICS)healthFocusHookId=null;
             goTo(target);
             return true;
         });
@@ -778,6 +787,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     @Override protected void onSaveInstanceState(Bundle out) {
         out.putInt("page", page); out.putString("selectedHookId", selectedHookId);
+        out.putString("healthFocusHookId", healthFocusHookId);
         out.putString("selectedGroupId", selectedGroupId);
         out.putInt("detailReturnPage", detailReturnPage);
         super.onSaveInstanceState(out);
@@ -955,6 +965,7 @@ public final class MainActivity extends AppCompatActivity {
         overview.addView(text(getString(R.string.ui_current_status) + ": " +
                 statusText(eligibility(spec, s)), 16));
         overview.addView(text(getString(R.string.ui_status_caution), 14));
+        button(overview,R.string.dx03_view_health,v->openHookHealth(spec));
         HookGroupCatalog.Group owningGroup = HookDetailRoute.groupForHook(
                 HookGroupCatalog.groups(TweakCatalog.all()), spec.id);
         if (owningGroup != null) {
@@ -1122,8 +1133,94 @@ public final class MainActivity extends AppCompatActivity {
         }
     }
     /** Framework-truth diagnostics. Per-process events live only in Xposed logs. */
+    /** DX-03: immutable framework truth plus sanitized imported evidence only. */
+    private String healthAxis(HookHealthModel.Axis value) {
+        switch(value){
+            case OK: return getString(R.string.dx03_axis_ok);
+            case PROBLEM: return getString(R.string.dx03_axis_problem);
+            case OPTED_OUT: return getString(R.string.dx03_axis_opted_out);
+            default: return getString(R.string.ui_unknown);
+        }
+    }
+    private String healthAdvice(HookHealthModel.Advice value) {
+        switch(value){
+            case CONNECT_FRAMEWORK: return getString(R.string.dx03_advice_framework);
+            case REVIEW_SCOPE: return getString(R.string.dx03_advice_scope);
+            case INSPECT_SAFETY_LOCK: return getString(R.string.dx03_advice_safety);
+            case ENABLE_OPT_IN: return getString(R.string.dx03_advice_optin);
+            case VERIFY_TARGET_VERSION: return getString(R.string.dx03_advice_version);
+            case IMPORT_EVIDENCE: return getString(R.string.dx03_advice_import);
+            case INSPECT_REPORTED_ERRORS: return getString(R.string.dx03_advice_errors);
+            default: return getString(R.string.dx03_advice_review);
+        }
+    }
+    private String healthGap(String value) {
+        switch(value){
+            case "NO_IMPORTED_SOURCE": return getString(R.string.dx03_gap_no_source);
+            case "NO_EXACT_HOOK_ASSOCIATION": return getString(R.string.dx03_gap_unattributed);
+            case "EVIDENCE_RETAINED_WITH_EVICTIONS": return getString(R.string.dx03_gap_evictions);
+            default: return getString(R.string.dx03_gap_imported);
+        }
+    }
+    private void openHookHealth(TweakSpec spec) {
+        if(spec == null || entryForId(spec.id) == null) return;
+        healthFocusHookId=spec.id;
+        diagnosticFilter.hookId=spec.id;
+        diagnosticPageIndex=0;
+        goTo(DIAGNOSTICS); // Read-only route; never toggles/changes scope.
+    }
+    private void hookHealthPanel() {
+        LinearLayout summary=card(getString(R.string.dx03_title),getString(R.string.dx03_truth));
+        if(healthFocusHookId!=null){
+            button(summary,R.string.dx03_show_all,v -> {
+                healthFocusHookId=null;
+                diagnosticFilter.hookId="";
+                diagnosticPageIndex=0;
+                render();
+            });
+        }
+        int globalUnknown=0;
+        for(com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event event:diagnosticsStore().filtered(null))
+            if("ERROR".equals(event.severity) && (event.hookId==null || event.hookId.isEmpty()))globalUnknown++;
+        summary.addView(text(getString(R.string.dx03_global_unattributed,globalUnknown,
+                diagnosticsStore().size(),diagnosticsStore().dropped()),14));
+        // No hook result is labeled ACTIVE: only the framework can confirm configuration.
+        for(TweakEngine.Entry<HookContext> entry:TweakCatalog.entries()){
+            TweakSpec spec=entry.spec;
+            if(healthFocusHookId!=null&&!healthFocusHookId.equals(spec.id))continue;
+            HookHealthModel.Report report=HookHealthModel.project(spec,snapshot,diagnosticsStore());
+            LinearLayout row=card(entry.title,getString(R.string.dx03_dimensions,
+                    healthAxis(report.framework),healthAxis(report.scope),
+                    healthAxis(report.optIn),healthAxis(report.quarantine),
+                    healthAxis(report.version),statusText(report.eligibility)));
+            row.addView(text(getString(R.string.dx03_source_summary,
+                    report.matchingImports,report.reportedErrors,report.reportedWarnings,
+                    report.sourceSummary.isEmpty()?getString(R.string.dx03_none):report.sourceSummary,
+                    healthGap(report.collectorGap),report.retainedDropped),14));
+            row.addView(text(getString(R.string.dx03_advice,healthAdvice(report.advice)),14));
+            for(com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event event:report.recent)
+                row.addView(text(getString(R.string.dx03_event_source,event.code,event.source,
+                        event.fileSha256,event.lineNumber),13));
+            button(row,R.string.dx03_open_setup,v->showApp(entry));
+            button(row,R.string.dx03_inspect,v->{
+                diagnosticFilter.hookId=spec.id;
+                diagnosticPageIndex=0;
+                // Already on Diagnostics: redraw read-only filtered evidence.
+                render();
+            });
+            button(row,R.string.dx03_capture,v->goTo(CAPTURE));
+            button(row,R.string.dx03_copy,v->copyDiagnosticText(HookHealthModel.redactedJson(report)));
+        }
+        if(healthFocusHookId!=null && entryForId(healthFocusHookId)==null){
+            // Restored selections can become invalid across app updates.
+            healthFocusHookId=null;
+            summary.addView(text(getString(R.string.dx03_invalid_selection),14));
+        }
+    }
+
     private void diagnosticsPage() {
         heading(R.string.diagnostics);
+        hookHealthPanel();
         diagnosticsTimelinePage();
         XposedService s = service();
         card(getString(R.string.status), connection(s));
