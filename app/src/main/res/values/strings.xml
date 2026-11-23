@@ -75,6 +75,20 @@
     <string name="ui_group_mcc">MCC Diamond Control</string>
     <string name="ui_group_wordmaster">Word Master Night Filter</string>
     <string name="ui_group_no_toggle">Each hook has independent opt-in and scope; this group has no master toggle.</string>
+    <string name="ui05_group_setup">Group setup</string>
+    <string name="ui05_group_details">View group setup</string>
+    <string name="ui05_group_unavailable">This group is no longer registered. Return to Hooks to select a valid group.</string>
+    <string name="ui05_scope_targets">Target app scope</string>
+    <string name="ui05_group_hooks">Independent hooks</string>
+    <string name="ui05_independent_config">Configured separately; no group-wide enable or scope grant.</string>
+    <string name="ui05_open_hook">Configure this hook</string>
+    <string name="ui05_hook_evidence">Hook identity and evidence</string>
+    <string name="ui05_hook_identity">Hook ID: %1$s · Target: %2$s</string>
+    <string name="ui05_version_observed">Observed installed version: %1$s</string>
+    <string name="ui05_version_unknown">Unknown (not verified)</string>
+    <string name="ui05_main_process_only">The installer is scoped to the target main process and its supported version; configuration does not prove execution.</string>
+    <string name="ui05_safety_unknown">Framework safety lock state unavailable. No action is permitted until it can be read.</string>
+
 
     <string name="ui_overview">Overview</string>
     <string name="ui_overview_summary">%1$d available integrations · %2$s scoped</string>

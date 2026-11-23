@@ -2,9 +2,9 @@
 
 **Roadmap ID:** `HOOKLAB-FLAT-UX`  
 **Revision:** 1.0 · **Prepared:** 2026-11-23  
-**Status:** ADOPTED SOURCE ROADMAP — DS-01 merged with required hosted CI success; UI-04 source implementation under native delivery, independent device acceptance pending  
+**Status:** ADOPTED SOURCE ROADMAP — DS-01 and UI-04 merged with required hosted CI success; UI-05 source implementation under native delivery, independent device acceptance pending  
 **Repository home:** `docs/roadmaps/hooklab-flat-ux.md` (committed by DS-01)  
-**Verified UI-04 base:** `Mikeyphw/MikeysHookLab` `main` at `7c963a49b0c83e71159e65d558e88ed20ae9c738` (merged PR #14, DS-01).  
+**Verified UI-05 base:** `Mikeyphw/MikeysHookLab` `main` at `c3e2968eb506b35ff566afd18d512e1a362a187e` (merged PR #15, UI-04).  
 **Contract:** `/Agent Contracts/ai_agent_operating_contract_cg.md`; `AGENT-OPERATIONS-DEVTOOL` v1.15; SHA-256 `cb3963ba70dd90001d04b07eb11c12cb6f29fad3d9de5fb19dda3952e1596100`.  
 **Visual source of truth:** `hooklab_diagnostics_mock_cg.html`, SHA-256 `0d2d0050be230ee9d27529d711cdb48022b87046f076cc11dd883bb1aa1a126b`, explicitly extended across the **entire** native app. Prototype behavior uses sample data and does not prove Android/LSPosed functionality.
 
@@ -129,8 +129,8 @@ Separate **framework service** / **remote preferences** / **LSPosed scope** / **
 | ID | Complete name | Main delivery | Dependencies | Implementation / acceptance |
 |---|---|---|---|---|
 | `DS-01` | Flat Design System & Adaptive Native Shell | Tokens, themes, responsive navigation, surfaces, reusable typography and controls | Current UI-03 stable state | MERGED · hosted CI PASS / DEVICE PENDING |
-| `UI-04` | Hook Groups & Group/App Catalog | Catalog metadata, default Groups, By app, search and stable hook identity | DS-01 for final visuals; current `TweakCatalog` | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
-| `UI-05` | Group/Hook Detail & Independent LSPosed Setup | Mini-module details, per-hook switches/scope/status, multi-hook same-app support | UI-04, UI-03 state authority | PLANNED / PENDING |
+| `UI-04` | Hook Groups & Group/App Catalog | Catalog metadata, default Groups, By app, search and stable hook identity | DS-01 for final visuals; current `TweakCatalog` | MERGED · hosted CI PASS / DEVICE PENDING |
+| `UI-05` | Group/Hook Detail & Independent LSPosed Setup | Mini-module details, per-hook switches/scope/status, multi-hook same-app support | UI-04, UI-03 state authority | SOURCE CANDIDATE · NATIVE/CI/DEVICE PENDING |
 | `UI-06` | Home Dashboard, Readiness & Recent Activity | Flat Home, honest framework/readiness summary, quick actions, last actual event | DS-01, UI-04, DX-01 for live recent events | PLANNED / PENDING |
 | `DX-01` | Unified Diagnostics Timeline, Log Adapters & Export | Structured events, source ingestion, correlation, filtering, inspector, safe export | DS-01, UI-04 metadata | PLANNED / PENDING |
 | `DX-02` | Guided Capture Sessions & Hook Discovery | Reproduction workflow, bounded collection, annotations, probe metadata, evidence bundle | DX-01 | PLANNED / PENDING |
@@ -237,3 +237,22 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - Source guard and pure Java JUnit tests check catalog coverage, duplicate/unmapped IDs, same-package hook independence, search, immutability and UI-only preference boundaries.
 - `UI04-P01..P04` remain pending hosted Android build/lint and device/LSPosed proof; no local Gradle was run.
 - DS-01 merged PR #14, hosted Android run #45234343946 PASS, source head `ea3d13cfeee2cf3548f9c5ce54d5a02465ceefe1`, merge commit `7c963a49b0c83e71159e65d558e88ed20ae9c738`; device/TalkBack not performed.
+
+
+### UI-05 source implementation inventory (independent device acceptance outstanding)
+
+- `HookDetailRoute`: exact hook/group resolution, unique ID fail-closed validation and no first-hook fallback on same-package targets.
+- `MainActivity`: grouped setup page with distinct per-target LSPosed scope requests/removal confirmations, independent per-hook setup, explicit compatibility/safety/version evidence, and deterministic return-to-group navigation across restoration.
+- `FrameworkStateStore` remains the only remote preference writer, with commit/readback and framework snapshot refresh; unknown preference state hides the switch rather than implying OFF.
+- The group is categorically not an authorization or enablement unit; existing `TweakCatalog` hook IDs and version/process guards are unchanged.
+- `UI05-P01..P04`: source-bound regression suite and hosted JUnit pending native Android CI; LSPosed/device runtime and deep-link behavior remain pending.
+- UI-04 PR #15 merged `c3e2968eb506b35ff566afd18d512e1a362a187e` with Android CI run #45242448541 successful for PR head `859c7be780a0d91fd4adb1dde2c955cebe08f55b`; device evidence not collected.
+
+
+### UI-05-F01 — Hosted CI source-contract regression correction
+
+- Original UI-05 source commit: `7dbce69623245d74f6708b85d8598f1c7fdcafaf` on PR #16.
+- Required Android CI run #45248242365, job #137950625526: `CONTRACT_FAIL UI-04 detail navigation uses independent hook ID` during `scripts/check_contract.py`, before Android compilation.
+- Root cause: UI-04's test asserted `entry.spec.id.equals(selectedHookId)` after UI-05 deliberately replaced that loop with the verified `HookDetailRoute.hook(TweakCatalog.all(), selectedHookId)` call. The production route remains in place; the obsolete internal assertion is replaced with exact-path and missing-ID rejection guards.
+- Change scope: `scripts/check_contract.py` and this roadmap only. Existing hook IDs, framework readback, LSPosed scope, UI production code and Java routing tests are unchanged.
+- Native Devtool apply/commit, hosted exact-head CI, protected merge and Android/LSPosed/device acceptance remain **PENDING** until independently verified. Original UI-05 source must **not** be reapplied.

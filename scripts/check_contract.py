@@ -253,11 +253,40 @@ check(all(hook in group_source for hook in (
     'wordmaster.night.filter', 'chatgpt.codeblock.copy.probe')),
     'UI-04 every reviewed registered hook grouped')
 check('selectedHookId = entry.spec.id' in main_source
-    and 'entry.spec.id.equals(selectedHookId)' in main_source,
-    'UI-04 detail navigation uses independent hook ID')
+    and 'HookDetailRoute.hook(TweakCatalog.all(), selectedHookId)' in main_source
+    and 'return verified == null ? null : entryForId(verified.id);' in main_source
+    and 'HookDetailRoute.hook(TweakCatalog.all(), requested) != null' in main_source
+    and (r/'app/src/test/java/com/mikeyphw/hooklab/core/HookDetailRouteTest.java').is_file(),
+    'UI-04/UI-05 independent hook-ID routing and invalid-selection rejection')
 check('appearance.edit().putInt(UI04_VIEW_KEY, mode).apply()' in main_source
     and 'appearance.edit().putString(UI04_QUERY_KEY, catalogQuery).apply()' in main_source
     and 'HookGroupCatalog.groups(TweakCatalog.all())' in main_source,
     'UI-04 local group/app persistence and catalog discovery')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/core/HookGroupCatalogTest.java').is_file(),
     'UI-04 pure Java catalog invariants tested in hosted CI')
+
+# UI-05: detail/group navigation must preserve per-hook identities and LSPosed truth.
+route = read('app/src/main/java/com/mikeyphw/hooklab/core/HookDetailRoute.java')
+main_ui05 = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
+store_ui05 = read('app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkStateStore.java')
+check('HookDetailRoute.hook(TweakCatalog.all(), selectedHookId)' in main_ui05
+      and 'HookDetailRoute.group(HookGroupCatalog.groups(TweakCatalog.all()), selectedGroupId)' in main_ui05
+      and 'page == APP_DETAIL || page == APPS || page == GROUP_DETAIL ? NAV_APPS' in main_ui05,
+      'UI-05 exact hook/group identity and Hooks nav')
+check('group.packages' in main_ui05 and 'removeScope(expected, pkg)' in main_ui05
+      and 'requestScope(expected, pkg)' in main_ui05
+      and 'confirmSafetyLock(s, spec.id, !lock)' in main_ui05,
+      'UI-05 independent per-target scope and per-hook safety control')
+check('saved = prefs != null && prefs.edit().putBoolean(key, value).commit()' in store_ui05
+      and 'prefs.getBoolean(key, !value) == value' in store_ui05
+      and 'refresh(); // Re-read framework truth' in store_ui05,
+      'UI-05 framework remote preference commit/readback source contract')
+check('showGroup(HookGroupCatalog.Group group)' in main_ui05
+      and 'goTo(GROUP_DETAIL); // Navigation only' in main_ui05
+      and 'selectedHookId = entry.spec.id' in main_ui05
+      and 'HookDetailRoute.hook(TweakCatalog.all(), requested) != null' in main_ui05
+      and 'new androidx.appcompat.app.AlertDialog.Builder(this)' in main_ui05,
+      'UI-05 safe group navigation and preserved scope removal confirmation')
+check('groupForHook' in route and 'return null;' in route
+      and (r/'app/src/test/java/com/mikeyphw/hooklab/core/HookDetailRouteTest.java').is_file(),
+      'UI-05 failed hook/group routes and same-package identity regression tests')
