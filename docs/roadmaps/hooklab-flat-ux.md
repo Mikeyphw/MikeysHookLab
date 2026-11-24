@@ -21,7 +21,7 @@ The verified repository has five independent, opt-in `TweakCatalog` entries: MCC
 | Stable group ID | Group title | Existing registered member(s) | Target applications | Availability |
 |---|---|---|---|---|
 | `group.obtainx` | ObtainX Integration | Neo Store → ObtainX; Droid-ify → ObtainX | Neo Store, Droid-ify | Source present; independent runtime acceptance not established |
-| `group.chatgpt_termux` | ChatGPT → Termux | ChatGPT Code-Block Action Diagnostic | ChatGPT | Diagnostic in merged source; **Termux execution is planned, not shipped** |
+| `group.chatgpt_termux` | ChatGPT → Termux | ChatGPT Code-Block Action Diagnostic | ChatGPT | Diagnostic in merged source; **R05 source candidate: native inline Run, explicit companion review; device acceptance pending** |
 | `group.mcc` | MCC Diamond Control | MCC Manual Diamond Button | Meu Cronograma Capilar | Source present; explicit confirmation for root-sensitive actions |
 | `group.wordmaster` | Word Master Night Filter | Word Master Experimental Night Filter | Word Master | Source present; not a full in-game dark palette |
 
@@ -328,6 +328,10 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - **Root cause:** legacy source guard searches literal `data/databases`, `data/files`, `data/app_flutter`; reviewed MCC scanner now constructs direct nonrecursive `"$root/databases"`, `"$root/files"`, `"$root/app_flutter"` under an authenticated app data directory. Root/path/account checks and manual-write confirmation are unchanged.
 - **F01 source candidate:** replace obsolete assertion with exact reviewed scanner tokens, exercise root-free positive/negative MCC fixtures during CI source validation, and document the failure receipt. No app production changes, no local Gradle, no automatic root and no release authorization.
 - **Remaining gates:** native Devtool check/apply/commit/session for F01 on exact previous PR24 head; explicitly approved fast-forward of **existing PR #24**, new exact-head required hosted CI, separate CI24 if configured, manual Android/LSPosed/MCC device and signing/release acceptance. A source-contract PASS is not physical-device proof. Never replay the original MCC-R01 transaction or force-push.
+
+## HL-DIAG-R05 — Root IPC Contract & Native Inline Termux Action
+
+See [R05 roadmap](hooklab-diag-r05.md) for source and acceptance gates. R04 root startup passed on device; its IPC result was refused. R04 Copy and launcher offers were observed; inline Run remains device-unverified. PR #13 TB01 is separate and must be reconciled before merge.
 
 ## HL-DIAG-R03 — Copy Coroutine Field Correction & Root Platform Qualification
 

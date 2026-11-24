@@ -27,3 +27,7 @@ Test fresh root denial, root authorization success, launch/callback/IPC failure,
 - UX-R05 — Full Native Visual Acceptance & Regression Enforcement.
 
 Prior roadmap historical DS/UI/DX/MCC/CGT/WM items and acceptance debt remain in `hooklab-flat-ux.md`. No historical acceptance is inferred from merges.
+
+## Observed R04 device evidence
+
+PR28 merged at `1eabc38e9b514986a84f9cccd4467473eefc8585`; required Android CI run 45426151291 succeeded. User receipt: three complete P06 traces, actions 29, 30 and 47; two P07 launch requests, three offers. AUTH 49 ms, BIND_SETUP 17 ms, LAUNCH_SUBMISSION 7 ms, BIND_CALLBACK 1285 ms, IPC returned in 2 ms with IPC_REFUSED. No proof of successful health RPC. R05 supersedes post-Copy popup; inline rendering, permission and foreground execution require new acceptance.

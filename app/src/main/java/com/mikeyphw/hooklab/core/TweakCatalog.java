@@ -59,9 +59,9 @@ public final class TweakCatalog {
             new TweakEngine.Entry<>(
                 new TweakSpec(ChatGptTermuxHandoff.TWEAK_ID, ChatGptCodeProbe.PACKAGE,
                     ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE),
-                "ChatGPT · Open copied code in Termux",
-                "Requires the Code-block action diagnostic enabled. After a verified native Copy, " +
-                "shows a short-lived action to open Termux for manual paste and review. No execution.",
+                "ChatGPT · Run code in Termux (experimental)",
+                "Adds a separate native Run action beside Copy; review and confirm in HookLab. " +
+                "No clipboard dependency or automatic execution.",
                 ChatGptTermuxHandoff::install)
         ));
 

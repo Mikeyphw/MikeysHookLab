@@ -1,0 +1,24 @@
+<resources>
+    <string name="termux_r05_title">Run in Termux</string>
+    <string name="termux_r05_settings_intro">Configure the default interpreter, working directory and permission. This screen does not run commands.</string>
+    <string name="termux_r05_review_intro">Review the exact selected code. Choose its interpreter deliberately. Commands can alter your files or system. Nothing runs until you confirm execution.</string>
+    <string name="termux_r05_interpreter">Interpreter</string>
+    <string name="termux_r05_workdir">Working directory under Termux home</string>
+    <string name="termux_r05_save">Save defaults</string>
+    <string name="termux_r05_prerequisites">Termux must be installed with the selected interpreter. Enable allow-external-apps in Termux yourself if you wish to use its external command API. HookLab never changes this setting.</string>
+    <string name="termux_r05_idle">Checking Termux availability</string>
+    <string name="termux_r05_grant">Grant Termux command permission</string>
+    <string name="termux_r05_review_run">Review execution</string>
+    <string name="termux_r05_unavailable">Compatible Termux command service not available.</string>
+    <string name="termux_r05_ready">Termux permission granted. Execution still requires confirmation.</string>
+    <string name="termux_r05_permission_missing">Termux command permission required.</string>
+    <string name="termux_r05_saved">Defaults saved.</string>
+    <string name="termux_r05_bad_settings">Invalid interpreter or working directory.</string>
+    <string name="termux_r05_confirm_title">Execute reviewed code?</string>
+    <string name="termux_r05_confirm_body">Run the exact preview using %1$s in %2$s in a foreground Termux session?</string>
+    <string name="termux_r05_execute">Execute</string>
+    <string name="termux_r05_dispatch_failed">Dispatch failed or is uncertain. Open a fresh preview before retrying.</string>
+    <string name="termux_r05_dispatched">Command requested. Check Termux for output and exit status.</string>
+    <string name="termux_r05_settings_label">Termux integration</string>
+    <string name="termux_r05_settings_description">Configure interpreter, directory and command permission.</string>
+</resources>

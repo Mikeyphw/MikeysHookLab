@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Five opt-in host packages and external ObtainX destination; no Termux permission. -->
+    <!-- Exact host visibility and explicit Termux command integration. -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
     <queries>
         <package android:name="br.art.code.meucronogramacapilar" />
         <package android:name="com.machiav3lli.fdroid" />
@@ -7,6 +8,7 @@
         <package android:name="com.fugo.wowsolitaire" />
         <package android:name="com.openai.chatgpt" />
         <package android:name="dev.bikram.obtainx" />
+        <package android:name="com.termux" />
     </queries>
     <application android:name=".HookLabApp" android:allowBackup="false"
         android:label="@string/app_name" android:description="@string/module_description"
@@ -19,6 +21,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".mcc.MccControlActivity" android:exported="true" />
+        <activity android:name=".termux.TermuxBridgeActivity" android:exported="true" android:excludeFromRecents="true" />
         <provider android:name="io.github.libxposed.service.XposedProvider"
             android:authorities="${applicationId}.XposedService"
             android:exported="true" android:directBootAware="true" />

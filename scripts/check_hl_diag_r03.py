@@ -22,16 +22,8 @@ for bad in ('nsenter','FLAG_MOUNT_MASTER','setenforce','/data/user/','/data/data
 assert 'ROOT_PLATFORM_RESULT_UNVERIFIED' in code and 'Pattern.compile' in code
 assert "implementation 'com.github.topjohnwu.libsu:core:6.0.0'" in read('app/build.gradle') and "implementation 'com.github.topjohnwu.libsu:service:6.0.0'" in read('app/build.gradle')
 assert "filter { includeGroup 'com.github.topjohnwu.libsu' }" in read('settings.gradle')
-assert not ET.parse(r/'app/src/main/AndroidManifest.xml').getroot().findall('uses-permission')
+assert [p.get('{http://schemas.android.com/apk/res/android}name') for p in ET.parse(r/'app/src/main/AndroidManifest.xml').getroot().findall('uses-permission')]==['com.termux.permission.RUN_COMMAND']
 assert (r/'app/src/test/java/com/mikeyphw/hooklab/root/RootContextCodeTest.java').is_file()
 assert 'clipboardLabelCannotSubstituteForAnnotatedObject' in read('app/src/test/java/com/mikeyphw/hooklab/chatgpt/AsyncCopyTraceTest.java')
-handoff=read(java+'chatgpt/ChatGptTermuxHandoff.java');gate=read(java+'chatgpt/TermuxOfferGate.java');catalog=read(java+'core/TweakCatalog.java');groups=read(java+'core/HookGroupCatalog.java')
-assert 'ChatGptTermuxHandoff::install' in catalog and 'chatgpt.codeblock.termux.handoff' in groups
-assert 'ChatGptCodeProbe.active()' in handoff and 'ENABLED.set(true)' in handoff
-assert '"MATCH".equals(verdict)&&a.blockId>0' in probe and 'finally{try{ChatGptTermuxHandoff.clipboardResult(matchedActionId);}' in probe
-assert all(v in handoff for v in ('setOnClickListener','GATE.consume','host.startActivity(intent)','Intent.ACTION_MAIN','com.termux.app.TermuxActivity','onPause','onPostResume','GATE.invalidate()','OFFER_EXPIRED','NO_FOREGROUND'))
-assert all(v not in handoff for v in ('getPrimaryClip(','setPrimaryClip(','RUN_COMMAND','putExtra(','ProcessBuilder(','Runtime.getRuntime(','startService(','getText()','FileOutputStream'))
-assert 'TTL_MS=12000L' in gate and 'action=0;generation++' in gate
 assert (r/'app/src/test/java/com/mikeyphw/hooklab/root/RootStartupPhaseTest.java').is_file()
-assert (r/'app/src/test/java/com/mikeyphw/hooklab/chatgpt/TermuxOfferGateTest.java').is_file()
-print('HL_DIAG_R03_F01_CGT01_P07_STATIC=PASS; Android build and device pending')
+print('HL_DIAG_R03_ROOT_STARTUP_STATIC=PASS; P07 superseded by R05')

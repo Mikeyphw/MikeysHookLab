@@ -17,21 +17,22 @@ check(True, 'Android XML syntax')
 root = ET.parse(r/'app/src/main/AndroidManifest.xml').getroot()
 ns = '{http://schemas.android.com/apk/res/android}'
 app = root.find('application')
-check(not root.findall('uses-permission'), 'no dangerous app permissions')
+check([p.get(ns+'name') for p in root.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND'], 'only explicit Termux command permission')
 query_list = root.findall('queries')
 check(len(query_list)==1 and all(x.tag=='package' for x in query_list[0])
       and [x.get(ns+'name') for x in query_list[0]]==[
           'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
-          'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx'],
+          'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx','com.termux'],
       'exact MCC/Neo Store/Droid-ify/Word Master/ChatGPT/ObtainX visibility only')
 check(app.get(ns+'allowBackup')=='false' and app.get(ns+'name')=='.HookLabApp', 'lifecycle application')
 act = app.findall('activity')
-check(len(act)==2 and
-      {a.get(ns+'name') for a in act}=={'.ui.MainActivity','.mcc.MccControlActivity'}
+check(len(act)==3 and
+      {a.get(ns+'name') for a in act}=={'.ui.MainActivity','.mcc.MccControlActivity','.termux.TermuxBridgeActivity'}
       and all(a.get(ns+'exported')=='true' for a in act)
       and len(act[0].findall('intent-filter'))==1
-      and len(act[1].findall('intent-filter'))==0,
-      'one launcher and one explicit-only MCC activity')
+      and len(act[1].findall('intent-filter'))==0
+      and len(act[2].findall('intent-filter'))==0,
+      'one launcher and two explicit-only activities')
 providers = app.findall('provider')
 check(len(providers)==1 and providers[0].get(ns+'name')=='io.github.libxposed.service.XposedProvider'
       and providers[0].get(ns+'authorities')=='${applicationId}.XposedService'
@@ -214,6 +215,7 @@ check(all(term in scanner_source for term in (
 subprocess.run(['python3','-B',str(r/'scripts/check_mcc_r01.py')],check=True)
 subprocess.run(['python3','-B',str(r/'scripts/check_hl_diag_r02.py')],check=True)
 subprocess.run(['python3','-B',str(r/'scripts/check_hl_diag_r03.py')],check=True)
+subprocess.run(['python3','-B',str(r/'scripts/check_hl_diag_r05.py')],check=True)
 check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in catalog
       and 'HANDED_OFF' not in button and 'requestAutomatic() { return false; }' in button,
       'legacy automatic process cannot install or navigate')
