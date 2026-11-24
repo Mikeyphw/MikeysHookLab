@@ -50,6 +50,7 @@ public final class MccRefillWorker {
             case 54: case 55: return "UNKNOWN_BALANCE_FORMAT_REFUSED";
             case 56: return "UNRECOGNIZED_ACCOUNT_FILE_REFUSED";
             case 57: return "BALANCE_CHANGED_DURING_OPERATION";
+            case 58: return "STORAGE_DIRECTORY_UNAVAILABLE_FROM_HOOKLAB_ROOT";
             case 59: return "WRITE_VERIFICATION_FAILED";
             case 70: return "ROOT_NOT_GRANTED";
             default: return "ROOT_COMMAND_EXIT_"+code;
@@ -68,20 +69,31 @@ public final class MccRefillWorker {
                 return "ROOT_COMMAND_TIMEOUT";
             }
             int exit=process.exitValue();
-            boolean ready=false, written=false, already=false;
+            boolean ready=false, written=false, already=false, fallback=false;
+            int primaryVisible=-1, aliasVisible=-1;
             try (BufferedReader reader=new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 for (int i=0; i<40 && (line=reader.readLine())!=null; i++) {
                     if ("MCC_STORAGE_READY".equals(line)) ready=true;
                     if ("MCC_BALANCE_WRITE_VERIFIED".equals(line)) written=true;
                     if ("MCC_BALANCE_ALREADY_NINE".equals(line)) already=true;
+                    if ("MCC_STORAGE_FALLBACK_USED".equals(line)) fallback=true;
+                    if (line.matches("MCC_SCAN_VISIBLE_PRIMARY=[0-3]"))
+                        primaryVisible=line.charAt(line.length()-1)-'0';
+                    if (line.matches("MCC_SCAN_VISIBLE_ALIAS=[0-6]"))
+                        aliasVisible=line.charAt(line.length()-1)-'0';
                     // Ignore all other root output. Never expose account file paths or data.
                 }
             }
-            if (exit!=0) return failure(exit);
-            if (probe) return ready ? "BALANCE_FILE_READY" : "ROOT_PROBE_UNVERIFIED";
+            if (exit!=0) {
+                String code=failure(exit);
+                if ((exit==51 || exit==58) && primaryVisible>=0 && aliasVisible>=0)
+                    return code+"_P"+primaryVisible+"_A"+aliasVisible;
+                return code;
+            }
+            if (probe) return ready ? (fallback ? "BALANCE_FILE_READY_USER0_ALIAS" : "BALANCE_FILE_READY") : "ROOT_PROBE_UNVERIFIED";
             if (already) return "ALREADY_9_NO_RESTART";
-            if (written) return "WRITE_9_VERIFIED_"+relaunch(context);
+            if (written) return "WRITE_9_VERIFIED_"+(fallback ? "USER0_ALIAS_" : "")+relaunch(context);
             return "ROOT_RESULT_UNVERIFIED";
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
