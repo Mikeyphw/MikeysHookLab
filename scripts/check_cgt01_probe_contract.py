@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CGT01-P04: exact APK-symbol source guard; device Copy causality is independent."""
+"""CGT01-P04/P05: exact API102 source guards; device Copy causality is independent."""
 from pathlib import Path
 import hashlib
 import re
@@ -98,3 +98,39 @@ assert (root/'scripts/check_cgt01_p04_apkm.py').is_file()
 assert (root/'docs/CGT01_P04_2026_321.md').is_file()
 assert 'test_missing_chatgpt_refused'  in read('scripts/test_apk_scope.py')
 print('CGT01_P04_SOURCE_CONTRACT=PASS source_only=true hosted_android=NOT_RUN device=NOT_RUN',flush=True)
+
+# P05: source-only regression gates. The exact twl constructor is a candidate
+# created within CopyButtonImpl, not proof of a gesture or visual block.
+tracker=read('app/src/main/java/com/mikeyphw/hooklab/chatgpt/CopyButtonCausalityTracker.java')
+for token in (
+    'type(loader,"twl")','type(loader,"bho0")',
+    'callbackOwner.getDeclaredConstructor(', 'callbackOwner.getDeclaredMethod("invoke")',
+    'hooklab.cgt01.p05.copyhandler.ctor.2632128',
+    'hooklab.cgt01.p05.copyhandler.invoke.2632128',
+    'COPY_CAUSALITY.beginRender()', 'COPY_CAUSALITY.endRender(frame)',
+    'COPY_CAUSALITY.constructed(chain.getThisObject())',
+    'COPY_CAUSALITY.enterHandler(chain.getThisObject())',
+    'COPY_CAUSALITY.exitHandler(frame)',
+    'COPY_CAUSALITY.currentHandler()',
+    'CGT01_P05_', 'BUTTON_HANDLER_INVOKED', 'BUTTON_CONSTRUCTOR_BOUND',
+    'BUTTON_CLIPBOARD_MATCH', 'P03_HOOK_INSTALLED', 'P03_BIND_AMBIGUOUS',
+    'P03_INVOKE_MISSING', 'P03_FRAME_MISSING', 'visual_block_identity=UNVERIFIED',
+    'CGT01_P05_HANDLER_INSTALL_REFUSED', 'clipboard_causality=PENDING'
+):
+    assert token in probe, 'P05_PROBE_MISSING:'+token
+assert probe.index('COPY_CAUSALITY.beginRender()') < probe.index('Object result=chain.proceed();',probe.index('xp.hook(copyButton)'))
+assert probe.index('MATCHER.compareCopiedText(copied)') < probe.index('COPY_CAUSALITY.currentHandler()')
+for token in ('WeakReference<Object>','ThreadLocal<RenderFrame>',
+              'ThreadLocal<InvocationFrame>', 'MAX_AGE_MS=120000L',
+              'MAX_BINDINGS=96', 'MAX_LOGS_PER_EVENT_ROLE=4',
+              'enum Event'):
+    if token.endswith('?'):continue
+    assert token in tracker, 'P05_TRACKER_MISSING:'+token
+assert not any(x in tracker for x in (
+    'java.lang.String source','ClipboardManager', 'FileOutputStream',
+    'SharedPreferences', 'Runtime.getRuntime(', 'com.termux', 'termux.RUN_COMMAND',
+    'getPrimaryClip(', 'getExternalFilesDir(', 'android.util.Log'))
+assert (root/'app/src/test/java/com/mikeyphw/hooklab/chatgpt/CopyButtonCausalityTrackerTest.java').is_file()
+assert (root/'scripts/check_cgt01_p05_apkm.py').is_file()
+assert (root/'docs/CGT01_P05_COPY_ACTION_CAUSALITY.md').is_file()
+print('CGT01_P05_SOURCE_CONTRACT=PASS source_only=true native_device=NOT_RUN hosted_android=NOT_RUN',flush=True)
