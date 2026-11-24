@@ -85,15 +85,23 @@ def check(path):
  d,c=code('classes4.dex','Llxl;','c',('I','I',co,'Lrqr;','Lr0o0;'),'V',True);at(d,c,228,'Ltwl;');at(d,c,242,('Ltwl;','<init>','V',twargs));assert d.words(c)[241]==0x12
  code('classes5.dex','Ltwl;','<init>',twargs,'V',False)
  d,c=code('classes5.dex','Ltwl;','invoke',(),o,False);at(d,c,177,'Lixl;');at(d,c,185,('Lixl;','<init>','V',ixargs));at(d,c,189,('Lzx2;','t0','Lrn71;',('Lqqw;','Lbqw;','I',f2,'I')));assert d.words(c)[180]==0xe12
- code('classes4.dex','Lixl;','<init>',ixargs,'V',False)
+ d,c=code('classes4.dex','Lixl;','<init>',ixargs,'V',False)
+ # In the pinned ctor p0=v0; String argument p2=v2; annotated argument p3=v3.
+ at(d,c,4,('Lixl;','r',o));at(d,c,6,('Lixl;','s',o))
+ if d.u16(c)!=9 or d.u16(c+2)!=9 or d.words(c)[4]!=0x025b or d.words(c)[6]!=0x035b:raise ValueError('IXL_CONSTRUCTOR_FIELD_FLOW_MISMATCH')
  d,c=code('classes4.dex','Lixl;','create',(o,cont),cont,False);at(d,c,129,('Lixl;','<init>','V',ixargs));assert d.words(c)[128]==0x12
- d,c=code('classes4.dex','Lixl;','invokeSuspend',(o,),o,False);at(d,c,735,('Landroid/content/ClipData;','newPlainText',cl,('Ljava/lang/CharSequence;','Ljava/lang/CharSequence;')));at(d,c,741,('Lt7l;','<init>','V',(cl,)));at(d,c,746,(f2,'invoke',o,(o,o)))
+ # Default branch loads s into v5 then moves v5 to v10 (argument three); r is String.
+ at(d,c,10,('Lixl;','s',o));at(d,c,109,('Lixl;','r',o));at(d,c,112,st);at(d,c,115,co)
+ if tuple(d.words(c)[114:115])!=(0x5a07,) or d.words(c)[131]!=7:raise ValueError('IXL_CREATE_ANNOTATED_FLOW_MISMATCH')
+ d,c=code('classes4.dex','Lixl;','invokeSuspend',(o,),o,False);at(d,c,11,('Lixl;','s',o));at(d,c,729,('Lixl;','r',o));at(d,c,731,st);at(d,c,733,co);at(d,c,735,('Landroid/content/ClipData;','newPlainText',cl,('Ljava/lang/CharSequence;','Ljava/lang/CharSequence;')));
+ if d.words(c)[11]!=0x1654 or d.words(c)[729]!=0x1554 or d.words(c)[737]!=0x0065:raise ValueError('IXL_CLIPDATA_LABEL_TEXT_FLOW_MISMATCH')
+ at(d,c,741,('Lt7l;','<init>','V',(cl,)));at(d,c,746,(f2,'invoke',o,(o,o)))
  code('classes3.dex','Lt7l;','<init>',(cl,),'V',False)
  d,c=code('classes2.dex','Lvm90;','create',(o,cont),cont,False);at(d,c,24,('Lvm90;','<init>','V',(o,o,o,cont,'B')));assert d.words(c)[22]==0x2812
  d,c=code('classes2.dex','Lvm90;','invokeSuspend',(o,),o,False);at(d,c,54,('Lv7l;','b',o,('Lt7l;',cont)))
  d,c=code('classes.dex','Lay2;','b',('Lt7l;',cont),o,False);at(d,c,78,('Lv7l;','b',o,('Lt7l;',cont)))
  d,c=code('classes.dex','Lvv2;','b',('Lt7l;',cont),o,False);at(d,c,40,('Landroid/content/ClipboardManager;','setPrimaryClip','V',(cl,)))
- for n,cls,f,ty in [('classes.dex',co,'b',st),('classes5.dex','Ltwl;','a','B'),('classes5.dex','Ltwl;','e',o),('classes4.dex','Lixl;','n','B'),('classes4.dex','Lixl;','r',o),('classes2.dex','Lvm90;','n','B'),('classes2.dex','Lvm90;','p',o),('classes3.dex','Lt7l;','a',cl)]:field(n,cls,f,ty)
+ for n,cls,f,ty in [('classes.dex',co,'b',st),('classes5.dex','Ltwl;','a','B'),('classes5.dex','Ltwl;','e',o),('classes4.dex','Lixl;','n','B'),('classes4.dex','Lixl;','r',o),('classes4.dex','Lixl;','s',o),('classes2.dex','Lvm90;','n','B'),('classes2.dex','Lvm90;','p',o),('classes3.dex','Lt7l;','a',cl)]:field(n,cls,f,ty)
  # Find annotation helper/return field in exact base, including other DEX if necessary.
  with zipfile.ZipFile(io.BytesIO(base)) as z:
   found=set()
@@ -105,6 +113,6 @@ def check(path):
    if 'Ld0m;' in d.classes:
     fs,_=d.members('Ld0m;');assert any(f==('Ld0m;','a',co) for f,_ in fs);found.add('annotation_field')
   assert found=={'annotation_helper','annotation_field'}
- return {'verdict':'P06_EXACT_STATIC_PATH_PASS','build':2632128,'verified_dex_hashes':len(HASHES),'physical_device':'NOT_RUN','visual_identity':'UNVERIFIED'}
+ return {'verdict':'P06_EXACT_STATIC_PATH_PASS','build':2632128,'verified_dex_hashes':len(HASHES),'ixl_annotated_field':'s','ixl_label_field':'r','physical_device':'NOT_RUN','visual_identity':'UNVERIFIED'}
 if __name__=='__main__':
  a=argparse.ArgumentParser();a.add_argument('apkm');args=a.parse_args();print(json.dumps(check(args.apkm),sort_keys=True))

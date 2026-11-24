@@ -28,6 +28,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 public final class MccControlActivity extends AppCompatActivity {
     private MaterialButton inspect;
     private MaterialButton setNine;
+    private MaterialButton rootInspect;
     private TextView status;
     private boolean running;
 
@@ -93,6 +94,10 @@ public final class MccControlActivity extends AppCompatActivity {
         inspect.setText(R.string.ui07_mcc_inspect);
         FlatUi.button(inspect);
         content.addView(inspect,new LinearLayout.LayoutParams(-1,-2));
+        rootInspect=new MaterialButton(this);
+        rootInspect.setText(R.string.root_platform_inspect);
+        FlatUi.button(rootInspect);
+        content.addView(rootInspect,new LinearLayout.LayoutParams(-1,-2));
         setNine=new MaterialButton(this);
         setNine.setText(R.string.ui07_mcc_write);
         FlatUi.button(setNine);
@@ -106,6 +111,12 @@ public final class MccControlActivity extends AppCompatActivity {
         content.addView(status,new LinearLayout.LayoutParams(-1,-2));
         setContentView(root);
         inspect.setOnClickListener(v -> operation(true));
+        rootInspect.setOnClickListener(v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.root_platform_inspect)
+            .setMessage(R.string.root_platform_confirmation)
+            .setNegativeButton(android.R.string.cancel,null)
+            .setPositiveButton(R.string.root_platform_start,(dialog,which) -> inspectRootPlatform())
+            .show());
         setNine.setOnClickListener(v -> new androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(R.string.ui07_mcc_confirm_title)
             .setMessage(R.string.ui07_mcc_confirm_body)
@@ -123,12 +134,16 @@ public final class MccControlActivity extends AppCompatActivity {
             : () -> MccRefillWorker.setNine(appContext);
         MccManualOperation.shared().start(readOnly,work);
     }
+    private void inspectRootPlatform() {
+        final android.content.Context appContext=getApplicationContext();
+        MccManualOperation.shared().start(true,() -> com.mikeyphw.hooklab.root.RootPlatform.inspect(appContext));
+    }
     private final MccManualOperation.Listener operationObserver = snapshot ->
         runOnUiThread(() -> {
-            if(isFinishing()||isDestroyed()||inspect==null||setNine==null||status==null)return;
+            if(isFinishing()||isDestroyed()||inspect==null||rootInspect==null||setNine==null||status==null)return;
             boolean active=snapshot.stage==MccManualOperation.Stage.RUNNING;
             running=active;
-            inspect.setEnabled(!active);setNine.setEnabled(!active);
+            inspect.setEnabled(!active);rootInspect.setEnabled(!active);setNine.setEnabled(!active);
             if(active){
                 status.setText(snapshot.inspectionOnly?R.string.ui07_mcc_inspecting:R.string.ui07_mcc_requesting);
             }else if(snapshot.stage==MccManualOperation.Stage.COMPLETE){

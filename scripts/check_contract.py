@@ -213,6 +213,7 @@ check(all(term in scanner_source for term in (
 # Run executable root-free negative/positive fixtures in hosted CI BEFORE Gradle.
 subprocess.run(['python3','-B',str(r/'scripts/check_mcc_r01.py')],check=True)
 subprocess.run(['python3','-B',str(r/'scripts/check_hl_diag_r02.py')],check=True)
+subprocess.run(['python3','-B',str(r/'scripts/check_hl_diag_r03.py')],check=True)
 check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in catalog
       and 'HANDED_OFF' not in button and 'requestAutomatic() { return false; }' in button,
       'legacy automatic process cannot install or navigate')

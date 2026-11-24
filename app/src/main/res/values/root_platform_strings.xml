@@ -1,0 +1,5 @@
+<resources>
+    <string name="root_platform_inspect">Inspect root-service environment</string>
+    <string name="root_platform_confirmation">Request root for one read-only service health check? It reports process identity and namespace comparisons only. It does not inspect MCC files, change app data, or change root settings.</string>
+    <string name="root_platform_start">Inspect environment</string>
+</resources>
