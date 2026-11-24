@@ -31,6 +31,7 @@ public final class ChatGptCodeProbe {
     private static final ThreadLocal<AsyncCopyTrace.Render> RENDER=new ThreadLocal<>();
     private static final ThreadLocal<AsyncCopyTrace.Action> HANDLER=new ThreadLocal<>(), IXL=new ThreadLocal<>(), SAFE=new ThreadLocal<>(), WRAP=new ThreadLocal<>(), BACKEND=new ThreadLocal<>();
     private ChatGptCodeProbe(){}
+    static boolean active(){return ACTIVE.get();}
     private static Class<?> type(ClassLoader l,String n)throws ClassNotFoundException{return Class.forName(n,false,l);}
     private static Field field(Class<?> c,String n,Class<?> expected)throws Exception{Field f=c.getDeclaredField(n);if(f.getType()!=expected)throw new NoSuchFieldException(n);f.setAccessible(true);return f;}
     private static Method method(Class<?> c,String n,Class<?> ret,boolean stat,Class<?>...args)throws Exception{Method m=c.getDeclaredMethod(n,args);if(m.getReturnType()!=ret||Modifier.isStatic(m.getModifiers())!=stat)throw new NoSuchMethodException(n);return m;}
@@ -87,12 +88,14 @@ public final class ChatGptCodeProbe {
             xp.hook(vvWrite).setId("hooklab.cgt01.p06.backend.write").setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept(chain->{AsyncCopyTrace.Action old=BACKEND.get(),a=ACTIVE.get()?TRACE.get(AsyncCopyTrace.Kind.WRAPPER,chain.getArg(0)):null;if(a!=SAFE.get()&&a!=WRAP.get())a=null;set(BACKEND,a);try{event(xp,"BACKEND",a);return chain.proceed();}finally{set(BACKEND,old);}});
             xp.hook(clipboard).setId("hooklab.cgt01.p06.clipboard.write").setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept(chain->{
                 Object result=chain.proceed();if(!ACTIVE.get())return result;
+                long matchedActionId=0;
                 try{ClipData clip=(ClipData)chain.getArg(0);AsyncCopyTrace.Action a=BACKEND.get();
                     // Inspect only a tracked payload or the original renderer value-parity candidate. Never read global clipboard.
                     String copied=clipValue(clip);if(copied==null)return result;
-                    if(a!=null){String verdict=TRACE.clipboard(a,clip,copied);event(xp,"CLIPBOARD_"+verdict,a);}
+                    if(a!=null){String verdict=TRACE.clipboard(a,clip,copied);event(xp,"CLIPBOARD_"+verdict,a);
+                        if("MATCH".equals(verdict)&&a.blockId>0)matchedActionId=a.id;}
                     CodeBlockProbeMatcher.Evidence e=MATCHER.compareCopiedText(copied);if(e.result==CodeBlockProbeMatcher.Result.MATCH_VALUE_ONLY)xp.log(Log.INFO,TAG,"CGT01_COPY_MATCH_VALUE_ONLY slot="+e.parameterSlot+" bytes="+e.utf8Length+" action_causality=UNVERIFIED");
-                }catch(Throwable t){error(xp,t);}return result;
+                }catch(Throwable t){error(xp,t);}finally{try{ChatGptTermuxHandoff.clipboardResult(matchedActionId);}catch(Throwable t){TweakDiagnostics.rethrowFatal(t);}}return result;
             });
             ACTIVE.set(true);xp.log(Log.INFO,TAG,"CGT01_P06_HOOKS_INSTALLED build=2632128 mode=READ_ONLY captured_content=NONE persistent_storage=NONE");xp.log(Log.INFO,TAG,"CGT01_PROBE_INSTALLED build=2632128 mode=READ_ONLY");
         }catch(Throwable t){ACTIVE.set(false);TweakDiagnostics.rethrowFatal(t);if(t instanceof Exception)throw (Exception)t;throw new IllegalStateException("CGT01 P06 registration failed",t);}

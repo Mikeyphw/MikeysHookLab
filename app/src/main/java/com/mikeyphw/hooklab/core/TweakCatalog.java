@@ -7,12 +7,13 @@ import com.mikeyphw.hooklab.obtainx.NeoStoreHook;
 import com.mikeyphw.hooklab.obtainx.DroidifyHook;
 import com.mikeyphw.hooklab.wordmaster.WordMasterNightHook;
 import com.mikeyphw.hooklab.chatgpt.ChatGptCodeProbe;
+import com.mikeyphw.hooklab.chatgpt.ChatGptTermuxHandoff;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** Five independently opted-in, exact-host API102 integrations. */
+/** Independently opted-in, exact-host API102 integrations. */
 public final class TweakCatalog {
     private TweakCatalog() { }
 
@@ -54,7 +55,14 @@ public final class TweakCatalog {
                 "Read-only, opt-in diagnostics for ChatGPT 1.2026.321/2632128. " +
                 "Observes native CodeBlock/CopyButton renders and callback/clipboard parity; " +
                 "no command execution, message storage, Termux dispatch or raw text logs.",
-                ChatGptCodeProbe::install)
+                ChatGptCodeProbe::install),
+            new TweakEngine.Entry<>(
+                new TweakSpec(ChatGptTermuxHandoff.TWEAK_ID, ChatGptCodeProbe.PACKAGE,
+                    ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE),
+                "ChatGPT · Open copied code in Termux",
+                "Requires the Code-block action diagnostic enabled. After a verified native Copy, " +
+                "shows a short-lived action to open Termux for manual paste and review. No execution.",
+                ChatGptTermuxHandoff::install)
         ));
 
     public static List<TweakEngine.Entry<HookContext>> entries() { return REGISTRY; }
