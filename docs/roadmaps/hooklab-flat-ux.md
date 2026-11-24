@@ -329,6 +329,10 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - **F01 source candidate:** replace obsolete assertion with exact reviewed scanner tokens, exercise root-free positive/negative MCC fixtures during CI source validation, and document the failure receipt. No app production changes, no local Gradle, no automatic root and no release authorization.
 - **Remaining gates:** native Devtool check/apply/commit/session for F01 on exact previous PR24 head; explicitly approved fast-forward of **existing PR #24**, new exact-head required hosted CI, separate CI24 if configured, manual Android/LSPosed/MCC device and signing/release acceptance. A source-contract PASS is not physical-device proof. Never replay the original MCC-R01 transaction or force-push.
 
+## HL-DIAG-R03 — Copy Coroutine Field Correction & Root Platform Qualification
+
+PR #26 merged at 5097ad8e3316ed1cc90157a9e4d2ced2b2de61b0; required CI run 45401614595 passed. Device evidence: three P06 handler events without downstream stages; R02 UR_GR_KN_ID_CS_SM_ANNNN_BNNNN. Correct ixl annotated-object field and add a separately confirmed libsu read-only execution-context service, with no target data access, namespace switching, new write authority or Termux execution. See docs/HL_DIAG_R03.md. Runtime acceptance pending. The historical R02 section below is retained.
+
 ## HL-DIAG-R02 — ChatGPT Copy Causality & MCC Migration Parity
 
 Consolidates CGT01-P06 and MCC-R02 on main 3e87750247657d0c3c30645d07f6a5ff4f525aea. PR24 and PR25 merged; user reports MCC root visibility P0/A0 and P05 handler invocation without synchronous match. Read-only exact-build coroutine-object diagnostics and same-subprocess MCC context evidence; no Termux execution, namespace change, new root write or device acceptance claimed. See docs/HL_DIAG_R02.md. Separate Android CI, installed signed APK, physical device tests and any future UX/CI24 gates remain pending.
