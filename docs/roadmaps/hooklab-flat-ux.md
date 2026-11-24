@@ -177,6 +177,7 @@ The following is the **known** existing/previously proposed project inventory ba
 | Existing ID | Name | Source/delivery observation | Independent acceptance / next gate |
 |---|---|---|---|
 | `M6` | MCC Manual Diamond Control | Merged functionality present in catalog | Physical-device and sensitive action authorization not attested here |
+| `MCC-R01` | Root-side MCC Storage Visibility & Safe Alias Diagnosis | Planned source-bound correction to M6, user-observed 0.7.1 `BALANCE_FILE_NOT_FOUND` | Source tests/native/hosted CI/device read-only inspection pending; no root write or release claimed |
 | `M7` | Neo Store + Droid-ify ObtainX Integration | Merged, two independent hooks | App-version/device parity and intent handoff pending independent proof |
 | `M8` | LSPosed Scope Recommendations & Optional Verbose Event Logging | Merged code present | Real framework logging and scope behavior must be tested |
 | `UI-01/02` | Material 3 Control Center & Per-App Setup | Merged historic UI | Visual layer superseded by DS-01/UI-04–08, never disable behavior casually |
