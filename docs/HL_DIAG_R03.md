@@ -16,3 +16,7 @@ MCC control adds separate **Inspect root-service environment** confirmation butt
 
 ## R03-P05 — Validation and delivery
 Full static source validator invokes R03 source guard before hosted Android CI, all existing gates preserved; no local Gradle. DEX register-flow checks run against exact uploaded APKM; fixture tests cover label distinction, namespace categories, and malformed results. Source handoff only; native transaction/session, exact required CI, physical device and stable signing are separate. CI24 is not registered on this base. Prior PR26 device observations remain valid for that build only. UX-R00 must be rebased separately; TB01 PR13 unaffected. Do not rerun the earlier merged overlay. Roll back via a separately reviewed Git revert after merge, not deleting native state.
+
+## Device qualification and continuation
+
+PR #27 merged at `c544974c852d33ccc485c476142a9ed460374c9a`; required CI run `45411379949` succeeded. Four user-reported complete P06 action traces (49–52, 41 allowlisted events, no truncation) establish observed Copy causality, not permanent visual identity. The new root button returned `ROOT_PLATFORM_AUTH_OR_BIND_TIMEOUT` on BakaSU. See [the R04 roadmap continuation](roadmaps/hooklab-diag-r04.md) for R03-F01 and CGT01-P07, source candidate and independent gates.

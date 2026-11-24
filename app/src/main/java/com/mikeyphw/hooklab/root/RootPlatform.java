@@ -10,10 +10,10 @@ import android.os.Looper;
 import android.os.Parcel;
 import android.util.Log;
 import com.topjohnwu.superuser.ipc.RootService;
+import com.topjohnwu.superuser.Shell;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** One explicit, non-daemon diagnostic session, initiated by the companion UI only. */
@@ -26,29 +26,52 @@ public final class RootPlatform {
     private static String finish(String value) {
         String safe=RootContextCode.checked(value);Log.i("HookLabRoot","ROOT_PLATFORM_RESULT="+safe);return safe;
     }
+    private static final RootStartupPhase.Observer STAGES=(phase,state,elapsed) ->
+        Log.i("HookLabRoot","ROOT_PLATFORM_STAGE="+phase+"_"+state+" elapsed_ms="+elapsed);
+    private static final Executor WORKER=command->{
+        Thread worker=new Thread(command,"hooklab-root-health-phase");worker.setDaemon(true);worker.start();
+    };
     public static String inspect(Context context) {
         if(Looper.myLooper()==Looper.getMainLooper())return finish("ROOT_PLATFORM_MAIN_THREAD_REFUSED");
         if(STARTUP_UNCERTAIN.get())return finish("ROOT_PLATFORM_RESTART_REQUIRED");
         if(!ACTIVE.compareAndSet(false,true))return finish("ROOT_PLATFORM_BUSY");
         Handler main=new Handler(Looper.getMainLooper());
         Connection connection=new Connection(main);
-        FutureTask<String> call=null;
+        Executor mainExecutor=command->{if(!main.post(command))throw new RejectedExecutionException();};
         try {
-            Intent intent=new Intent(context.getApplicationContext(),RootDiagnosticService.class);
-            if(!main.post(() -> connection.bind(intent)))return finish("ROOT_PLATFORM_START_FAILED");
-            if(!connection.ready.await(15,TimeUnit.SECONDS)) {
-                STARTUP_UNCERTAIN.set(true);return finish("ROOT_PLATFORM_AUTH_OR_BIND_TIMEOUT");
+            // Follow the MMRL authorization-before-binding pattern; never set namespace flags.
+            Shell shell=RootStartupPhase.run("AUTH","ROOT_PLATFORM_AUTH_TIMEOUT","ROOT_PLATFORM_AUTH_FAILED",
+                35000,WORKER,Shell::getShell,STAGES,false,true);
+            if(shell==null||!shell.isRoot()){
+                STAGES.event("AUTH_ROOT","DENIED",0);return finish("ROOT_PLATFORM_NOT_ROOT");
             }
-            IBinder binder=connection.binder;
-            if(binder==null)return finish(connection.failure);
-            call=new FutureTask<>(() -> inspectBinder(binder));
-            Thread worker=new Thread(call,"hooklab-root-health-ipc");worker.setDaemon(true);worker.start();
-            try {return finish(call.get(5,TimeUnit.SECONDS));}
-            catch(TimeoutException timeout){STARTUP_UNCERTAIN.set(true);return finish("ROOT_PLATFORM_IPC_TIMEOUT");}
-            catch(java.util.concurrent.ExecutionException failure){return finish("ROOT_PLATFORM_IPC_REFUSED");}
-        }catch(InterruptedException interrupted){STARTUP_UNCERTAIN.set(true);Thread.currentThread().interrupt();return finish("ROOT_PLATFORM_INTERRUPTED");}
-        catch(RuntimeException failure){return finish("ROOT_PLATFORM_START_FAILED");}
-        finally {if(call!=null&&!call.isDone())call.cancel(true);connection.close();ACTIVE.set(false);}
+            STAGES.event("AUTH_ROOT","OK",0);
+            Intent intent=new Intent(context.getApplicationContext(),RootDiagnosticService.class);
+            Shell.Task task=RootStartupPhase.run("BIND_SETUP","ROOT_PLATFORM_BIND_SETUP_TIMEOUT","ROOT_PLATFORM_BIND_REFUSED",
+                5000,mainExecutor,()->connection.prepare(intent,mainExecutor),STAGES,true,false);
+            if(task!=null){
+                // bindOrTask returns libsu's own launch task; run only that task on the verified shell.
+                AtomicBoolean died=new AtomicBoolean();
+                Shell.Task observed=new Shell.Task(){
+                    @Override public void run(java.io.OutputStream in,java.io.InputStream out,java.io.InputStream err)throws java.io.IOException {
+                        task.run(in,out,err);
+                    }
+                    @Override public void shellDied(){died.set(true);task.shellDied();}
+                };
+                RootStartupPhase.run("LAUNCH_SUBMISSION","ROOT_PLATFORM_LAUNCH_TIMEOUT","ROOT_PLATFORM_LAUNCH_FAILED",
+                    10000,WORKER,()->{if(!shell.isRoot())throw new IllegalStateException();shell.execTask(observed);
+                        if(died.get())throw new java.io.IOException();return null;},STAGES,true,true);
+            }else STAGES.event("LAUNCH_SUBMISSION","NOT_NEEDED",0);
+            // Task submission is not evidence that the remote process started or returned a Binder.
+            IBinder binder=RootStartupPhase.run("BIND_CALLBACK","ROOT_PLATFORM_SERVICE_BIND_TIMEOUT","ROOT_PLATFORM_BIND_REFUSED",
+                20000,WORKER,()->{connection.ready.await();return connection.binder;},STAGES,true,true);
+            if(binder==null){STARTUP_UNCERTAIN.set(true);return finish(connection.failure);}
+            return finish(RootStartupPhase.run("IPC","ROOT_PLATFORM_IPC_TIMEOUT","ROOT_PLATFORM_IPC_REFUSED",
+                5000,WORKER,()->inspectBinder(binder),STAGES,true,true));
+        }catch(RootStartupPhase.Failure failure){if(failure.uncertain)STARTUP_UNCERTAIN.set(true);return finish(failure.code);}
+        catch(InterruptedException interrupted){STARTUP_UNCERTAIN.set(true);Thread.currentThread().interrupt();return finish("ROOT_PLATFORM_INTERRUPTED");}
+        catch(RuntimeException failure){STARTUP_UNCERTAIN.set(true);return finish("ROOT_PLATFORM_START_FAILED");}
+        finally {connection.close();ACTIVE.set(false);}
     }
     private static String inspectBinder(IBinder binder) throws Exception {
         AtomicBoolean dead=new AtomicBoolean();IBinder.DeathRecipient death=()->dead.set(true);
@@ -69,10 +92,10 @@ public final class RootPlatform {
         volatile IBinder binder;volatile String failure="ROOT_PLATFORM_BIND_REFUSED";
         boolean bindAttempted; // main thread only
         Connection(Handler h){main=h;}
-        void bind(Intent intent){
-            if(closed.get())return;
-            try{bindAttempted=true;RootService.bind(intent,this);}
-            catch(RuntimeException denied){failure="ROOT_PLATFORM_BIND_REFUSED";ready.countDown();}
+        Shell.Task prepare(Intent intent, Executor callbackExecutor){
+            if(closed.get())throw new IllegalStateException("Closed");
+            bindAttempted=true;
+            return RootService.bindOrTask(intent,callbackExecutor,this);
         }
         private void unbind(){if(bindAttempted)try{RootService.unbind(this);}catch(RuntimeException ignored){}}
         void close(){closed.set(true);main.post(this::unbind);}
