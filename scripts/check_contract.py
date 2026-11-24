@@ -189,7 +189,7 @@ check('MccRefillWorker.setNine(' in control
       and 'onCreate(' in control and 'startRefill(true)' not in control,
       'no automatic navigation/root on MCC control Activity creation')
 check('getApplicationInfo(MccIds.PACKAGE,0)' in worker
-      and 'new ProcessBuilder("su","-c",MccRefillCommand.script(dir,probe))' in worker
+      and 'new ProcessBuilder("su","-c",script)' in worker
       and 'WRITE_9_VERIFIED_' in worker and 'return "BALANCE_FILE_NOT_FOUND"' in worker,
       'manual root operation under HookLab UID with explicit failure truth')
 check('checkedDataDir(verifiedDir)' in command,
@@ -212,6 +212,7 @@ check(all(term in scanner_source for term in (
       'strict bounded MCC-only balance discovery and verified manual write')
 # Run executable root-free negative/positive fixtures in hosted CI BEFORE Gradle.
 subprocess.run(['python3','-B',str(r/'scripts/check_mcc_r01.py')],check=True)
+subprocess.run(['python3','-B',str(r/'scripts/check_hl_diag_r02.py')],check=True)
 check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in catalog
       and 'HANDED_OFF' not in button and 'requestAutomatic() { return false; }' in button,
       'legacy automatic process cannot install or navigate')

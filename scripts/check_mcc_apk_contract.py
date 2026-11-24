@@ -301,8 +301,12 @@ def source_contract(root: Path) -> list[str]:
           and 'setPositiveButton("Set to 9"' in control
           and 'MccRefillWorker.setNine(' in control,
           'MCC_REQUIRES_MANUAL_CONFIRMATION')
-    check('new ProcessBuilder("su","-c",MccRefillCommand.script(dir,probe))' in worker
-          and 'MCC_DATA_DIRECTORY_UNVERIFIED' in worker,
+    check('String dir=installedDataDir(context);if(dir==null)return "MCC_DATA_DIRECTORY_UNVERIFIED";' in worker
+          and 'String script=(probe?MccRootContextProbe.script(dir,android.os.Process.myPid()):"")+MccRefillCommand.script(dir,probe);' in worker
+          and worker.count('new ProcessBuilder("su","-c",script)') == 1
+          and worker.count('new ProcessBuilder(') == 1
+          and 'return MccRefillCommand.checkedDataDir(info.dataDir);' in worker
+          and 'MccRootContextProbe' not in ui and 'ProcessBuilder(' not in ui,
           'MCC_ROOT_ONLY_FROM_COMPANION_AND_FAIL_CLOSED')
     check('assertEquals(3,TweakCatalog.entries().size())' not in unit
           and 'assertNull("Duplicate MCC installer", mccEntry)' in unit
