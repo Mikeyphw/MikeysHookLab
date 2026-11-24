@@ -11,9 +11,9 @@ matcher=read(java+'chatgpt/CodeBlockProbeMatcher.java'); catalog=read(java+'core
 ns='{http://schemas.android.com/apk/res/android}'
 manifest=ET.parse(root/'app/src/main/AndroidManifest.xml').getroot()
 queries=[p.get(ns+'name') for p in manifest.findall('./queries/package')]
-assert queries==['br.art.code.meucronogramacapilar','com.machiav3lli.fdroid','com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx']
-assert manifest.findall('uses-permission')==[]
-assert read('app/src/main/resources/META-INF/xposed/scope.list').splitlines()==queries[:-1]
+assert queries==['br.art.code.meucronogramacapilar','com.machiav3lli.fdroid','com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx','com.termux']
+assert [p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND']
+assert read('app/src/main/resources/META-INF/xposed/scope.list').splitlines()==queries[:-2]
 assert read('app/src/main/resources/META-INF/xposed/module.prop').splitlines()==['minApiVersion=102','targetApiVersion=102','staticScope=false','exceptionMode=protective','autoHotReload=false']
 assert catalog.count('ChatGptCodeProbe::install')==1 and 'ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE' in catalog and 'ChatGptCodeProbe.TWEAK_ID' in catalog
 assert 'Read-only, opt-in diagnostics for ChatGPT 1.2026.321/2632128.' in catalog

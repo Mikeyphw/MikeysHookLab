@@ -1418,6 +1418,11 @@ public final class MainActivity extends AppCompatActivity {
         button(framework,R.string.ui07_open_scope,v -> goTo(SCOPE));
         button(framework,R.string.ui07_open_hooks,v -> goTo(APPS));
         verboseLogging(); // Existing framework-owned preference + verified commit/readback.
+        LinearLayout termux=card(getString(R.string.termux_r05_settings_label),
+                getString(R.string.termux_r05_settings_description));
+        button(termux,R.string.termux_r05_settings_label,v -> startActivity(
+                new Intent(this,com.mikeyphw.hooklab.termux.TermuxBridgeActivity.class)
+                    .setAction(com.mikeyphw.hooklab.termux.TermuxCommandPolicy.ACTION_SETTINGS)));
         LinearLayout support=card(getString(R.string.ui07_help_title),
                 getString(R.string.ui07_settings_support));
         button(support,R.string.ui07_open_help,v -> openHelp());

@@ -27,7 +27,7 @@ public final class RootPlatform {
         String safe=RootContextCode.checked(value);Log.i("HookLabRoot","ROOT_PLATFORM_RESULT="+safe);return safe;
     }
     private static final RootStartupPhase.Observer STAGES=(phase,state,elapsed) ->
-        Log.i("HookLabRoot","ROOT_PLATFORM_STAGE="+phase+"_"+state+" elapsed_ms="+elapsed);
+        Log.i("HookLabRoot","ROOT_PLATFORM_STAGE="+phase+"_"+(phase.equals("IPC")&&state.equals("OK")?"RETURNED":state)+" elapsed_ms="+elapsed);
     private static final Executor WORKER=command->{
         Thread worker=new Thread(command,"hooklab-root-health-phase");worker.setDaemon(true);worker.start();
     };
@@ -66,8 +66,10 @@ public final class RootPlatform {
             IBinder binder=RootStartupPhase.run("BIND_CALLBACK","ROOT_PLATFORM_SERVICE_BIND_TIMEOUT","ROOT_PLATFORM_BIND_REFUSED",
                 20000,WORKER,()->{connection.ready.await();return connection.binder;},STAGES,true,true);
             if(binder==null){STARTUP_UNCERTAIN.set(true);return finish(connection.failure);}
-            return finish(RootStartupPhase.run("IPC","ROOT_PLATFORM_IPC_TIMEOUT","ROOT_PLATFORM_IPC_REFUSED",
-                5000,WORKER,()->inspectBinder(binder),STAGES,true,true));
+            String result=RootStartupPhase.run("IPC","ROOT_PLATFORM_IPC_TIMEOUT","ROOT_PLATFORM_IPC_REFUSED",
+                5000,WORKER,()->inspectBinder(binder),STAGES,true,true);
+            Log.i("HookLabRoot","ROOT_PLATFORM_IPC_VERDICT="+(RootContextCode.isContext(result)?"CONTEXT_VERIFIED":"REFUSED"));
+            return finish(result);
         }catch(RootStartupPhase.Failure failure){if(failure.uncertain)STARTUP_UNCERTAIN.set(true);return finish(failure.code);}
         catch(InterruptedException interrupted){STARTUP_UNCERTAIN.set(true);Thread.currentThread().interrupt();return finish("ROOT_PLATFORM_INTERRUPTED");}
         catch(RuntimeException failure){STARTUP_UNCERTAIN.set(true);return finish("ROOT_PLATFORM_START_FAILED");}
@@ -75,16 +77,19 @@ public final class RootPlatform {
     }
     private static String inspectBinder(IBinder binder) throws Exception {
         AtomicBoolean dead=new AtomicBoolean();IBinder.DeathRecipient death=()->dead.set(true);
-        binder.linkToDeath(death,0);
-        Parcel request=Parcel.obtain(),reply=Parcel.obtain();
+        Parcel request=Parcel.obtain(),reply=Parcel.obtain();boolean linked=false;
         try {
+            binder.linkToDeath(death,0);linked=true;
             if(dead.get()||!binder.isBinderAlive())return "ROOT_PLATFORM_BINDER_DIED";
             request.writeInterfaceToken(RootDiagnosticService.DESCRIPTOR);
-            if(!binder.transact(RootDiagnosticService.INSPECT,request,reply,0))return "ROOT_PLATFORM_IPC_REFUSED";
+            if(!binder.transact(RootDiagnosticService.INSPECT,request,reply,0))return "ROOT_PLATFORM_IPC_TRANSACT_REFUSED";
             reply.readException();String result=reply.readString();
-            if(reply.dataAvail()!=0)return "ROOT_PLATFORM_RESULT_UNVERIFIED";
+            if(reply.dataAvail()!=0)return "ROOT_PLATFORM_IPC_BAD_RESPONSE";
             return dead.get()?"ROOT_PLATFORM_BINDER_DIED":RootContextCode.checked(result);
-        } finally {request.recycle();reply.recycle();try{binder.unlinkToDeath(death,0);}catch(RuntimeException ignored){}}
+        } catch(SecurityException refused){return "ROOT_PLATFORM_IPC_SECURITY_REFUSED";}
+          catch(android.os.RemoteException failure){return dead.get()?"ROOT_PLATFORM_BINDER_DIED":"ROOT_PLATFORM_IPC_REMOTE_FAILURE";}
+          catch(RuntimeException malformed){return "ROOT_PLATFORM_IPC_BAD_RESPONSE";
+        } finally {request.recycle();reply.recycle();try{if(linked)binder.unlinkToDeath(death,0);}catch(RuntimeException ignored){}}
     }
     private static final class Connection implements ServiceConnection {
         final Handler main;final CountDownLatch ready=new CountDownLatch(1);

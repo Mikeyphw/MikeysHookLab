@@ -22,9 +22,9 @@ ns='{http://schemas.android.com/apk/res/android}'
 queries=manifest.findall('./queries/package')
 assert [x.get(ns+'name') for x in queries]==[
     'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
-    'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx']
-assert manifest.findall('uses-permission')==[]
-assert manifest.findall('./application/activity') and len(manifest.findall('./application/activity'))==2
+    'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx','com.termux']
+assert [p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND']
+assert manifest.findall('./application/activity') and len(manifest.findall('./application/activity'))==3
 for required in ['NEO_CODE = 1304L','DROIDIFY_CODE = 780L',
     'NEO_VERSION = "1.3.3"','DROIDIFY_VERSION = "0.7.8"',
     'neostore.obtainx.manual','droidify.obtainx.manual']:

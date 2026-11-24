@@ -1,13 +1,20 @@
 package com.mikeyphw.hooklab.chatgpt;
 
-/** One expiring, one-use affordance; only numeric identity, never clipboard text. */
+/** One composition slot owns one generation. No Activity, global text cache or clipboard. */
 final class TermuxOfferGate {
-    static final long TTL_MS=12000L;
-    private long generation,action,created;
-    synchronized long replace(long actionId,long now){generation++;action=actionId>0?actionId:0;created=now;return generation;}
-    synchronized boolean current(long token){return token==generation;}
-    synchronized long available(long token,long now){return current(token)&&action>0&&now>=created&&now-created<=TTL_MS?action:0;}
-    synchronized long consume(long token,long now){long result=available(token,now);if(result!=0){action=0;generation++;}return result;}
-    synchronized void clear(long token){if(current(token)){action=0;generation++;}}
-    synchronized void invalidate(){action=0;generation++;}
+    private Object identity;
+    private String source;
+    private boolean active,disposed;
+    private long lastTap=Long.MIN_VALUE;
+    TermuxOfferGate(Object identity,String source){
+        if(identity==null||source==null)throw new IllegalArgumentException("Missing source binding");
+        this.identity=identity;this.source=source;
+    }
+    synchronized boolean owns(Object object){return !disposed&&identity==object;}
+    synchronized void remembered(){if(!disposed)active=true;}
+    synchronized void dispose(){active=false;disposed=true;identity=null;source=null;}
+    synchronized String selected(long now){
+        if(!active||disposed||source==null||now<0||(lastTap!=Long.MIN_VALUE&&(now<lastTap||now-lastTap<500)))return null;
+        lastTap=now;return source;
+    }
 }

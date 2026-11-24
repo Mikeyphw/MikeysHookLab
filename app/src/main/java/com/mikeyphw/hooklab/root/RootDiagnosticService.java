@@ -5,6 +5,7 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.os.RemoteException;
+import android.util.Log;
 import android.system.Os;
 import com.topjohnwu.superuser.ipc.RootService;
 import java.io.BufferedReader;
@@ -34,10 +35,19 @@ public final class RootDiagnosticService extends RootService {
         return new Binder() {
             @Override protected boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
                 if(code==INTERFACE_TRANSACTION) { if(reply!=null)reply.writeString(DESCRIPTOR);return reply!=null; }
-                if(code!=INSPECT || reply==null || flags!=0) return false;
-                data.enforceInterface(DESCRIPTOR);
-                if(data.dataAvail()!=0 || allowedUid<10000 || Binder.getCallingUid()!=allowedUid)
-                    throw new SecurityException("Root diagnostic caller refused");
+                // Binder may add transport flags (e.g. FLAG_COLLECT_NOTED_APP_OPS).
+                // Only reject asynchronous calls, unknown transactions and missing replies.
+                if(code!=INSPECT || reply==null || (flags & IBinder.FLAG_ONEWAY)!=0) {
+                    Log.w("HookLabRoot","ROOT_PLATFORM_IPC_SERVER=TRANSACTION_REFUSED");return false;
+                }
+                try { data.enforceInterface(DESCRIPTOR); }
+                catch(SecurityException invalid) { Log.w("HookLabRoot","ROOT_PLATFORM_IPC_SERVER=DESCRIPTOR_REFUSED");throw invalid; }
+                if(data.dataAvail()!=0) {
+                    Log.w("HookLabRoot","ROOT_PLATFORM_IPC_SERVER=PAYLOAD_REFUSED");throw new SecurityException("Unexpected root diagnostic payload");
+                }
+                if(allowedUid<10000 || Binder.getCallingUid()!=allowedUid) {
+                    Log.w("HookLabRoot","ROOT_PLATFORM_IPC_SERVER=CALLER_REFUSED");throw new SecurityException("Root diagnostic caller refused");
+                }
                 final int pid=Binder.getCallingPid();
                 String result="ROOT_PLATFORM_NOT_ROOT";
                 if(Os.getuid()==0) {
@@ -49,7 +59,8 @@ public final class RootDiagnosticService extends RootService {
                         +"_C"+RootContextCode.compare(self,pid>0?readLink("/proc/"+pid+"/ns/mnt"):null)
                         +"_S"+RootContextCode.security(readFixed("/proc/self/attr/current",null));
                 }
-                reply.writeNoException();reply.writeString(RootContextCode.checked(result));return true;
+                reply.writeNoException();reply.writeString(RootContextCode.checked(result));
+                Log.i("HookLabRoot","ROOT_PLATFORM_IPC_SERVER="+(RootContextCode.isContext(result)?"CONTEXT_RETURNED":"NOT_ROOT"));return true;
             }
         };
     }
