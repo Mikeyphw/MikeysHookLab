@@ -9,6 +9,7 @@ import android.util.Log;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakDiagnostics;
 import io.github.libxposed.api.XposedInterface;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -18,7 +19,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * CGT01-P04: Read-only native code-block and CopyButton renderer diagnostic for ChatGPT 2632128.
+ * CGT01-P05: Read-only CopyButton callback causality diagnostics for ChatGPT 2632128.
  * Does not add actions, read unrelated message storage, launch Termux, or save source text.
  * An observed clipboard match proves equality of VALUES only; distinct block identity
  * and actual tap-to-handler causality require separate on-device evidence.
@@ -41,10 +42,22 @@ public final class ChatGptCodeProbe {
     // P03 observes callback OBJECT identity; never substitute equal text for block identity.
     private static final CodeBlockActionMatcher ACTION =
             new CodeBlockActionMatcher(SystemClock::elapsedRealtime);
+    // P05 tracks only instances of a pinned callback class constructed synchronously
+    // inside CopyButtonImpl. It never retains source text or grants execute authority.
+    private static final CopyButtonCausalityTracker COPY_CAUSALITY =
+            new CopyButtonCausalityTracker(SystemClock::elapsedRealtime);
+
     private static final Set<Class<?>> CALLBACK_CLASSES = ConcurrentHashMap.newKeySet();
     private static final AtomicInteger CALLBACK_CLASS_COUNT = new AtomicInteger();
     private static final int MAX_ACTION_CLASSES = 24;
     private ChatGptCodeProbe() {}
+
+    private static void p05(XposedInterface xp,CopyButtonCausalityTracker.Event event,
+                            int role,String fixedDetails) {
+        int count=COPY_CAUSALITY.logCount(event,role);
+        if(count!=0)xp.log(Log.INFO,LOG_TAG,"CGT01_P05_"+event.name()
+                +" role="+role+" occurrence="+count+" "+fixedDetails);
+    }
 
     private static Class<?> type(ClassLoader loader, String name) throws ClassNotFoundException {
         return Class.forName(name,false,loader);
@@ -57,45 +70,84 @@ public final class ChatGptCodeProbe {
      */
     private static void bindAction(XposedInterface xp, ClassLoader loader,
                                    Object callback, int role, String source) {
-        if (callback == null || source == null) return;
+        if (callback == null) {
+            p05(xp,CopyButtonCausalityTracker.Event.P03_NULL_CALLBACK,role,"binding=NOT_CREATED");
+            return;
+        }
+        if (source == null) {
+            p05(xp,CopyButtonCausalityTracker.Event.P03_NULL_SOURCE,role,"binding=NOT_CREATED");
+            return;
+        }
         try {
-            Class<?> iface = Class.forName("kotlin.jvm.functions.Function0", false, loader);
-            if (!iface.isInstance(callback)) return;
-            if (!ACTION.bind(callback, role, source)) return;
-            Class<?> owner = callback.getClass();
-            if (CALLBACK_CLASSES.contains(owner)) return;
-            if (CALLBACK_CLASS_COUNT.get() >= MAX_ACTION_CLASSES) return;
-            Method invoke = owner.getDeclaredMethod("invoke");
-            if (invoke.getReturnType() != Object.class) return;
-            if (!CALLBACK_CLASSES.add(owner)) return;
-            int count = CALLBACK_CLASS_COUNT.incrementAndGet();
+            Class<?> iface=Class.forName("kotlin.jvm.functions.Function0",false,loader);
+            if(!iface.isInstance(callback)) {
+                p05(xp,CopyButtonCausalityTracker.Event.P03_NOT_FUNCTION0,role,"binding=REJECTED");
+                return;
+            }
+            if(!ACTION.bind(callback,role,source)) {
+                p05(xp,CopyButtonCausalityTracker.Event.P03_BIND_AMBIGUOUS,role,"binding=REJECTED");
+                return;
+            }
+            Class<?> owner=callback.getClass();
+            if(CALLBACK_CLASSES.contains(owner)) {
+                p05(xp,CopyButtonCausalityTracker.Event.P03_REUSED_CLASS,role,"hook=EXISTING");
+                return;
+            }
+            if(CALLBACK_CLASS_COUNT.get()>=MAX_ACTION_CLASSES) {
+                p05(xp,CopyButtonCausalityTracker.Event.P03_CAP_REACHED,role,"hook=REJECTED");
+                return;
+            }
+            final Method invoke;
+            try {invoke=owner.getDeclaredMethod("invoke");}
+            catch(NoSuchMethodException unavailable) {
+                p05(xp,CopyButtonCausalityTracker.Event.P03_INVOKE_MISSING,role,"hook=REJECTED");
+                return;
+            }
+            if(invoke.getReturnType()!=Object.class) {
+                p05(xp,CopyButtonCausalityTracker.Event.P03_INVOKE_RETURN_MISMATCH,
+                    role,"hook=REJECTED");
+                return;
+            }
+            if(!CALLBACK_CLASSES.add(owner)) {
+                p05(xp,CopyButtonCausalityTracker.Event.P03_REUSED_CLASS,role,"hook=EXISTING");
+                return;
+            }
+            int count=CALLBACK_CLASS_COUNT.incrementAndGet();
             try {
-                xp.hook(invoke)
-                    .setId("hooklab.cgt01.action.invoke." + count)
+                xp.hook(invoke).setId("hooklab.cgt01.action.invoke."+count)
                     .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                     .intercept(chain -> {
                         CodeBlockActionMatcher.Frame frame=ACTION.enter(chain.getThisObject());
-                        if (frame==null) return chain.proceed();
-                        try {
-                            xp.log(Log.INFO,LOG_TAG,"CGT01_ACTION_CALLBACK_INVOKED role="
-                                    +frame.role()+" binding_id="+frame.bindingId()
-                                    +" button_identity=UNVERIFIED");
+                        if(frame==null) {
+                            p05(xp,CopyButtonCausalityTracker.Event.P03_FRAME_MISSING,role,
+                                "invocation=NOT_BOUND");
                             return chain.proceed();
-                        } finally {
-                            ACTION.exit(frame);
                         }
+                        try {
+                            p05(xp,CopyButtonCausalityTracker.Event.P03_CALLBACK_INVOKED,frame.role(),
+                                "binding_id="+frame.bindingId()+" button_identity=UNVERIFIED");
+                            if(COPY_CAUSALITY.occurrenceCount(
+                                    CopyButtonCausalityTracker.Event.P03_CALLBACK_INVOKED,
+                                    frame.role())<=4)
+                                xp.log(Log.INFO,LOG_TAG,"CGT01_ACTION_CALLBACK_INVOKED role="
+                                        +frame.role()+" binding_id="+frame.bindingId()
+                                        +" button_identity=UNVERIFIED");
+                            return chain.proceed();
+                        } finally { ACTION.exit(frame); }
                     });
+                p05(xp,CopyButtonCausalityTracker.Event.P03_HOOK_INSTALLED,role,
+                    "class_hook=INSTALLED ordinal="+count);
             } catch(Throwable failure) {
                 CALLBACK_CLASSES.remove(owner);
                 CALLBACK_CLASS_COUNT.decrementAndGet();
                 TweakDiagnostics.rethrowFatal(failure);
-                xp.log(Log.WARN,LOG_TAG,"CGT01_ACTION_HOOK_FAILED role=" + role
-                        +" category="+TweakDiagnostics.failureCategory(failure));
+                p05(xp,CopyButtonCausalityTracker.Event.P03_HOOK_FAILED,role,
+                    "category="+TweakDiagnostics.failureCategory(failure));
             }
         } catch(Throwable failure) {
             TweakDiagnostics.rethrowFatal(failure);
-            xp.log(Log.WARN,LOG_TAG,"CGT01_ACTION_BIND_FAILED role="+role
-                    +" category="+TweakDiagnostics.failureCategory(failure));
+            p05(xp,CopyButtonCausalityTracker.Event.P03_BIND_FAILED,role,
+                "category="+TweakDiagnostics.failureCategory(failure));
         }
     }
 
@@ -131,15 +183,71 @@ public final class ChatGptCodeProbe {
                 throw new NoSuchMethodException("CopyButtonImpl signature mismatch");
             Method clipboard=ClipboardManager.class.getDeclaredMethod("setPrimaryClip",ClipData.class);
             XposedInterface xp=context.framework(XposedInterface.class);
+            // P05: classes4.dex lxl.c creates a twl Function0 via the exact
+            // seven-argument constructor; twl.invoke lives in classes5.dex.
+            // Constructor binding is allowed ONLY under the lxl.c render frame.
+            // This remains an observed handler CANDIDATE until synchronous copy
+            // confirmation; it is not a visual block identity or execution grant.
+            try {
+                Class<?> callbackOwner=type(loader,"twl");
+                Class<?> function0=type(loader,"kotlin.jvm.functions.Function0");
+                if(!function0.isAssignableFrom(callbackOwner))
+                    throw new NoSuchMethodException("Pinned Copy handler not Function0");
+                Constructor<?> constructor=callbackOwner.getDeclaredConstructor(
+                    Object.class,Object.class,String.class,Object.class,Object.class,
+                    type(loader,"bho0"),byte.class);
+                Method handler=callbackOwner.getDeclaredMethod("invoke");
+                if(handler.getReturnType()!=Object.class || handler.getParameterCount()!=0)
+                    throw new NoSuchMethodException("Pinned Copy handler invoke mismatch");
+                xp.hook(constructor).setId("hooklab.cgt01.p05.copyhandler.ctor.2632128")
+                    .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                    .intercept(chain -> {
+                        Object result=chain.proceed();
+                        if(ACTIVE.get() && COPY_CAUSALITY.inRender()) {
+                            CopyButtonCausalityTracker.Mark mark=
+                                COPY_CAUSALITY.constructed(chain.getThisObject());
+                            if(mark!=null)
+                                p05(xp,CopyButtonCausalityTracker.Event.BUTTON_CONSTRUCTOR_BOUND,0,
+                                    "binding_id="+mark.bindingId+" render_id="+mark.renderId
+                                    +" tap=UNVERIFIED visual_block_identity=UNVERIFIED");
+                        }
+                        return result;
+                    });
+                xp.hook(handler).setId("hooklab.cgt01.p05.copyhandler.invoke.2632128")
+                    .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                    .intercept(chain -> {
+                        if(!ACTIVE.get() || !COPY_CAUSALITY.hasCandidates())
+                            return chain.proceed();
+                        CopyButtonCausalityTracker.InvocationFrame frame=
+                            COPY_CAUSALITY.enterHandler(chain.getThisObject());
+                        if(frame==null)return chain.proceed();
+                        try {
+                            p05(xp,CopyButtonCausalityTracker.Event.BUTTON_HANDLER_INVOKED,0,
+                                "binding_id="+frame.bindingId+" render_id="+frame.renderId
+                                +" actual_copy=UNVERIFIED");
+                            return chain.proceed();
+                        } finally {COPY_CAUSALITY.exitHandler(frame);}
+                    });
+                xp.log(Log.INFO,LOG_TAG,
+                    "CGT01_P05_HANDLER_HOOKS_INSTALLED candidate=twl constructor=EXACT invoke=EXACT "
+                    +"clipboard_causality=PENDING");
+            } catch(Throwable failure) {
+                TweakDiagnostics.rethrowFatal(failure);
+                xp.log(Log.WARN,LOG_TAG,"CGT01_P05_HANDLER_INSTALL_REFUSED category="
+                    +TweakDiagnostics.failureCategory(failure));
+            }
             xp.hook(copyButton).setId("hooklab.cgt01.copybutton.render.2632128")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
-                    Object result=chain.proceed();
-                    if (ACTIVE.get() && COPY_BUTTON_RENDER_SEEN.compareAndSet(false,true)) {
-                        xp.log(Log.INFO,LOG_TAG,
-                            "CGT01_COPY_BUTTON_RENDER_OBSERVED build=2632128 tap=UNVERIFIED block_identity=UNVERIFIED");
-                    }
-                    return result;
+                    CopyButtonCausalityTracker.RenderFrame frame=COPY_CAUSALITY.beginRender();
+                    try {
+                        Object result=chain.proceed();
+                        if (ACTIVE.get() && COPY_BUTTON_RENDER_SEEN.compareAndSet(false,true)) {
+                            xp.log(Log.INFO,LOG_TAG,
+                                "CGT01_COPY_BUTTON_RENDER_OBSERVED build=2632128 tap=UNVERIFIED block_identity=UNVERIFIED");
+                        }
+                        return result;
+                    } finally {COPY_CAUSALITY.endRender(frame);}
                 });
             xp.hook(render).setId("hooklab.cgt01.codeblock.render.2632128")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
@@ -192,6 +300,29 @@ public final class ChatGptCodeProbe {
                                 +causal.role+" binding_id="+causal.bindingId);
                         }
                         CodeBlockProbeMatcher.Evidence evidence=MATCHER.compareCopiedText(copied);
+                        // Synchronous correlation on this thread only: do not infer
+                        // which visual block was tapped from equal values.
+                        CopyButtonCausalityTracker.InvocationFrame handlerFrame=
+                            COPY_CAUSALITY.currentHandler();
+                        if(handlerFrame!=null) {
+                            if(evidence.result==CodeBlockProbeMatcher.Result.MATCH_VALUE_ONLY) {
+                                p05(xp,CopyButtonCausalityTracker.Event.BUTTON_CLIPBOARD_MATCH,0,
+                                    "binding_id="+handlerFrame.bindingId
+                                    +" render_id="+handlerFrame.renderId
+                                    +" slot="+evidence.parameterSlot
+                                    +" bytes="+evidence.utf8Length
+                                    +" ephemeral_token="+evidence.ephemeralToken
+                                    +" synchronous=YES visual_block_identity=UNVERIFIED");
+                            } else if(evidence.result==CodeBlockProbeMatcher.Result.AMBIGUOUS_SLOTS) {
+                                p05(xp,CopyButtonCausalityTracker.Event.BUTTON_CLIPBOARD_AMBIGUOUS,0,
+                                    "binding_id="+handlerFrame.bindingId
+                                    +" source_value=AMBIGUOUS");
+                            } else {
+                                p05(xp,CopyButtonCausalityTracker.Event.BUTTON_CLIPBOARD_NO_MATCH,0,
+                                    "binding_id="+handlerFrame.bindingId
+                                    +" source_value=UNVERIFIED");
+                            }
+                        }
                         if (evidence.result==CodeBlockProbeMatcher.Result.MATCH_VALUE_ONLY) {
                             xp.log(Log.INFO,LOG_TAG,"CGT01_COPY_MATCH_VALUE_ONLY slot="
                                 +evidence.parameterSlot+" bytes="+evidence.utf8Length
@@ -217,7 +348,7 @@ public final class ChatGptCodeProbe {
                 });
             ACTIVE.set(true);
             xp.log(Log.INFO,LOG_TAG,"CGT01_PROBE_INSTALLED build=2632128 mode=READ_ONLY "
-                +"p04_copybutton_render=OBSERVED_NOT_TAP p03_action_hooks=DISCOVER_ON_RENDER captured_content=NONE persistent_storage=NONE");
+                +"p04_copybutton_render=OBSERVED_NOT_TAP p05_copyhandler=PINNED_CANDIDATE captured_content=NONE persistent_storage=NONE");
         } catch(Throwable failure) {
             ACTIVE.set(false);
             INSTALLED.set(false);
