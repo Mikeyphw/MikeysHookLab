@@ -1,7 +1,7 @@
 # HookLab — Final UI/UX Revamp & Native Fidelity Roadmap
 
-**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.3-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
-**Status:** UX-R00 committed on draft PR #30; Design and CI24 passed at the original head, Android lint and native baseline failed. F02 correction pending native delivery and fresh hosted qualification.
+**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.4-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
+**Status:** UX-R00 F02 pushed on draft PR #30; Android CI, Design Contract and CI24 workflow succeeded at F02. Native baseline failed during emulator metadata collection. F03 source candidate pending native delivery and exact-head qualification.
 **Proposed repository path:** `docs/roadmaps/hooklab-ux-revamp.md` (retain `hooklab-flat-ux.md` and its historical acceptance matrix).  
 **Operator:** continue the existing `devop-hooklab` cumulative command; do not create an independent executable for this roadmap.  
 
@@ -430,3 +430,11 @@ All 38 historic IDs preserved. No visual golden approved by this candidate. Keep
 PR #30 head `a60b2758c6cd9695dc8fab2bc1c955d35f9eb41e` tree `f86305f1272d9a78aa948996ec93ccd390a34336`. Design run 45470890438 and JVM CI24 run 45470889969 succeeded at that head. Android run 45470890057 failed `UseSdkSuppress` on NativeBaselineTest; native run 45470889972 failed `installed bytes mismatch` before instrumentation. The logs do not establish whether the raw read was denied, returned diagnostic bytes, or was a true mismatch. Repair uses exact API36 test filtering and retains both exact installed APK digests, with exit-aware on-device SHA-256, constrained package path, owner-only fallback on explicit access denial, and fail-closed drift/mismatch. No retries on genuine mismatch, no root, no waived checks. Fresh exact-head Android, native, Design, and CI24 results required; no native golden or device acceptance inferred.
 
 F02 follow-up validates the normal ADB streamed/push install acknowledgement, refuses incremental installation, nonzero status, unexpected output, path splits, traversal and foreign-package base APK paths. The complete uploaded Git archive independently supplied the exact PR base object and tree. The repair retains R00 verification and the six-overlay roster; no emulator qualification is asserted.
+
+## UX-R00-F03 — SDK package revision evidence repair
+
+Remote PR #30 head `26985971d28c26847e498cf12dc1a08db04592ec`, tree `6b16e6e56be745a8897d2ccd09114776b09ce43a`, main `af75dfeecc51e92a0b128990e206517f88fd66e0`. At this head Android CI 45484518909, Design Contract 45484518905 and CI24 workflow 45484518958 reported success; CI24 independent artifact qualification is not inferred. Native UI 45484518896 job 138766211892 booted API36 and verified both installed APK SHA-256 values, then refused when invoking `emulator -version` returned 127. Instrumentation and subsequent visual gates were not established.
+
+F03 removes the additional emulator executable invocation from the actual hosted metadata path. It reads the three installed SDK packages' `source.properties` files, validates revisions and any declared package identity, rejects duplicates/missing/malformed metadata, and explicitly labels the emulator package revision as `sdk-package:<revision>` (not an executed binary fingerprint). The independent verifier requires this evidence format. API36/qemu/ABI/offline guard, exact APK identity, instrumentation roster, visual comparison and artifact gates remain unchanged. Unit tests include the actual environment caller with a forbidden subprocess invocation and malformed/duplicate/missing metadata. Existing synthetic visual report fixtures now use the same revision format. No local Gradle, no approval of goldens, no physical-device or release acceptance.
+
+F03 must be applied to the existing PR branch as a new native transaction, not by replaying F01/F02. All 11 promises and six overlay obligations remain open until independently qualified.

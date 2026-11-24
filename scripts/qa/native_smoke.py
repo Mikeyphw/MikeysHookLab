@@ -116,7 +116,7 @@ def validate_receipt_files(out,receipt):
     for name,expected in [('fixture',FIXTURE_EVIDENCE),('framework-fixture',FRAMEWORK_EVIDENCE)]:
         p=out/(name+'.json');require(p.stat().st_size<=4096 and json.loads(p.read_text())==expected and receipt.get(name.replace('-','_')+'_sha256')==digest(p),'fixture evidence mismatch '+name)
     isolation=out/'release-isolation.json';require(digest(isolation)==receipt['release_isolation_sha256'],'release isolation hash drift');verify_release(json.loads(isolation.read_text()),receipt['app_apk_sha256'],receipt['android_test_apk_sha256'])
-    env=out/'environment.json';e=json.loads(env.read_text());require(digest(env)==receipt['environment_sha256'] and set(e)=={'api','abi','serial','qemu','fingerprint','emulator_version','platform_tools_revision','system_image_revision','width_px','height_px','density_dpi','font_scale','offline'} and e['api']=='36' and e['abi']=='x86_64' and e['qemu']=='1' and e['serial']==SERIAL and e['offline'] is True and [e['width_px'],e['height_px'],e['density_dpi'],e['font_scale']]==[780,1688,320,1.0] and all(isinstance(e[k],str) and 0<len(e[k])<=256 for k in ('fingerprint','emulator_version','platform_tools_revision','system_image_revision')),'environment evidence drift')
+    env=out/'environment.json';e=json.loads(env.read_text());require(digest(env)==receipt['environment_sha256'],'environment evidence hash drift');validate_environment(e)
     for suffix,field in [('', 'screenshots'),('-repeat','repeat_screenshots')]:
         seen=set();records={}
         for route in ROUTES:
@@ -136,11 +136,50 @@ def parse_instrumentation(output,test_id):
         if m:records.append((int(m.group(1)),current.get('class'),current.get('test')));current={}
     require(records==[(1,klass,method),(0,klass,method)],'instrumentation exact test roster failed')
 
+# SDK metadata is read-only. Do not invoke a second emulator process while the
+# hosted runner owns the live AVD (F02 failed with emulator -version exit 127).
+SDK_REVISION=re.compile(r'[0-9]+(?:\.[0-9]+){0,3}(?:[- ](?:rc|beta|alpha|preview)[- ]?[0-9]+)?',re.I)
+SDK_PACKAGES={'emulator_version':'emulator','platform_tools_revision':'platform-tools','system_image_revision':'system-images/android-36/google_apis/x86_64'}
+
+def sdk_revision(sdk,package):
+    require(package in SDK_PACKAGES.values(),'unexpected SDK package')
+    folder=sdk/package;path=folder/'source.properties'
+    require(path.is_file() and not path.is_symlink() and 0<path.stat().st_size<=65536,'SDK revision metadata missing/unsafe '+package)
+    props={}
+    for line in path.read_text(encoding='utf-8').splitlines():
+        line=line.strip()
+        if not line or line.startswith(('#','!')):continue
+        key,sep,value=line.partition('=')
+        key=key.strip()
+        if key in ('Pkg.Revision','Pkg.Path'):
+            require(sep and key not in props,'ambiguous SDK package metadata '+package)
+            props[key]=value.strip()
+    rev=props.get('Pkg.Revision','')
+    require(SDK_REVISION.fullmatch(rev) is not None and len(rev)<=80,'invalid SDK package revision '+package)
+    if 'Pkg.Path' in props:require(props['Pkg.Path']==package.replace('/',';'),'SDK package path mismatch '+package)
+    return rev
+
+def sdk_environment(sdk):
+    require(sdk.is_absolute() and sdk.is_dir(),'SDK root missing/invalid')
+    revisions={key:sdk_revision(sdk,package) for key,package in SDK_PACKAGES.items()}
+    # Explicitly identify this as the installed SDK package revision, not a
+    # claim to have executed or independently fingerprinted the emulator binary.
+    revisions['emulator_version']='sdk-package:'+revisions['emulator_version']
+    return revisions
+
+def validate_environment(e):
+    require(set(e)=={'api','abi','serial','qemu','fingerprint','emulator_version','platform_tools_revision','system_image_revision','width_px','height_px','density_dpi','font_scale','offline'} and e['api']=='36' and e['abi']=='x86_64' and e['qemu']=='1' and e['serial']==SERIAL and e['offline'] is True and [e['width_px'],e['height_px'],e['density_dpi'],e['font_scale']]==[780,1688,320,1.0],'environment evidence drift')
+    require(isinstance(e['fingerprint'],str) and 0<len(e['fingerprint'])<=256,'invalid emulator fingerprint')
+    version=e['emulator_version'];require(isinstance(version,str) and version.startswith('sdk-package:') and SDK_REVISION.fullmatch(version.removeprefix('sdk-package:')) is not None,'invalid emulator package evidence')
+    for key in ('platform_tools_revision','system_image_revision'):
+        require(isinstance(e[key],str) and SDK_REVISION.fullmatch(e[key]) is not None,'invalid SDK package evidence '+key)
+
 def environment():
-    def revision(path):
-        line=next((x.split('=',1)[1].strip() for x in path.read_text().splitlines() if x.split('=',1)[0].strip()=='Pkg.Revision' and '=' in x),'');require(bool(re.fullmatch(r'[0-9.]+(?:[-a-zA-Z0-9. ]*)?',line)),'invalid SDK revision');return line
-    sdk=Path(os.environ['ANDROID_HOME']);emulator=subprocess.check_output([str(sdk/'emulator/emulator'),'-version'],text=True,stderr=subprocess.STDOUT,timeout=30).splitlines();version=next((x.strip()[:256] for x in emulator if 'emulator version' in x.lower()),'');require(bool(version),'emulator revision missing')
-    return {'api':txt('shell','getprop','ro.build.version.sdk'),'abi':txt('shell','getprop','ro.product.cpu.abi'),'serial':SERIAL,'qemu':txt('shell','getprop','ro.kernel.qemu'),'fingerprint':txt('shell','getprop','ro.build.fingerprint'),'emulator_version':version,'platform_tools_revision':revision(sdk/'platform-tools/source.properties'),'system_image_revision':revision(sdk/'system-images/android-36/google_apis/x86_64/source.properties'),'width_px':780,'height_px':1688,'density_dpi':320,'font_scale':1.0,'offline':True}
+    sdk=Path(os.environ['ANDROID_HOME']);revisions=sdk_environment(sdk)
+    value={'api':txt('shell','getprop','ro.build.version.sdk'),'abi':txt('shell','getprop','ro.product.cpu.abi'),'serial':SERIAL,'qemu':txt('shell','getprop','ro.kernel.qemu'),'fingerprint':txt('shell','getprop','ro.build.fingerprint'),**revisions,'width_px':780,'height_px':1688,'density_dpi':320,'font_scale':1.0,'offline':True}
+    validate_environment(value)
+    print('SDK_PACKAGE_REVISIONS_VERIFIED '+json.dumps(revisions,sort_keys=True),flush=True)
+    return value
 
 def expected_identity():
     source=os.environ['SOURCE_SHA'];require(re.fullmatch('[0-9a-f]{40}',source) and git('rev-parse','HEAD')==source,'source drift')

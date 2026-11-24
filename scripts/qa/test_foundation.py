@@ -66,6 +66,33 @@ class FoundationTests(unittest.TestCase):
             with self.subTest(results=results),patch.object(native_smoke.subprocess,'run',side_effect=results) as call:
                 with self.assertRaises(ValueError):native_smoke.installed_digest(pkg,h)
                 self.assertEqual(call.call_count,len(results))
+    def test_sdk_package_metadata_without_emulator_process(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            sdk=Path(tmp)
+            for key,package in native_smoke.SDK_PACKAGES.items():
+                folder=sdk/package;folder.mkdir(parents=True)
+                (folder/'source.properties').write_text('Pkg.Desc=SDK fixture\nPkg.Revision=37.3.10\nPkg.Path='+package.replace('/',';')+'\n')
+            with patch.object(native_smoke.subprocess,'check_output',side_effect=AssertionError('emulator process forbidden')),patch.object(native_smoke,'txt',side_effect=lambda *a:{'ro.build.version.sdk':'36','ro.product.cpu.abi':'x86_64','ro.kernel.qemu':'1','ro.build.fingerprint':'fixture/fingerprint'}[a[-1]]),patch.dict(native_smoke.os.environ,{'ANDROID_HOME':str(sdk)}):
+                proof=native_smoke.environment()
+            self.assertEqual(proof['emulator_version'],'sdk-package:37.3.10')
+            native_smoke.validate_environment(proof)
+            for value in ('synthetic','Android emulator version 37.3.10','sdk-package:','sdk-package:...','sdk-package:37.3.10 unknown'):
+                with self.subTest(value=value),self.assertRaises(ValueError):native_smoke.validate_environment(dict(proof,emulator_version=value))
+            file=sdk/'emulator/source.properties'
+            for content in ('','Pkg.Revision=...\n','Pkg.Revision=37.3.10\nPkg.Revision=37.3.10\n','Pkg.Revision=37.3.10\nPkg.Path=platform-tools\n','Pkg.Revision=garbage\n','Pkg.Revision=37.3.10\nPkg.Path=emulator\nPkg.Path=emulator\n'):
+                file.write_text(content)
+                with self.subTest(content=content),self.assertRaises(ValueError):native_smoke.sdk_environment(sdk)
+            file.unlink()
+            with self.assertRaises(ValueError):native_smoke.sdk_environment(sdk)
+            file.symlink_to(sdk/'platform-tools/source.properties')
+            with self.assertRaises(ValueError):native_smoke.sdk_environment(sdk)
+    def test_sdk_revision_accepts_standard_sdk_revisions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sdk=Path(tmp);folder=sdk/'emulator';folder.mkdir();file=folder/'source.properties'
+            for rev in ('1','36.0.0','37.3.10','37.3.10.0','37.3.10-rc1','37.3.10 rc 1'):
+                file.write_text('Pkg.Revision='+rev+'\n')
+                self.assertEqual(native_smoke.sdk_revision(sdk,'emulator'),rev)
     def test_browser_geometry_negative(self):
         r=reference.browser_roster(ROOT);c=r['VIS-001'];g={'viewport':[390,844],'items':[dict(i,index=n,bounds=[0,0,10,10],visible=True) for n,i in enumerate(c['controls'])],'route':c['route'],'theme':c['theme'],'dialog':c['dialog'],'tokens':c['tokens']}
         reference.verify_browser_case(r,'VIS-001',g)
