@@ -1,0 +1,204 @@
+{
+  "approval": "CANDIDATE_ONLY",
+  "baseline_map": {
+    "diagnostics": "VIS-006",
+    "home": "VIS-024",
+    "hooks": "VIS-002"
+  },
+  "cases": [
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-001",
+      "native_approved": false,
+      "owner": "UX-R03"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-002",
+      "native_approved": false,
+      "owner": "UX-R02"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-003",
+      "native_approved": false,
+      "owner": "UX-R02"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-004",
+      "native_approved": false,
+      "owner": "UX-R02"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-005",
+      "native_approved": false,
+      "owner": "UX-R02"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-006",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-007",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-008",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-009",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-010",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-011",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-012",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-013",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-014",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-015",
+      "native_approved": false,
+      "owner": "UX-R03"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-016",
+      "native_approved": false,
+      "owner": "UX-R03"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-017",
+      "native_approved": false,
+      "owner": "UX-R03"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-018",
+      "native_approved": false,
+      "owner": "UX-R03"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-019",
+      "native_approved": false,
+      "owner": "UX-R03"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-020",
+      "native_approved": false,
+      "owner": "UX-R03"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-021",
+      "native_approved": false,
+      "owner": "UX-R03"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-022",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-023",
+      "native_approved": false,
+      "owner": "UX-R01"
+    },
+    {
+      "admission": "CANDIDATE",
+      "id": "VIS-024",
+      "native_approved": false,
+      "owner": "UX-R03"
+    }
+  ],
+  "fixture_contract": "fixtures.json",
+  "masks": [],
+  "native_goldens": [],
+  "native_repeat_policy": "ONLY_MEASURED_SYSTEM_BAR_INSETS",
+  "reference_files": {
+    "hooklab_ux_revamp.html": "8df26c67823ad29bae220ff18ae86d685f5ad27ed87d94ba6bc607d6e0cb3a2d",
+    "hooklab_ux_revamp.svg": "59ca31cb43ed09fdd10de3739837f85c3ab522e85e32474831e8285021e578af"
+  },
+  "regions": {
+    "body": [
+      0,
+      98,
+      390,
+      760
+    ],
+    "bottom": [
+      0,
+      760,
+      390,
+      844
+    ],
+    "header": [
+      0,
+      0,
+      390,
+      98
+    ]
+  },
+  "required_navigation": {
+    "diagnostics": "Diagnostics",
+    "home": "Home",
+    "hooks": "Hooks"
+  },
+  "required_title": {
+    "diagnostics": "Diagnostics",
+    "home": "HookLab",
+    "hooks": "Hooks"
+  },
+  "schema": "hooklab.visual.contract.v1",
+  "tolerances": {
+    "bounds_dp": 2,
+    "font_sp": 1,
+    "native_changed_pixel_max": 0.01,
+    "native_ssim_min": 0.99,
+    "rgb_delta": 0
+  },
+  "viewport": [
+    390,
+    844
+  ]
+}

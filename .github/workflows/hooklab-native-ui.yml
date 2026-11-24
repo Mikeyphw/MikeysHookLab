@@ -1,0 +1,98 @@
+name: HookLab Native UI Baseline
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  baseline:
+    name: Real Activity native visual candidate gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          cmdline-tools-version: '15859902'
+          packages: 'platform-tools'
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'system-images;android-36;google_apis;x86_64'
+      - name: Require KVM, space and exact source
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          mkdir -p "${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+          test "$(df -Pk "${ANDROID_AVD_HOME:-$HOME/.android/avd}" | awk 'END {print $4}')" -ge 4194304
+      - name: Debug and instrumentation APKs (hosted only)
+        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Pinned reference renderer (same source and workflow attempt)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-roboto
+          fc-cache -f
+          fc-match Roboto -f '%{family}\n' | grep -F Roboto
+          python -m pip install 'playwright==1.57.0' 'Pillow==11.3.0'
+          python -m playwright install --with-deps chromium
+          python3 -B scripts/qa/reference.py repeat --out "$RUNNER_TEMP/hooklab-comparison-reference"
+          python3 -B scripts/qa/visual.py bind --reference "$RUNNER_TEMP/hooklab-comparison-reference/first"
+          python3 -B scripts/qa/visual_image_checks.py
+          python3 -B scripts/qa/visual_report_checks.py --reference "$RUNNER_TEMP/hooklab-comparison-reference/first"
+      - name: Real Activity on isolated API36 emulator (candidate baseline)
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          disk-size: 3072M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: python3 -B scripts/qa/native_smoke.py run --out "$RUNNER_TEMP/hooklab-native-smoke"
+      - name: Independently verify screenshot hashes, identity and route evidence
+        run: python3 -B scripts/qa/native_smoke.py verify --out "$RUNNER_TEMP/hooklab-native-smoke"
+      - name: Compare candidate native screens and independently recompute report
+        run: |
+          set -Eeuo pipefail
+          python3 -B scripts/qa/visual.py compare --reference "$RUNNER_TEMP/hooklab-comparison-reference/first" --native "$RUNNER_TEMP/hooklab-native-smoke" --out "$RUNNER_TEMP/hooklab-visual-report"
+          python3 -B scripts/qa/visual.py verify --reference "$RUNNER_TEMP/hooklab-comparison-reference/first" --native "$RUNNER_TEMP/hooklab-native-smoke" --out "$RUNNER_TEMP/hooklab-visual-report"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: hooklab-native-baseline-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/hooklab-native-smoke/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: hooklab-visual-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/hooklab-visual-report/
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: hooklab-native-reference-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/hooklab-comparison-reference/
+          if-no-files-found: warn
+          retention-days: 14

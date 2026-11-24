@@ -1,0 +1,353 @@
+{
+  "cases": [
+    {
+      "fixtures": [
+        "F02",
+        "F03",
+        "F05",
+        "F11"
+      ],
+      "id": "VIS-001",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F02",
+        "F03",
+        "F05"
+      ],
+      "id": "VIS-002",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F02",
+        "F09"
+      ],
+      "id": "VIS-003",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F02",
+        "F03",
+        "F09"
+      ],
+      "id": "VIS-004",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F02",
+        "F03",
+        "F05"
+      ],
+      "id": "VIS-005",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F11"
+      ],
+      "id": "VIS-006",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F11"
+      ],
+      "id": "VIS-007",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F11"
+      ],
+      "id": "VIS-008",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F02",
+        "F11"
+      ],
+      "id": "VIS-009",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F11"
+      ],
+      "id": "VIS-010",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F10"
+      ],
+      "id": "VIS-011",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F10"
+      ],
+      "id": "VIS-012",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F12"
+      ],
+      "id": "VIS-013",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F12"
+      ],
+      "id": "VIS-014",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F02"
+      ],
+      "id": "VIS-015",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F02",
+        "F03",
+        "F04"
+      ],
+      "id": "VIS-016",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F14"
+      ],
+      "id": "VIS-017",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F01"
+      ],
+      "id": "VIS-018",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F01"
+      ],
+      "id": "VIS-019",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F01",
+        "F11"
+      ],
+      "id": "VIS-020",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F02"
+      ],
+      "id": "VIS-021",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F10"
+      ],
+      "id": "VIS-022",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F10"
+      ],
+      "id": "VIS-023",
+      "native_equivalence": false
+    },
+    {
+      "fixtures": [
+        "F01"
+      ],
+      "id": "VIS-024",
+      "native_equivalence": false
+    }
+  ],
+  "fixtures": [
+    {
+      "foundation_test": "NativeBaselineTest",
+      "id": "F01",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "disconnected"
+    },
+    {
+      "foundation_test": "FrameworkFixtureTest",
+      "id": "F02",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "connected/readback"
+    },
+    {
+      "foundation_test": "FrameworkFixtureTest",
+      "id": "F03",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "approved scope"
+    },
+    {
+      "foundation_test": "FrameworkFixtureTest",
+      "id": "F04",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "pending/denied scope"
+    },
+    {
+      "foundation_test": "FrameworkFixtureTest",
+      "id": "F05",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "enabled eligible configuration"
+    },
+    {
+      "foundation_test": null,
+      "id": "F06",
+      "owner": "UX-R02",
+      "runtime_qualified": false,
+      "state": "unsupported/unknown version"
+    },
+    {
+      "foundation_test": null,
+      "id": "F07",
+      "owner": "UX-R02",
+      "runtime_qualified": false,
+      "state": "safety lock"
+    },
+    {
+      "foundation_test": null,
+      "id": "F08",
+      "owner": "UX-R02",
+      "runtime_qualified": false,
+      "state": "missing app"
+    },
+    {
+      "foundation_test": "FrameworkFixtureTest",
+      "id": "F09",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "same-package multi-hook"
+    },
+    {
+      "foundation_test": "NativeBaselineTest",
+      "id": "F10",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "empty timeline"
+    },
+    {
+      "foundation_test": "DiagnosticFixtureTest",
+      "id": "F11",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "mixed-source synthetic imports"
+    },
+    {
+      "foundation_test": "FrameworkFixtureTest",
+      "id": "F12",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "capture marker/report"
+    },
+    {
+      "foundation_test": "FrameworkFixtureTest",
+      "id": "F13",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "failed preference write"
+    },
+    {
+      "foundation_test": null,
+      "id": "F14",
+      "owner": "UX-R03",
+      "runtime_qualified": false,
+      "state": "MCC preflight denied"
+    },
+    {
+      "foundation_test": "FrameworkFixtureTest",
+      "id": "F15",
+      "owner": "UX-R00",
+      "runtime_qualified": false,
+      "state": "stale callback"
+    }
+  ],
+  "profiles": [
+    {
+      "admission": "FOUNDATION_CANDIDATE",
+      "api": 36,
+      "font_scale": 1.0,
+      "height_dp": 844,
+      "name": "primary",
+      "width_dp": 390
+    },
+    {
+      "admission": "UX-R04_PENDING",
+      "api": 36,
+      "font_scale": 1.0,
+      "name": "compact",
+      "width_dp": 360
+    },
+    {
+      "admission": "UX-R04_PENDING",
+      "api": 36,
+      "font_scale": 1.0,
+      "name": "typical",
+      "width_dp": 393
+    },
+    {
+      "admission": "UX-R04_PENDING",
+      "api": 36,
+      "font_scale": 1.6,
+      "name": "small",
+      "width_dp": 320
+    },
+    {
+      "admission": "UX-R04_PENDING",
+      "api": 36,
+      "font_scale": 2.0,
+      "name": "large",
+      "width_dp": 360
+    },
+    {
+      "admission": "UX-R04_PENDING",
+      "api": 36,
+      "font_scale": 1.0,
+      "name": "tablet",
+      "width_dp": 600
+    },
+    {
+      "admission": "UX-R04_PENDING",
+      "api": 36,
+      "font_scale": 1.0,
+      "name": "wide",
+      "width_dp": 840
+    },
+    {
+      "admission": "UX-R04_PENDING",
+      "api": 29,
+      "font_scale": 1.0,
+      "name": "minimum",
+      "width_dp": 360
+    }
+  ],
+  "schema": "hooklab.fixture.contract.v1"
+}

@@ -1,0 +1,1878 @@
+{
+  "cases": [
+    {
+      "controls": [
+        {
+          "action": "go",
+          "argument": "settings",
+          "label": "Settings",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "scope",
+          "label": "Scope & permissions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "mcc",
+          "label": "Meu Cronograma Capilar\nImported warning \u00b7 balance file not found",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "chat",
+          "label": "ChatGPT\nScope / runtime evidence",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Browse hooks\nGroups and apps",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Investigate a problem\nTimeline, health and capture",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "latest",
+          "argument": null,
+          "label": "Balance file not found\n21:41 \u00b7 Imported module log",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-001",
+      "route": "home",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "go",
+          "argument": "settings",
+          "label": "Settings",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "Search hooks",
+          "role": null,
+          "tag": "input"
+        },
+        {
+          "action": "group",
+          "argument": "obtainx",
+          "label": "ObtainX Integration\n2 hooks \u00b7 2 apps",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "expand",
+          "argument": "obtainx",
+          "label": "Collapse ObtainX Integration",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "neo",
+          "label": "Neo Store\nOpen in ObtainX \u00b7 Eligible configuration",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "droid",
+          "label": "Droid-ify\nAdd to ObtainX \u00b7 Disabled",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "chat",
+          "label": "ChatGPT \u2192 Termux\n1 hook \u00b7 1 app",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "mcc",
+          "label": "MCC Diamond Control\n1 hook \u00b7 1 app",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "word",
+          "label": "Word Master Night Filter\n1 hook \u00b7 1 app",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-002",
+      "route": "hooks",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "go",
+          "argument": "settings",
+          "label": "Settings",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "Search hooks",
+          "role": null,
+          "tag": "input"
+        },
+        {
+          "action": "hook",
+          "argument": "neo",
+          "label": "Neo Store\n1 hook \u00b7 Eligible configuration",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "droid",
+          "label": "Droid-ify\n1 hook \u00b7 Disabled",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "chat",
+          "label": "ChatGPT\n1 hook \u00b7 Scope needed",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "mcc",
+          "label": "Meu Cronograma Capilar\n1 hook \u00b7 Needs attention",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "word",
+          "label": "Word Master\n1 hook \u00b7 Not installed",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-003",
+      "route": "hooks",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "neo",
+          "label": "Neo Store\nOpen in ObtainX \u00b7 Eligible configuration",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "droid",
+          "label": "Droid-ify\nAdd to ObtainX \u00b7 Disabled",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "scope",
+          "label": "Neo Store\nScope approved (sample)",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "scope",
+          "label": "Droid-ify\nScope approved (sample)",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "groupdiag",
+          "argument": "obtainx",
+          "label": "Group evidence\nFilter imported events",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-004",
+      "route": "group",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "toggle",
+          "argument": "neo",
+          "label": "Enable hook\nExplicit opt-in \u00b7 sample state",
+          "role": "switch",
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "scope",
+          "label": "LSPosed scope\nApproved (sample)",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "neo",
+          "label": "Hook health\nSee evidence and next steps",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hookdiag",
+          "argument": "neo",
+          "label": "View imported logs\nFiltered by hook identity",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "lock",
+          "argument": "neo",
+          "label": "Safety lock\nExplicit confirmation required",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-005",
+      "route": "hook",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "diagmenu",
+          "argument": null,
+          "label": "Diagnostics actions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "timeline",
+          "label": "Timeline",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "health",
+          "label": "Health",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "capture",
+          "label": "Capture",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "Search events",
+          "role": null,
+          "tag": "input"
+        },
+        {
+          "action": "filters",
+          "argument": null,
+          "label": "Filters",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "import",
+          "argument": null,
+          "label": "Import logs",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "copy",
+          "argument": null,
+          "label": "Copy filtered sample events",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "export",
+          "argument": null,
+          "label": "Export filtered sample events",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-006",
+      "route": "diagnostics",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "diagmenu",
+          "argument": null,
+          "label": "Diagnostics actions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "timeline",
+          "label": "Timeline",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "health",
+          "label": "Health",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "capture",
+          "label": "Capture",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "Search events",
+          "role": null,
+          "tag": "input"
+        },
+        {
+          "action": "filters",
+          "argument": null,
+          "label": "Filters",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "import",
+          "argument": null,
+          "label": "Import logs",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "copy",
+          "argument": null,
+          "label": "Copy filtered sample events",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "export",
+          "argument": null,
+          "label": "Export filtered sample events",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "dismiss",
+          "argument": null,
+          "label": "Close",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "All hooks\nObtainX Integration (group)\nChatGPT \u2192 Termux (group)\nMCC Diamond Control (group)\nWord Master Night Filter (group)\nNeo Store\nDroid-ify\nChatGPT\nMeu Cronograma Capilar\nWord Master",
+          "role": null,
+          "tag": "select"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "All severities\nInfo\nWarning",
+          "role": null,
+          "tag": "select"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "All sources\nHookLab module log\nLSPosed framework log",
+          "role": null,
+          "tag": "select"
+        },
+        {
+          "action": "resetfilters",
+          "argument": null,
+          "label": "Reset",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "applyfilters",
+          "argument": null,
+          "label": "Apply filters",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": "Filter events",
+      "id": "VIS-007",
+      "route": "diagnostics",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "copyevent",
+          "argument": "1",
+          "label": "Copy event\nCopy only this sample record",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "exportevent",
+          "argument": "1",
+          "label": "Export event\nSave sample JSON",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "mcc",
+          "label": "Hook health\nOpen related report",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-008",
+      "route": "event",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "diagmenu",
+          "argument": null,
+          "label": "Diagnostics actions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "timeline",
+          "label": "Timeline",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "health",
+          "label": "Health",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "capture",
+          "label": "Capture",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "neo",
+          "label": "Neo Store\nEligible configuration",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "droid",
+          "label": "Droid-ify\nDisabled",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "chat",
+          "label": "ChatGPT\nScope needed",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "mcc",
+          "label": "Meu Cronograma Capilar\nNeeds attention",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "word",
+          "label": "Word Master\nNot installed",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-009",
+      "route": "diagnostics",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "event",
+          "argument": "1",
+          "label": "Balance file not found\n21:41:32 \u00b7 Imported",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "mcc",
+          "label": "Open hook configuration\nReview scope and opt-in",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hookdiag",
+          "argument": "mcc",
+          "label": "Inspect timeline\nFilter by this hook",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "capturefor",
+          "argument": "mcc",
+          "label": "Guided capture\nRecord a reproduction",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-010",
+      "route": "health",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "diagmenu",
+          "argument": null,
+          "label": "Diagnostics actions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "timeline",
+          "label": "Timeline",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "health",
+          "label": "Health",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "capture",
+          "label": "Capture",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "capturefor",
+          "argument": "all",
+          "label": "New capture session",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-011",
+      "route": "diagnostics",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "diagmenu",
+          "argument": null,
+          "label": "Diagnostics actions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "timeline",
+          "label": "Timeline",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "health",
+          "label": "Health",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "capture",
+          "label": "Capture",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "capturefor",
+          "argument": "all",
+          "label": "New capture session",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "dismiss",
+          "argument": null,
+          "label": "Close",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "Research-only / general\nNeo Store\nDroid-ify\nChatGPT\nMeu Cronograma Capilar\nWord Master",
+          "role": null,
+          "tag": "select"
+        },
+        {
+          "action": "startcapture",
+          "argument": null,
+          "label": "Start sample session",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": "New capture session",
+      "id": "VIS-012",
+      "route": "diagnostics",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "marker",
+          "argument": "Opened app",
+          "label": "Opened app\nAdd timestamped marker\n+",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "marker",
+          "argument": "Tapped item",
+          "label": "Tapped item\nAdd timestamped marker\n+",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "marker",
+          "argument": "Observed failure",
+          "label": "Observed failure\nAdd timestamped marker\n+",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "marker",
+          "argument": "Expected behavior",
+          "label": "Expected behavior\nAdd timestamped marker\n+",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "import",
+          "argument": null,
+          "label": "Import logs\nAttach sample imported evidence",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "stop",
+          "argument": null,
+          "label": "Stop and review",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "cancel",
+          "argument": null,
+          "label": "Cancel session",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-013",
+      "route": "session",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "exportreport",
+          "argument": "0",
+          "label": "Export sample report",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-014",
+      "route": "report",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "theme",
+          "argument": null,
+          "label": "Theme\ndark",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "dynamic",
+          "argument": null,
+          "label": "Material You colors\nSimulated accent palette",
+          "role": "switch",
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "scope",
+          "label": "Scope & permissions\nManage individual target apps",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "verbose",
+          "argument": null,
+          "label": "Verbose logging\nOff by default \u00b7 sample opt-in",
+          "role": "switch",
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "privacy",
+          "label": "Privacy & log handling\nRedaction, retention and source limits",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "scenarios",
+          "label": "Prototype scenarios\nTest empty, disconnected and missing states",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "about",
+          "label": "About HookLab\nVersion, signing and source",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "help",
+          "label": "Help & documentation\nSetup and troubleshooting",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-015",
+      "route": "settings",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "scopechange",
+          "argument": "neo",
+          "label": "Neo Store\nApproved (sample)",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "scopechange",
+          "argument": "droid",
+          "label": "Droid-ify\nApproved (sample)",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "scopechange",
+          "argument": "chat",
+          "label": "ChatGPT\nNot approved",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "scopechange",
+          "argument": "mcc",
+          "label": "Meu Cronograma Capilar\nApproved (sample)",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "scopechange",
+          "argument": "word",
+          "label": "Word Master\nNot approved",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-016",
+      "route": "scope",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "inspect",
+          "argument": null,
+          "label": "Inspect storage\nRead-only preflight \u00b7 sample only",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "mccconfirm",
+          "argument": null,
+          "label": "Review manual action",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-017",
+      "route": "mcc",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "help",
+          "label": "Help & documentation\nSetup, privacy and troubleshooting",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-018",
+      "route": "about",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "helpitem",
+          "argument": "start",
+          "label": "Getting started\nScope, enable, restart, verify",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "helpitem",
+          "argument": "trouble",
+          "label": "Troubleshoot a hook\nCheck compatibility and imported logs",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "privacy",
+          "label": "Privacy & diagnostics\nWhat data is and is not collected",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "mcc",
+          "label": "MCC manual control\nPreflight and root confirmation",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-019",
+      "route": "help",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "back",
+          "argument": null,
+          "label": "Back",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-020",
+      "route": "privacy",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "go",
+          "argument": "settings",
+          "label": "Settings",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "scope",
+          "label": "Scope & permissions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "mcc",
+          "label": "Meu Cronograma Capilar\nImported warning \u00b7 balance file not found",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "chat",
+          "label": "ChatGPT\nScope / runtime evidence",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Browse hooks\nGroups and apps",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Investigate a problem\nTimeline, health and capture",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "latest",
+          "argument": null,
+          "label": "Balance file not found\n21:41 \u00b7 Imported module log",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-021",
+      "route": "home",
+      "theme": "light",
+      "tokens": {
+        "accent": "#295e4c",
+        "bg": "#f4f6f3",
+        "error": "#ae403f",
+        "ink": "#182321",
+        "line": "#c5d0c9",
+        "muted": "#546660",
+        "on": "#fff",
+        "surface": "#e9eeeb",
+        "surface2": "#dce5df",
+        "warn": "#80551a"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "diagmenu",
+          "argument": null,
+          "label": "Diagnostics actions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "timeline",
+          "label": "Timeline",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "health",
+          "label": "Health",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "capture",
+          "label": "Capture",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "Search events",
+          "role": null,
+          "tag": "input"
+        },
+        {
+          "action": "filters",
+          "argument": null,
+          "label": "Filters",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "import",
+          "argument": null,
+          "label": "Import logs",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "import",
+          "argument": null,
+          "label": "Import logs",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "copy",
+          "argument": null,
+          "label": "Copy filtered sample events",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "export",
+          "argument": null,
+          "label": "Export filtered sample events",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-022",
+      "route": "diagnostics",
+      "theme": "amoled",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#000",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#111718",
+        "surface2": "#1c2527",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "diagmenu",
+          "argument": null,
+          "label": "Diagnostics actions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "timeline",
+          "label": "Timeline",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "health",
+          "label": "Health",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": "tab",
+          "argument": "capture",
+          "label": "Capture",
+          "role": "tab",
+          "tag": "button"
+        },
+        {
+          "action": null,
+          "argument": null,
+          "label": "Search events",
+          "role": null,
+          "tag": "input"
+        },
+        {
+          "action": "filters",
+          "argument": null,
+          "label": "Filters",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "import",
+          "argument": null,
+          "label": "Import logs",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "copy",
+          "argument": null,
+          "label": "Copy filtered sample events",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "export",
+          "argument": null,
+          "label": "Export filtered sample events",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "dismiss",
+          "argument": null,
+          "label": "Close",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "load",
+          "argument": "HookLab module log",
+          "label": "HookLab module log\nLoad demonstration data",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "load",
+          "argument": "LSPosed framework log",
+          "label": "LSPosed framework log\nLoad demonstration data",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "load",
+          "argument": "Authorized Android logcat export",
+          "label": "Authorized Android logcat export\nLoad demonstration data",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": "Import logs",
+      "id": "VIS-023",
+      "route": "diagnostics",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    },
+    {
+      "controls": [
+        {
+          "action": "go",
+          "argument": "settings",
+          "label": "Settings",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "go",
+          "argument": "scope",
+          "label": "Scope & permissions",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "health",
+          "argument": "mcc",
+          "label": "Meu Cronograma Capilar\nImported warning \u00b7 balance file not found",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "hook",
+          "argument": "chat",
+          "label": "ChatGPT\nScope / runtime evidence",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Browse hooks\nGroups and apps",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Investigate a problem\nTimeline, health and capture",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "latest",
+          "argument": null,
+          "label": "Balance file not found\n21:41 \u00b7 Imported module log",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "home",
+          "label": "Home",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "hooks",
+          "label": "Hooks",
+          "role": null,
+          "tag": "button"
+        },
+        {
+          "action": "root",
+          "argument": "diagnostics",
+          "label": "Diagnostics",
+          "role": null,
+          "tag": "button"
+        }
+      ],
+      "dialog": null,
+      "id": "VIS-024",
+      "route": "home",
+      "theme": "dark",
+      "tokens": {
+        "accent": "#b7eccb",
+        "bg": "#0d1214",
+        "error": "#f29d9a",
+        "ink": "#eef3ef",
+        "line": "#2a3436",
+        "muted": "#a5b2af",
+        "on": "#183229",
+        "surface": "#151b1e",
+        "surface2": "#20292c",
+        "warn": "#f4c987"
+      }
+    }
+  ],
+  "schema": "hooklab.browser.semantic.v1"
+}

@@ -106,13 +106,13 @@ state_store = read('app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkStateStor
 state_model = read('app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkSnapshot.java')
 check(all(term in ui for term in ('stateStore.start(', 'stateStore.refresh()',
                                   'stateStore.writeTweak(', 'stateStore.writeSafetyLock(',
-                                  'stateStore.writeVerbose(', 'TweakCatalog.knowsPackage('))
+                                  'stateStore.writeVerbose(', 'environment.knowsPackage('))
       and all(term not in ui for term in ('getRemotePreferences(', 'getScope(', 'getApiVersion('))
       and 'DynamicColors.applyToActivityIfAvailable(this)' in ui
       and 'snapshot.eligibility(spec)' in ui
       and all(term in state_store for term in ('getRemotePreferences(TweakKeys.GROUP)',
              'getRemotePreferences(TweakDiagnostics.GROUP)', 'worker.execute(',
-             'ticket != generation', 'expected == app.currentService()',
+             'ticket != generation', 'expected == environment.currentService()',
              'prefs.edit().putBoolean(key, value).commit()', 'prefs.getBoolean(key, !value) == value',
              'requestScope(', 'removeScope(', 'main.post(', 'FrameworkSnapshot.loading()'))
       and all(term in state_model for term in ('Connection.LOADING', 'Connection.UNAVAILABLE',
@@ -158,8 +158,8 @@ check(all(t in compat for t in ('FRAMEWORK_UNAVAILABLE', 'SCOPE_UNKNOWN',
       'honest three-valued compatibility model')
 check(all(t in ui for t in ('diagnosticsPage()', 'confirmSafetyLock(s, id, nextLock)',
       'R.string.diagnostics_note', 'R.string.diagnostics_reset_confirm',
-      's == service()', 'stateStore.writeSafetyLock(id, locked,'))
-      and all(t in state_store for t in ('writeSafetyLock(String id, boolean locked, Completion cb)',
+      's == service()', 'stateStore.writeSafetyLock(s, id, locked,'))
+      and all(t in state_store for t in ('writeSafetyLock(UiEnvironment.Port expected, String id, boolean locked, Completion cb)',
              'TweakDiagnostics.quarantineKey(id)', 'prefs.edit().putBoolean(key, value).commit()')),
       'framework-backed manual safety locks on background executor with UI confirmation')
 check('targetSdk 36' in build, 'preserve Android target SDK 36')
@@ -270,14 +270,14 @@ check(all(hook in group_source for hook in (
     'wordmaster.night.filter', 'chatgpt.codeblock.copy.probe')),
     'UI-04 every reviewed registered hook grouped')
 check('selectedHookId = entry.spec.id' in main_source
-    and 'HookDetailRoute.hook(TweakCatalog.all(), selectedHookId)' in main_source
+    and 'HookDetailRoute.hook(environment.all(), selectedHookId)' in main_source
     and 'return verified == null ? null : entryForId(verified.id);' in main_source
-    and 'HookDetailRoute.hook(TweakCatalog.all(), requested) != null' in main_source
+    and 'HookDetailRoute.hook(environment.all(), requested) != null' in main_source
     and (r/'app/src/test/java/com/mikeyphw/hooklab/core/HookDetailRouteTest.java').is_file(),
     'UI-04/UI-05 independent hook-ID routing and invalid-selection rejection')
 check('appearance.edit().putInt(UI04_VIEW_KEY, mode).apply()' in main_source
     and 'appearance.edit().putString(UI04_QUERY_KEY, catalogQuery).apply()' in main_source
-    and 'HookGroupCatalog.groups(TweakCatalog.all())' in main_source,
+    and 'HookGroupCatalog.groups(environment.all())' in main_source,
     'UI-04 local group/app persistence and catalog discovery')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/core/HookGroupCatalogTest.java').is_file(),
     'UI-04 pure Java catalog invariants tested in hosted CI')
@@ -286,8 +286,8 @@ check((r/'app/src/test/java/com/mikeyphw/hooklab/core/HookGroupCatalogTest.java'
 route = read('app/src/main/java/com/mikeyphw/hooklab/core/HookDetailRoute.java')
 main_ui05 = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 store_ui05 = read('app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkStateStore.java')
-check('HookDetailRoute.hook(TweakCatalog.all(), selectedHookId)' in main_ui05
-      and 'HookDetailRoute.group(HookGroupCatalog.groups(TweakCatalog.all()), selectedGroupId)' in main_ui05
+check('HookDetailRoute.hook(environment.all(), selectedHookId)' in main_ui05
+      and 'HookDetailRoute.group(HookGroupCatalog.groups(environment.all()), selectedGroupId)' in main_ui05
       and 'page == APP_DETAIL || page == APPS || page == GROUP_DETAIL ? NAV_APPS' in main_ui05,
       'UI-05 exact hook/group identity and Hooks nav')
 check('group.packages' in main_ui05 and 'removeScope(expected, pkg)' in main_ui05
@@ -301,7 +301,7 @@ check('saved = prefs != null && prefs.edit().putBoolean(key, value).commit()' in
 check('showGroup(HookGroupCatalog.Group group)' in main_ui05
       and 'goTo(GROUP_DETAIL); // Navigation only' in main_ui05
       and 'selectedHookId = entry.spec.id' in main_ui05
-      and 'HookDetailRoute.hook(TweakCatalog.all(), requested) != null' in main_ui05
+      and 'HookDetailRoute.hook(environment.all(), requested) != null' in main_ui05
       and 'new androidx.appcompat.app.AlertDialog.Builder(this)' in main_ui05,
       'UI-05 safe group navigation and preserved scope removal confirmation')
 check('groupForHook' in route and 'return null;' in route
@@ -365,7 +365,7 @@ check('MarkerCode' in capture and 'REPRODUCE_ACTION' in capture_ui
       and 'acceptedImportRanges' in capture and 'currentCapture.registerImport(' in capture_ui,
       'DX-02 fixed action markers and source/ordinal evidence attribution')
 check('runtime_methods=NOT_ACCESSED; injection=DISABLED' in capture
-      and 'researchOnly' in capture and 'TweakCatalog.knowsPackage(pkg)' in capture_ui,
+      and 'researchOnly' in capture and 'environment.knowsPackage(pkg)' in capture_ui,
       'DX-02 metadata-only safe discovery; no implicit hook installation')
 check('events_sha256' in capture and 'markers_sha256' in capture
       and 'ZipOutputStream' in capture_saf and '"content".equals(uri.getScheme())' in capture_saf
@@ -413,7 +413,7 @@ ui07_main=read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 ui07_mcc=read('app/src/main/java/com/mikeyphw/hooklab/mcc/MccControlActivity.java')
 ui07_work=read('app/src/main/java/com/mikeyphw/hooklab/mcc/MccManualOperation.java')
 ui07_identity=read('app/src/main/java/com/mikeyphw/hooklab/ui/Ui07Identity.java')
-check('Ui07ScopeModel.project(TweakCatalog.all()' in ui07_main
+check('Ui07ScopeModel.project(environment.all()' in ui07_main
       and 'ready(expected),scopedPackages(expected),pendingScope' in ui07_main
       and 'row.canRequest()' in ui07_main and 'row.canRemove()' in ui07_main
       and 'removeScope(expected,row.packageName)' in ui07_main
@@ -451,7 +451,7 @@ workflow08=read('.github/workflows/android.yml')
 check('private void appCard(' not in ui08 and 'hooksCatalog();' in ui08
       and 'FlatUi.sectionHeading(titleView);' in ui08,
       'UI-08 P01 single flat native catalog, accessible section headings')
-check('Ui08LegacySelection.resolveUnique(TweakCatalog.all(),oldPackage)' in ui08
+check('Ui08LegacySelection.resolveUnique(environment.all(),oldPackage)' in ui08
       and 'if (unique != null) return null;' in legacy08
       and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui08LegacySelectionTest.java').is_file(),
       'UI-08 P02 deterministic unambiguous legacy selection only')

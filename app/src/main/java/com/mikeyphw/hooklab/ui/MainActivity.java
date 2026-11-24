@@ -42,7 +42,6 @@ import com.mikeyphw.hooklab.ui.HookHealthModel;
 import com.mikeyphw.hooklab.diagnostics.CaptureSession;
 import com.mikeyphw.hooklab.ui.HomeDashboardModel;
 import com.mikeyphw.hooklab.core.HookContext;
-import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.HookGroupCatalog;
 import com.mikeyphw.hooklab.core.HookDetailRoute;
 import com.mikeyphw.hooklab.core.TweakEngine;
@@ -51,7 +50,6 @@ import com.mikeyphw.hooklab.core.TweakSpec;
 import com.mikeyphw.hooklab.mcc.MccIds;
 import com.mikeyphw.hooklab.mcc.MccControlActivity;
 import android.content.Intent;
-import io.github.libxposed.service.XposedService;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -113,7 +111,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private TweakEngine.Entry<HookContext> entryForId(String id) {
         if (id == null) return null;
-        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries())
+        for (TweakEngine.Entry<HookContext> entry : environment.entries())
             if (id.equals(entry.spec.id)) return entry;
         return null;
     }
@@ -145,7 +143,7 @@ public final class MainActivity extends AppCompatActivity {
         catalogResults.removeAllViews();
         int visible = 0;
         if (catalogView == UI04_GROUPS) {
-            for (HookGroupCatalog.Group group : HookGroupCatalog.groups(TweakCatalog.all())) {
+            for (HookGroupCatalog.Group group : HookGroupCatalog.groups(environment.all())) {
                 String name = groupName(group);
                 boolean groupMatch = HookGroupCatalog.matches(catalogQuery, name, group.description, group.id);
                 List<TweakEngine.Entry<HookContext>> matches = new java.util.ArrayList<>();
@@ -179,7 +177,7 @@ public final class MainActivity extends AppCompatActivity {
             }
         } else {
             java.util.Map<String,List<TweakSpec>> byPackage =
-                    new java.util.TreeMap<>(HookGroupCatalog.byPackage(TweakCatalog.all()));
+                    new java.util.TreeMap<>(HookGroupCatalog.byPackage(environment.all()));
             for (java.util.Map.Entry<String,List<TweakSpec>> group : byPackage.entrySet()) {
                 List<TweakEngine.Entry<HookContext>> matches = new java.util.ArrayList<>();
                 String pkg = group.getKey();
@@ -283,7 +281,7 @@ public final class MainActivity extends AppCompatActivity {
             registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
                     uri -> { if(uri!=null) exportCaptureDocument(uri); });
     private HookLabApp captureApp(){return (HookLabApp)getApplication();}
-    private long captureClock(){return android.os.SystemClock.elapsedRealtime();}
+    private long captureClock(){return environment.elapsedRealtime();}
     private void selectCaptureSource(TweakSpec hook,String researchPackage){
         final String[] ids={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
         final String[] labels={getString(R.string.dx01_module),getString(R.string.dx01_framework),
@@ -293,7 +291,7 @@ public final class MainActivity extends AppCompatActivity {
                 if(which<0 || which>=ids.length)return;
                 com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline timeline=diagnosticsStore();
                 long mark=com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(timeline);
-                long elapsed=captureClock(),wall=System.currentTimeMillis();
+                long elapsed=captureClock(),wall=environment.wallTime();
                 com.mikeyphw.hooklab.diagnostics.CaptureSession next;
                 try {
                     next=hook!=null
@@ -305,7 +303,7 @@ public final class MainActivity extends AppCompatActivity {
             }).show();
     }
     private void selectCaptureTarget(){
-        final List<TweakSpec> specs=TweakCatalog.all();
+        final List<TweakSpec> specs=environment.all();
         if(specs.size()>DX02_MAX_CHOICES) {toast(R.string.dx02_target_invalid);return;}
         final String[] titles=new String[specs.size()+1];
         for(int i=0;i<specs.size();i++){
@@ -325,7 +323,7 @@ public final class MainActivity extends AppCompatActivity {
                     .setNegativeButton(android.R.string.cancel,null)
                     .setPositiveButton(android.R.string.ok,(confirm,button) -> {
                         String pkg=input.getText().toString().trim();
-                        if(TweakCatalog.knowsPackage(pkg)){
+                        if(environment.knowsPackage(pkg)){
                             toast(R.string.dx02_research_registered);return;
                         }
                         if(!pkg.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")){
@@ -601,6 +599,7 @@ public final class MainActivity extends AppCompatActivity {
 
     private MaterialToolbar toolbar;
     private NavigationBarView navigation;
+    private UiEnvironment environment;
     private FrameworkStateStore stateStore;
     private FrameworkSnapshot snapshot = FrameworkSnapshot.loading();
     private final Set<String> pendingPreferences = new HashSet<>();
@@ -622,14 +621,15 @@ public final class MainActivity extends AppCompatActivity {
             try { DynamicColors.applyToActivityIfAvailable(this); }
             catch (RuntimeException ignored) { /* Fallback to packaged Material 3 palette. */ }
         }
-        stateStore = new FrameworkStateStore((HookLabApp) getApplication());
+        environment = UiEnvironmentFactory.create((HookLabApp) getApplication());
+        stateStore = new FrameworkStateStore(environment);
         page = state == null ? HOME : Math.max(HOME, Math.min(HELP, state.getInt("page")));
         selectedHookId = state == null ? null : state.getString("selectedHookId");
         helpReturnPage = state == null ? SETTINGS : state.getInt("helpReturnPage", SETTINGS);
         if(helpReturnPage != SETTINGS && helpReturnPage != SCOPE && helpReturnPage != ABOUT) helpReturnPage=SETTINGS;
         healthFocusHookId = state == null ? null : state.getString("healthFocusHookId");
         if(healthFocusHookId!=null){
-            if(HookDetailRoute.hook(TweakCatalog.all(),healthFocusHookId)!=null)
+            if(HookDetailRoute.hook(environment.all(),healthFocusHookId)!=null)
                 diagnosticFilter.hookId=healthFocusHookId;
             else healthFocusHookId=null;
         }
@@ -641,7 +641,7 @@ public final class MainActivity extends AppCompatActivity {
         // Never pick the first hook when multiple registered hooks share one app.
         if (selectedHookId == null && state != null) {
             String oldPackage = state.getString("selectedPackage");
-            selectedHookId = Ui08LegacySelection.resolveUnique(TweakCatalog.all(),oldPackage);
+            selectedHookId = Ui08LegacySelection.resolveUnique(environment.all(),oldPackage);
         }
         catalogView = appearance.getInt(UI04_VIEW_KEY, UI04_GROUPS) == UI04_BY_APP
                 ? UI04_BY_APP : UI04_GROUPS;
@@ -654,7 +654,7 @@ public final class MainActivity extends AppCompatActivity {
                 && ACTION_OPEN_HOOK.equals(getIntent().getAction())) {
             try {
                 String requested = getIntent().getStringExtra("hook_id");
-                if (HookDetailRoute.hook(TweakCatalog.all(), requested) != null) {
+                if (HookDetailRoute.hook(environment.all(), requested) != null) {
                     selectedHookId = requested;
                     detailReturnPage = APPS;
                     page = APP_DETAIL;
@@ -808,9 +808,9 @@ public final class MainActivity extends AppCompatActivity {
         super.onSaveInstanceState(out);
     }
     private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
-    private XposedService service() { return ((HookLabApp) getApplication()).currentService(); }
-    private boolean ready(XposedService s) {
-        return s != null && s == service() && snapshot.ready();
+    private UiEnvironment.Port service() { return environment.currentService(); }
+    private boolean ready(UiEnvironment.Port s) {
+        return s != null && s == service() && snapshot.ready() && stateStore.ownsReadySnapshot(s);
     }
     private MaterialTextView text(CharSequence value, int sp) {
         MaterialTextView t = new MaterialTextView(this); t.setText(value); t.setTextSize(sp);
@@ -842,7 +842,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private void toast(int message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
-    private String connection(XposedService s) {
+    private String connection(UiEnvironment.Port s) {
         switch (snapshot.connection) {
             case LOADING: return getString(R.string.ui_loading_framework);
             case UNSUPPORTED: return getString(R.string.status_unsupported, snapshot.apiVersion);
@@ -855,16 +855,16 @@ public final class MainActivity extends AppCompatActivity {
             default: return getString(R.string.status_disconnected);
         }
     }
-    private Set<String> scopedPackages(XposedService s) {
+    private Set<String> scopedPackages(UiEnvironment.Port s) {
         return ready(s) ? snapshot.scope : null;
     }
     private TweakEngine.Entry<HookContext> selectedEntry() {
-        TweakSpec verified = HookDetailRoute.hook(TweakCatalog.all(), selectedHookId);
+        TweakSpec verified = HookDetailRoute.hook(environment.all(), selectedHookId);
         return verified == null ? null : entryForId(verified.id);
     }
 
     /** Framework-observable configuration only; never assert that a hook ran. */
-    private TweakCompatibility.State eligibility(TweakSpec spec, XposedService s) {
+    private TweakCompatibility.State eligibility(TweakSpec spec, UiEnvironment.Port s) {
         return snapshot.eligibility(spec);
     }
     private String statusText(TweakCompatibility.State state) {
@@ -914,11 +914,11 @@ public final class MainActivity extends AppCompatActivity {
 
 
     private HookGroupCatalog.Group selectedGroup() {
-        return HookDetailRoute.group(HookGroupCatalog.groups(TweakCatalog.all()), selectedGroupId);
+        return HookDetailRoute.group(HookGroupCatalog.groups(environment.all()), selectedGroupId);
     }
     private void showGroup(HookGroupCatalog.Group group) {
         if (group == null || HookDetailRoute.group(
-                HookGroupCatalog.groups(TweakCatalog.all()), group.id) == null) return;
+                HookGroupCatalog.groups(environment.all()), group.id) == null) return;
         selectedGroupId = group.id;
         goTo(GROUP_DETAIL); // Navigation only, never a group-wide preference write.
     }
@@ -931,7 +931,7 @@ public final class MainActivity extends AppCompatActivity {
         }
         heading(R.string.ui05_group_setup);
         card(groupName(group), group.description + "\n" + getString(R.string.ui_group_no_toggle));
-        XposedService expected = service();
+        UiEnvironment.Port expected = service();
         Set<String> scope = scopedPackages(expected);
         body.addView(text(getString(R.string.ui05_scope_targets), 22));
         for (String pkg : group.packages) {
@@ -962,7 +962,7 @@ public final class MainActivity extends AppCompatActivity {
         TweakEngine.Entry<HookContext> entry = selectedEntry();
         if (entry == null) { apps(); return; }
         TweakSpec spec = entry.spec;
-        XposedService s = service();
+        UiEnvironment.Port s = service();
         heading(R.string.ui_app_configuration);
         LinearLayout overview = card(entry.title, entry.description);
         LinearLayout iconLine = horizontal();
@@ -975,7 +975,7 @@ public final class MainActivity extends AppCompatActivity {
         overview.addView(text(getString(R.string.ui_status_caution), 14));
         button(overview,R.string.dx03_view_health,v->openHookHealth(spec));
         HookGroupCatalog.Group owningGroup = HookDetailRoute.groupForHook(
-                HookGroupCatalog.groups(TweakCatalog.all()), spec.id);
+                HookGroupCatalog.groups(environment.all()), spec.id);
         if (owningGroup != null) {
             button(overview, R.string.ui05_group_details, v -> showGroup(owningGroup));
         }
@@ -1049,7 +1049,7 @@ public final class MainActivity extends AppCompatActivity {
         // UI-06: truthful projection of the framework snapshot and DX-01 imports.
         // No read or write path here can install, toggle, scope or start hooks.
         HomeDashboardModel.Summary summary = HomeDashboardModel.project(
-                TweakCatalog.all(), HookGroupCatalog.groups(TweakCatalog.all()),
+                environment.all(), HookGroupCatalog.groups(environment.all()),
                 snapshot, diagnosticsStore());
         card(getString(R.string.ui06_overview), getString(R.string.ui06_counts,
                 summary.hookCount, summary.groupCount, summary.packageCount)
@@ -1091,31 +1091,31 @@ public final class MainActivity extends AppCompatActivity {
         button(shortcuts, R.string.scope, v -> goTo(SCOPE));
         // DX-02 capture exists under Diagnostics; Home quick actions remain navigation-only.
     }
-    private void saveTweak(XposedService s, String id, boolean enabled) {
+    private void saveTweak(UiEnvironment.Port s, String id, boolean enabled) {
         if (!ready(s) || !pendingPreferences.add(id)) return;
         render(); // Show pending state; no optimistic preference change.
-        stateStore.writeTweak(id, enabled, success -> {
+        stateStore.writeTweak(s, id, enabled, success -> {
             pendingPreferences.remove(id);
             toast(success ? R.string.tweak_saved : R.string.tweak_failed);
         });
     }
-    private void requestScope(XposedService s, String pkg) {
-        if (!ready(s) || !TweakCatalog.knowsPackage(pkg) || !pendingScope.add(pkg)) return;
+    private void requestScope(UiEnvironment.Port s, String pkg) {
+        if (!ready(s) || !environment.knowsPackage(pkg) || !pendingScope.add(pkg)) return;
         render();
-        stateStore.requestScope(pkg, confirmed -> {
+        stateStore.requestScope(s, pkg, confirmed -> {
             pendingScope.remove(pkg);
             toast(confirmed ? R.string.scope_added : R.string.ui_scope_request_unconfirmed);
         });
     }
-    private void removeScope(XposedService s, String pkg) {
-        if (!ready(s) || !TweakCatalog.knowsPackage(pkg) || pendingScope.contains(pkg)) return;
+    private void removeScope(UiEnvironment.Port s, String pkg) {
+        if (!ready(s) || !environment.knowsPackage(pkg) || pendingScope.contains(pkg)) return;
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle(R.string.scope_remove).setMessage(pkg)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    if (!pendingScope.add(pkg)) return;
+                    if (!ready(s) || !pendingScope.add(pkg)) return;
                     render();
-                    stateStore.removeScope(pkg, requested -> {
+                    stateStore.removeScope(s, pkg, requested -> {
                         pendingScope.remove(pkg);
                         toast(requested ? R.string.scope_removed : R.string.ui_scope_request_unconfirmed);
                     });
@@ -1133,8 +1133,8 @@ public final class MainActivity extends AppCompatActivity {
     /** UI-07 uses only the immutable framework snapshot; never infer missing scope. */
     private void scopePage() {
         heading(R.string.scope);
-        XposedService expected=service();
-        Ui07ScopeModel.Listing listing=Ui07ScopeModel.project(TweakCatalog.all(),
+        UiEnvironment.Port expected=service();
+        Ui07ScopeModel.Listing listing=Ui07ScopeModel.project(environment.all(),
                 ready(expected),scopedPackages(expected),pendingScope);
         LinearLayout summary=card(getString(R.string.ui07_scope_heading),
                 getString(R.string.ui07_scope_summary,
@@ -1216,7 +1216,7 @@ public final class MainActivity extends AppCompatActivity {
         summary.addView(text(getString(R.string.dx03_global_unattributed,globalUnknown,
                 diagnosticsStore().size(),diagnosticsStore().dropped()),14));
         // No hook result is labeled ACTIVE: only the framework can confirm configuration.
-        for(TweakEngine.Entry<HookContext> entry:TweakCatalog.entries()){
+        for(TweakEngine.Entry<HookContext> entry:environment.entries()){
             TweakSpec spec=entry.spec;
             if(healthFocusHookId!=null&&!healthFocusHookId.equals(spec.id))continue;
             HookHealthModel.Report report=HookHealthModel.project(spec,snapshot,diagnosticsStore());
@@ -1253,14 +1253,14 @@ public final class MainActivity extends AppCompatActivity {
         heading(R.string.diagnostics);
         hookHealthPanel();
         diagnosticsTimelinePage();
-        XposedService s = service();
+        UiEnvironment.Port s = service();
         card(getString(R.string.status), connection(s));
         if (!ready(s)) {
             card(getString(R.string.diagnostics), snapshot.connection == FrameworkSnapshot.Connection.LOADING
                     ? getString(R.string.ui_loading_framework) : getString(R.string.diagnostics_disconnected));
             return;
         }
-        List<TweakEngine.Entry<HookContext>> entries = TweakCatalog.entries();
+        List<TweakEngine.Entry<HookContext>> entries = environment.entries();
         if (entries.isEmpty()) {
             card(getString(R.string.diagnostics_empty), getString(R.string.diagnostics_inert));
             return;
@@ -1286,16 +1286,16 @@ public final class MainActivity extends AppCompatActivity {
         card(getString(R.string.diagnostics_note_title), getString(R.string.diagnostics_note));
     }
 
-    private void confirmSafetyLock(XposedService s, String id, boolean locked) {
+    private void confirmSafetyLock(UiEnvironment.Port s, String id, boolean locked) {
         if (!ready(s) || pendingPreferences.contains("lock:" + id)) return;
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle(locked ? R.string.diagnostics_enable_lock : R.string.diagnostics_reset_quarantine)
                 .setMessage(locked ? R.string.diagnostics_lock_confirm : R.string.diagnostics_reset_confirm)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    pendingPreferences.add("lock:" + id);
+                    if (!ready(s) || !pendingPreferences.add("lock:" + id)) return;
                     render();
-                    stateStore.writeSafetyLock(id, locked, success -> {
+                    stateStore.writeSafetyLock(s, id, locked, success -> {
                         pendingPreferences.remove("lock:" + id);
                         toast(success ? R.string.diagnostics_reset_success : R.string.diagnostics_reset_failed);
                     });
@@ -1334,10 +1334,10 @@ public final class MainActivity extends AppCompatActivity {
         if (!available) panel.addView(text(getString(pendingPreferences.contains("verbose")
                 ? R.string.ui_saving : R.string.settings_unavailable), 14));
     }
-    private void writeVerboseLogging(XposedService expected, boolean value) {
+    private void writeVerboseLogging(UiEnvironment.Port expected, boolean value) {
         if (!ready(expected) || !pendingPreferences.add("verbose")) return;
         render();
-        stateStore.writeVerbose(value, success -> {
+        stateStore.writeVerbose(expected, value, success -> {
             pendingPreferences.remove("verbose");
             toast(success ? R.string.verbose_lsposed_saved : R.string.tweak_failed);
         });

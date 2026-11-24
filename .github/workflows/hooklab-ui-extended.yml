@@ -1,0 +1,10 @@
+name: HookLab Extended UI Foundation
+# R00 provides an executable manual foundation. Adaptive sizes and accessibility
+# parity are admitted by UX-R04, not silently counted as covered here.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  baseline:
+    uses: ./.github/workflows/hooklab-native-ui.yml

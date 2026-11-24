@@ -1,0 +1,53 @@
+name: HookLab Candidate Evidence Review
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Exact commit SHA of successful native candidate run
+        required: true
+        type: string
+      run_id:
+        description: Native candidate workflow run ID
+        required: true
+        type: string
+      attempt:
+        description: Exact successful run attempt
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: ${{ inputs.source }}
+      RUN_ID: ${{ inputs.run_id }}
+      ATTEMPT: ${{ inputs.attempt }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify source-bound completed run before checkout
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ && "$RUN_ID" =~ ^[1-9][0-9]*$ && "$ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" | jq -e --arg s "$SOURCE_SHA" --arg a "$ATTEMPT" --arg r "$GITHUB_REPOSITORY" '.head_sha==$s and (.run_attempt|tostring)==$a and .repository.full_name==$r and .path==".github/workflows/hooklab-native-ui.yml" and .status=="completed" and .conclusion=="success"'
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source }}
+          persist-credentials: false
+      - name: Independent evidence review (never approves a golden)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          # Do not expose the read token to verifier code from the selected revision.
+          folder="$RUNNER_TEMP/hooklab-review"
+          mkdir "$folder"
+          for name in "hooklab-native-reference-$RUN_ID-$ATTEMPT" "hooklab-native-baseline-$ATTEMPT" "hooklab-visual-candidate-$RUN_ID-$ATTEMPT"; do
+            gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$name" --dir "$folder/$name"
+          done
+          unset GH_TOKEN
+          python3 -B scripts/qa/verify_ui_artifacts.py native --root "$PWD" --artifacts "$folder" --source "$SOURCE_SHA" --tree "$(git rev-parse HEAD^{tree})" --run-id "$RUN_ID" --attempt "$ATTEMPT"
+          echo 'REVIEW_EVIDENCE_VERIFIED; NO GOLDEN OR RELEASE APPROVAL'

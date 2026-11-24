@@ -1,0 +1,85 @@
+name: HookLab Full JVM Regression (24 Shards)
+on:
+  workflow_dispatch:
+  # Bootstrap: dispatchable workflow files must first exist on the default branch.
+  # This separate PR run qualifies the initial workflow adoption, not a release.
+  pull_request:
+    paths:
+      - '.github/workflows/hooklab-ci24.yml'
+      - 'scripts/qa/ci24.py'
+permissions:
+  contents: read
+concurrency:
+  group: hooklab-ci24-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+jobs:
+  junit:
+    name: JVM / shard ${{ matrix.shard }}/24
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          cmdline-tools-version: '15859902'
+          packages: 'platform-tools'
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+      - name: Run exact selected classes on hosted runner
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          python3 -B scripts/qa/ci24.py run --source "$SOURCE_SHA" --shard "$SHARD" --out "$RUNNER_TEMP/shard-$SHARD"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: hooklab-ci24-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shard-${{ matrix.shard }}/
+          if-no-files-found: error
+          retention-days: 14
+  summary:
+    name: Summarize all 24 shards (fail closed)
+    if: always()
+    needs: [junit]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: hooklab-ci24-${{ github.run_id }}-${{ github.run_attempt }}-shard-*
+          path: artifacts
+          merge-multiple: false
+      - name: Independently verify class/method roster, source, exact attempt and XML hashes
+        run: |
+          set -Eeuo pipefail
+          python3 -B scripts/qa/ci24.py summarize --source "$SOURCE_SHA" --artifacts artifacts --out out/CI24_SUMMARY.json
+          test '${{ needs.junit.result }}' = success
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: hooklab-ci24-${{ github.run_id }}-${{ github.run_attempt }}-summary
+          path: out/CI24_SUMMARY.json
+          if-no-files-found: error
+          retention-days: 14
