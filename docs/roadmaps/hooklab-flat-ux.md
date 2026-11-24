@@ -320,3 +320,11 @@ Migration requirements: keep existing opt-in pref keys and history, preserve `Tw
 - **UI08-P04:** no signing or release operation is performed. Release is NOT_AUTHORIZED; if separately authorized, independently verify stable certificate fingerprint, APK source SHA, installed APK, package and version as a separate gate.
 - **UI08-P05:** versioned `docs/qa/hooklab-flat-ux-acceptance.md` accounts for all 38 promises. Source-only imported logs, incomplete DX-01/02 collectors, Android runtime/device and privacy limitations remain explicit. The source QA script is read-only.
 - **Status:** UI-08 source candidate only. Native Devtool check/apply/commit/session, exact-head hosted Android CI, guarded PR merge, installed-device/TalkBack/LSPosed/release evidence are separate PENDING gates. Do not promote any overlay to full acceptance from hosted CI alone.
+
+
+## MCC-R01-F01 · Hosted CI guard reconciliation (2026-11-24)
+
+- **Authoritative source:** PR #24 `feature/mcc-r01-root-discovery-20261123`, native commit `dd7a75f4ec2548ab7fd67ec3b4194f0d78a45b15`, tree `b64032a388195ab1ab0e658dfba823beb4474d9e`. MCC-R01 native transaction/session succeeded; PR #24 was published but hosted required Android CI run `45310534400`, job `138164852607` **FAILED** at `scripts/check_contract.py:197` before Gradle or APK provenance.
+- **Root cause:** legacy source guard searches literal `data/databases`, `data/files`, `data/app_flutter`; reviewed MCC scanner now constructs direct nonrecursive `"$root/databases"`, `"$root/files"`, `"$root/app_flutter"` under an authenticated app data directory. Root/path/account checks and manual-write confirmation are unchanged.
+- **F01 source candidate:** replace obsolete assertion with exact reviewed scanner tokens, exercise root-free positive/negative MCC fixtures during CI source validation, and document the failure receipt. No app production changes, no local Gradle, no automatic root and no release authorization.
+- **Remaining gates:** native Devtool check/apply/commit/session for F01 on exact previous PR24 head; explicitly approved fast-forward of **existing PR #24**, new exact-head required hosted CI, separate CI24 if configured, manual Android/LSPosed/MCC device and signing/release acceptance. A source-contract PASS is not physical-device proof. Never replay the original MCC-R01 transaction or force-push.

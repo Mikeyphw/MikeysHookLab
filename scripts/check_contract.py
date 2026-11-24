@@ -194,11 +194,24 @@ check('getApplicationInfo(MccIds.PACKAGE,0)' in worker
       'manual root operation under HookLab UID with explicit failure truth')
 check('checkedDataDir(verifiedDir)' in command,
       'source-checked data-directory input')
-check('data/databases' in command
-      and 'data/files' in command and 'data/app_flutter' in command
-      and 'MCC_MULTIPLE_ACCOUNTS' in command and 'MCC_BALANCE_WRITE_VERIFIED' in command
-      and 'am force-stop --user' in command and 'MCC_STORAGE_READY' in command,
+# MCC-R01-F01: the scanner now builds direct paths beneath a source-checked root.
+# Normalize Java-escaped quotation marks ONLY for source verification; never
+# change the command, its target package, its strict path scope or the write.
+scanner_source = command.replace(chr(92) + chr(34), chr(34))
+check(all(term in scanner_source for term in (
+      'for dir in "$root/databases" "$root/files" "$root/app_flutter"; do',
+      'for candidate in "$dir"/*-DiamondBalance; do',
+      'scan_base "$data"',
+      'if [ "$n" -eq 0 ]',
+      'MCC_MULTIPLE_ACCOUNTS',
+      'MCC_BALANCE_WRITE_VERIFIED',
+      'MCC_BALANCE_CHANGED',
+      'MCC_BALANCE_WRITE_FAILED',
+      'am force-stop --user',
+      'MCC_STORAGE_READY')),
       'strict bounded MCC-only balance discovery and verified manual write')
+# Run executable root-free negative/positive fixtures in hosted CI BEFORE Gradle.
+subprocess.run(['python3','-B',str(r/'scripts/check_mcc_r01.py')],check=True)
 check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in catalog
       and 'HANDED_OFF' not in button and 'requestAutomatic() { return false; }' in button,
       'legacy automatic process cannot install or navigate')
