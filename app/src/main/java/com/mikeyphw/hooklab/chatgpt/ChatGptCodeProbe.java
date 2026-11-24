@@ -18,23 +18,26 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * CGT01-P02: Read-only investigation of ChatGPT 2631431 code-block text parity.
+ * CGT01-P04: Read-only native code-block and CopyButton renderer diagnostic for ChatGPT 2632128.
  * Does not add actions, read unrelated message storage, launch Termux, or save source text.
  * An observed clipboard match proves equality of VALUES only; distinct block identity
  * and actual tap-to-handler causality require separate on-device evidence.
  */
 public final class ChatGptCodeProbe {
     public static final String PACKAGE="com.openai.chatgpt";
-    public static final String VERSION_NAME="1.2026.314";
-    public static final long VERSION_CODE=2631431L;
+    public static final String VERSION_NAME="1.2026.321";
+    public static final long VERSION_CODE=2632128L;
     public static final String TWEAK_ID="chatgpt.codeblock.copy.probe";
-    public static final String EXPECTED_RENDER_OWNER="p4l";
+    public static final String EXPECTED_RENDER_OWNER="lxl";
     private static final String LOG_TAG="HookLabCGT01";
     private static final AtomicBoolean INSTALLED=new AtomicBoolean();
     private static final AtomicBoolean ACTIVE=new AtomicBoolean();
     private static final CodeBlockProbeMatcher MATCHER =
             new CodeBlockProbeMatcher(SystemClock::elapsedRealtime);
     private static final AtomicLong LAST_UNMATCHED=new AtomicLong();
+    // P04: presence of the pinned CopyButtonImpl renderer is NOT evidence of a tap.
+    private static final AtomicBoolean NATIVE_RENDER_SEEN = new AtomicBoolean();
+    private static final AtomicBoolean COPY_BUTTON_RENDER_SEEN = new AtomicBoolean();
     // P03 observes callback OBJECT identity; never substitute equal text for block identity.
     private static final CodeBlockActionMatcher ACTION =
             new CodeBlockActionMatcher(SystemClock::elapsedRealtime);
@@ -108,25 +111,45 @@ public final class ChatGptCodeProbe {
         }
         if (!INSTALLED.compareAndSet(false,true)) return;
         try {
-            // Exact DEX descriptor from original ChatGPT 1.2026.314 (2631431), classes7.dex.
+            // Exact method descriptors and static flags from ChatGPT 1.2026.321 (2632128), classes4.dex.
             ClassLoader loader=context.classLoader;
             Method render=type(loader,EXPECTED_RENDER_OWNER).getDeclaredMethod("a",
-                String.class, String.class, type(loader,"kki0"), type(loader,"yuj0"),
-                type(loader,"yuj0"), float.class, boolean.class, boolean.class,
+                String.class, String.class, type(loader,"xpm0"), type(loader,"r0o0"),
+                type(loader,"r0o0"), float.class, boolean.class, boolean.class,
                 boolean.class, boolean.class,
                 type(loader,"kotlin.jvm.functions.Function0"),
                 type(loader,"kotlin.jvm.functions.Function2"),
                 boolean.class, boolean.class, type(loader,"kotlin.jvm.functions.Function0"),
-                boolean.class, type(loader,"bz11"), type(loader,"qvq"), int.class, int.class);
+                boolean.class, type(loader,"va41"), type(loader,"rqr"), int.class, int.class);
             if (!Modifier.isStatic(render.getModifiers()) || render.getReturnType()!=void.class)
                 throw new NoSuchMethodException("CodeBlockImpl signature mismatch");
+            // CopyButtonImpl is a separate, exact, static Compose renderer in the same DEX.
+            // Its invocation indicates composition only; it does not identify a user gesture.
+            Method copyButton=type(loader,EXPECTED_RENDER_OWNER).getDeclaredMethod("c",
+                int.class, int.class, type(loader,"co3"), type(loader,"rqr"), type(loader,"r0o0"));
+            if (!Modifier.isStatic(copyButton.getModifiers()) || copyButton.getReturnType()!=void.class)
+                throw new NoSuchMethodException("CopyButtonImpl signature mismatch");
             Method clipboard=ClipboardManager.class.getDeclaredMethod("setPrimaryClip",ClipData.class);
             XposedInterface xp=context.framework(XposedInterface.class);
-            xp.hook(render).setId("hooklab.cgt01.codeblock.render.2631431")
+            xp.hook(copyButton).setId("hooklab.cgt01.copybutton.render.2632128")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object result=chain.proceed();
+                    if (ACTIVE.get() && COPY_BUTTON_RENDER_SEEN.compareAndSet(false,true)) {
+                        xp.log(Log.INFO,LOG_TAG,
+                            "CGT01_COPY_BUTTON_RENDER_OBSERVED build=2632128 tap=UNVERIFIED block_identity=UNVERIFIED");
+                    }
+                    return result;
+                });
+            xp.hook(render).setId("hooklab.cgt01.codeblock.render.2632128")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
                     Object result=chain.proceed(); // Host drawing always happens first.
                     if (!ACTIVE.get()) return result;
+                    if (NATIVE_RENDER_SEEN.compareAndSet(false,true)) {
+                        xp.log(Log.INFO,LOG_TAG,
+                            "CGT01_NATIVE_RENDER_OBSERVED build=2632128 visual_block_identity=UNVERIFIED");
+                    }
                     try {
                         String source=(String)chain.getArg(1);
                         MATCHER.observePair((String)chain.getArg(0), source);
@@ -193,8 +216,8 @@ public final class ChatGptCodeProbe {
                     return result;
                 });
             ACTIVE.set(true);
-            xp.log(Log.INFO,LOG_TAG,"CGT01_PROBE_INSTALLED build=2631431 mode=READ_ONLY "
-                +"p03_action_hooks=DISCOVER_ON_RENDER captured_content=NONE persistent_storage=NONE");
+            xp.log(Log.INFO,LOG_TAG,"CGT01_PROBE_INSTALLED build=2632128 mode=READ_ONLY "
+                +"p04_copybutton_render=OBSERVED_NOT_TAP p03_action_hooks=DISCOVER_ON_RENDER captured_content=NONE persistent_storage=NONE");
         } catch(Throwable failure) {
             ACTIVE.set(false);
             INSTALLED.set(false);
