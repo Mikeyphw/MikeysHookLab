@@ -28,7 +28,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static org.junit.Assert.*;
 
 /** Actual production Activity, ordinary disconnected emulator. No fixture backdoor. */
-@androidx.annotation.RequiresApi(36)
+@androidx.test.filters.SdkSuppress(minSdkVersion = 36, maxSdkVersion = 36)
 @RunWith(AndroidJUnit4.class)
 public final class NativeBaselineTest {
     private static final int HOME=201, HOOKS=202, DIAGNOSTICS=203;

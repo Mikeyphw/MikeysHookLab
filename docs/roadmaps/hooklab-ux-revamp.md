@@ -1,7 +1,7 @@
 # HookLab — Final UI/UX Revamp & Native Fidelity Roadmap
 
-**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.2-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)  
-**Status:** SOURCE CHECKPOINT — UX-R00 partial candidate; not committed, no native/hosted/emulator acceptance performed.  
+**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.3-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
+**Status:** UX-R00 committed on draft PR #30; Design and CI24 passed at the original head, Android lint and native baseline failed. F02 correction pending native delivery and fresh hosted qualification.
 **Proposed repository path:** `docs/roadmaps/hooklab-ux-revamp.md` (retain `hooklab-flat-ux.md` and its historical acceptance matrix).  
 **Operator:** continue the existing `devop-hooklab` cumulative command; do not create an independent executable for this roadmap.  
 
@@ -26,7 +26,7 @@ Both reference files were rehashed from the current workspace; XML inspection co
 **Coverage:** complete for the six proposed revamp overlays; known subset of the wider HookLab project.  
 **Source implementation:** 0/6 · 0% `[░░░░░░░░░░░░]`  
 **Independently accepted:** 0/6 · 0% `[░░░░░░░░░░░░]`  
-**Delivered/merged:** 0/6; **remaining implementation:** 6; **remaining acceptance:** 6. All promise counts below describe planned scope, not code coverage. Existing nine-overlay tranche: 9/9 merged, 0/9 fully accepted on evidence inspected; complete source count inconclusive (known DX gaps). Not a project-wide percentage.
+**Delivered/merged:** 1/6 delivered as draft PR #30, 0/6 merged; **remaining implementation:** 6; **remaining acceptance:** 6. All promise counts below describe planned scope, not code coverage. Existing nine-overlay tranche: 9/9 merged, 0/9 fully accepted on evidence inspected; complete source count inconclusive (known DX gaps). Not a project-wide percentage.
 
 | ID | Overlay | Implementation / acceptance | Dependency |
 |---|---|---|---|
@@ -424,3 +424,9 @@ Current base `af75dfeecc51e92a0b128990e206517f88fd66e0`, tree `7015dc79d91b6ea0c
 | UI08-P01, UI08-P02, UI08-P03, UI08-P04, UI08-P05 | Structural checks, independent evidence verifier; final native/device/performance/permission/signer acceptance open |
 
 All 38 historic IDs preserved. No visual golden approved by this candidate. Keep existing required Android CI; new UI workflows and CI24 qualify separately at the exact PR head and attempt. No local Gradle. Candidate is not an acceptance receipt.
+
+## UX-R00-F02 — Hosted Android lint and installed APK identity repair
+
+PR #30 head `a60b2758c6cd9695dc8fab2bc1c955d35f9eb41e` tree `f86305f1272d9a78aa948996ec93ccd390a34336`. Design run 45470890438 and JVM CI24 run 45470889969 succeeded at that head. Android run 45470890057 failed `UseSdkSuppress` on NativeBaselineTest; native run 45470889972 failed `installed bytes mismatch` before instrumentation. The logs do not establish whether the raw read was denied, returned diagnostic bytes, or was a true mismatch. Repair uses exact API36 test filtering and retains both exact installed APK digests, with exit-aware on-device SHA-256, constrained package path, owner-only fallback on explicit access denial, and fail-closed drift/mismatch. No retries on genuine mismatch, no root, no waived checks. Fresh exact-head Android, native, Design, and CI24 results required; no native golden or device acceptance inferred.
+
+F02 follow-up validates the normal ADB streamed/push install acknowledgement, refuses incremental installation, nonzero status, unexpected output, path splits, traversal and foreign-package base APK paths. The complete uploaded Git archive independently supplied the exact PR base object and tree. The repair retains R00 verification and the six-overlay roster; no emulator qualification is asserted.

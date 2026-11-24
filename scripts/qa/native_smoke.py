@@ -36,6 +36,42 @@ def guard():
         time.sleep(1)
     raise ValueError('active default network')
 
+def install_apk(apk):
+    # adb may emit its install-mode heading before the final Success line.
+    result=subprocess.run(['adb','-s',SERIAL,'install','--no-incremental','-t',str(apk)],capture_output=True,text=True,timeout=180)
+    require(result.returncode==0,'APK installation command failed rc='+str(result.returncode))
+    output=result.stdout.strip().splitlines()
+    require(not result.stderr.strip() and output in (['Success'],['Performing Streamed Install','Success'],['Performing Push Install','Success']),'APK installation did not report unambiguous success')
+
+def installed_path(package):
+    require(package in (PKG, PKG+'.test'),'unexpected package identity')
+    result=subprocess.run(['adb','-s',SERIAL,'shell','-T','pm','path','--user','0',package],capture_output=True,text=True,timeout=30)
+    require(result.returncode==0 and not result.stderr.strip(),'installed package path query failed '+package)
+    path=result.stdout.strip()
+    require(re.fullmatch(r'package:/data/app/(?:~~[A-Za-z0-9_+=-]+/)?'+re.escape(package)+r'-[A-Za-z0-9_+=-]+/base\.apk',path) is not None,'unexpected installed APK path or splits '+package)
+    return path.removeprefix('package:')
+
+def installed_digest(package, expected):
+    # Hash bytes on the emulator; do not hash exec-out diagnostics as APK bytes.
+    # Modern adb shell protocol preserves the remote exit status and separates stderr.
+    require(re.fullmatch('[a-f0-9]{64}',expected) is not None,'invalid expected APK digest')
+    path=installed_path(package)
+    def checksum(prefix):
+        return subprocess.run(['adb','-s',SERIAL,'shell','-T',*prefix,'sha256sum',path],capture_output=True,text=True,timeout=90)
+    result=checksum([]);method='shell'
+    if result.returncode!=0 and re.search(r'permission denied|operation not permitted',result.stderr+'\n'+result.stdout,re.I):
+        # Debug/test APK owner may read its own installed APK when shell cannot.
+        # No root, no chmod, and never retry a successfully computed mismatch.
+        result=checksum(['run-as',package]);method='run-as'
+    require(result.returncode==0 and not result.stderr.strip(),'installed APK hash command failed '+package+' method='+method+' rc='+str(result.returncode))
+    match=re.fullmatch(r'([a-fA-F0-9]{64})[ \t]+\*?'+re.escape(path),result.stdout.strip())
+    require(match is not None,'invalid installed APK hash response '+package+' method='+method)
+    observed=match.group(1).lower()
+    require(installed_path(package)==path,'installed APK path changed '+package)
+    require(observed==expected,'installed APK hash mismatch '+package+' expected='+expected+' observed='+observed+' method='+method)
+    print('INSTALLED_APK_VERIFIED '+package+' sha256='+observed+' method='+method,flush=True)
+    return observed
+
 def one(pattern):
     paths=list(Path('.').glob(pattern));require(len(paths)==1 and paths[0].is_file(),'APK missing/ambiguous');return paths[0]
 def verify(out,expected):
@@ -119,10 +155,9 @@ def run(out):
     app=one('app/build/outputs/apk/debug/*.apk');test=one('app/build/outputs/apk/androidTest/debug/*.apk')
     cert=subprocess.check_output([str(Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0/apksigner'),'verify','--print-certs',str(app)],text=True,timeout=30)
     m=re.search(r'Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]{64})',cert);require(m is not None,'debug signer unavailable')
-    adb('install','-t',str(app));adb('install','-t',str(test));
-    def installed(package):
-        p=txt('shell','pm','path',package);require(p.startswith('package:') and '\n' not in p,'unexpected splits');return hashlib.sha256(raw('exec-out','cat',p.removeprefix('package:'))).hexdigest()
-    ah,th=digest(app),digest(test);require(installed(PKG)==ah and installed(PKG+'.test')==th,'installed bytes mismatch')
+    for apk in (app,test):install_apk(apk)
+    ah,th=digest(app),digest(test)
+    installed_digest(PKG,ah);installed_digest(PKG+'.test',th)
     adb('shell','wm','size','780x1688');adb('shell','wm','density','320');adb('shell','settings','put','system','font_scale','1.0');adb('shell','cmd','uimode','night','yes')
     for name in ('window_animation_scale','transition_animation_scale','animator_duration_scale'):adb('shell','settings','put','global',name,'0')
     require(not any(os.environ.get(k) for k in ('HOOKLAB_SIGNING_KEYSTORE_PATH','HOOKLAB_SIGNING_STORE_PASSWORD','HOOKLAB_SIGNING_KEY_ALIAS','HOOKLAB_SIGNING_KEY_PASSWORD')),'release credentials refused in UI workflow')
@@ -132,7 +167,14 @@ def run(out):
     dump(out/'release-isolation.json',isolation);dump(out/'environment.json',environment())
     def instrument(test_id):
         result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',test_id,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=240)
-        require(result.returncode==0,'instrumentation child failed '+test_id);parse_instrumentation(result.stdout,test_id)
+        try:
+            require(result.returncode==0,'instrumentation child failed '+test_id);parse_instrumentation(result.stdout,test_id)
+        except ValueError:
+            print('INSTRUMENTATION_FAILED_TEST '+test_id+' rc='+str(result.returncode),file=sys.stderr,flush=True)
+            for line in result.stdout.splitlines():
+                if re.fullmatch(r'INSTRUMENTATION_(?:STATUS_CODE|CODE): -?\d+',line.strip()) or re.fullmatch(r'INSTRUMENTATION_STATUS: (?:class|test)=[A-Za-z0-9_.$]+',line.strip()):
+                    print(line.strip(),file=sys.stderr,flush=True)
+            raise
         print('INSTRUMENTATION_PASS',test_id,flush=True)
     def capture(suffix):
         records={}
@@ -152,7 +194,7 @@ def run(out):
     instrument(FIXTURE);instrument(FRAMEWORK_TEST)
     for name in ('fixture','framework-fixture'):
         f=out/(name+'.json');f.write_bytes(raw('exec-out','run-as',PKG,'cat','files/uxr00-native-smoke/'+f.name))
-    receipt={**ident,'status':'BASELINE_PASS_NOT_VISUAL_APPROVAL','tests':TESTS,'fixture_sha256':digest(out/'fixture.json'),'framework_fixture_sha256':digest(out/'framework-fixture.json'),'release_isolation_sha256':digest(out/'release-isolation.json'),'environment_sha256':digest(out/'environment.json'),'app_apk_sha256':ah,'android_test_apk_sha256':th,'installed_apk_sha256':installed(PKG),'installed_test_apk_sha256':installed(PKG+'.test'),'debug_certificate_sha256':m.group(1).lower(),'screenshots':records,'repeat_screenshots':repeat_records,'repeat_calibration':repeat}
+    receipt={**ident,'status':'BASELINE_PASS_NOT_VISUAL_APPROVAL','tests':TESTS,'fixture_sha256':digest(out/'fixture.json'),'framework_fixture_sha256':digest(out/'framework-fixture.json'),'release_isolation_sha256':digest(out/'release-isolation.json'),'environment_sha256':digest(out/'environment.json'),'app_apk_sha256':ah,'android_test_apk_sha256':th,'installed_apk_sha256':installed_digest(PKG,ah),'installed_test_apk_sha256':installed_digest(PKG+'.test',th),'debug_certificate_sha256':m.group(1).lower(),'screenshots':records,'repeat_screenshots':repeat_records,'repeat_calibration':repeat}
     dump(out/'receipt.json',receipt);verify(out,ident);print('NATIVE_BASELINE_PASS_NOT_VISUAL_APPROVAL')
 
 def main():

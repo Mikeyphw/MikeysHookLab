@@ -36,6 +36,36 @@ class FoundationTests(unittest.TestCase):
         native_smoke.parse_instrumentation(ok,t)
         for wrong in (ok.replace('STATUS_CODE: 0','STATUS_CODE: -2'),ok.replace(m,'other'),ok.replace('OK (1 test)','OK (0 tests)'),ok+'FAILURES!!!'):
             with self.assertRaises(ValueError):native_smoke.parse_instrumentation(wrong,t)
+    def test_instrumentation_sdk_filter(self):
+        source=(ROOT/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/NativeBaselineTest.java').read_text()
+        self.assertIn('@androidx.test.filters.SdkSuppress(minSdkVersion = 36, maxSdkVersion = 36)',source)
+        self.assertNotIn('@androidx.annotation.RequiresApi',source)
+    def test_install_acknowledgement(self):
+        from unittest.mock import patch
+        from subprocess import CompletedProcess
+        for output in ('Success','Performing Streamed Install\nSuccess','Performing Push Install\nSuccess'):
+            with patch.object(native_smoke.subprocess,'run',return_value=CompletedProcess([],0,output,'')) as call:
+                native_smoke.install_apk(Path('fixture.apk'))
+                self.assertIn('--no-incremental',call.call_args.args[0])
+        for rc,output,stderr in ((0,'Failure [INSTALL_FAILED]',''),(0,'Success\nFailure',''),(0,'unexpected\nSuccess',''),(0,'',''),(1,'Success',''),(0,'Success','unverified transport warning'),(0,'Performing Incremental Install\nSuccess',''),(0,'Performing Push Install\nPerforming Push Install\nSuccess','')):
+            with self.subTest(rc=rc,output=output),patch.object(native_smoke.subprocess,'run',return_value=CompletedProcess([],rc,output,stderr)):
+                with self.assertRaises(ValueError):native_smoke.install_apk(Path('fixture.apk'))
+    def test_installed_apk_identity(self):
+        from unittest.mock import patch
+        from subprocess import CompletedProcess
+        pkg=native_smoke.PKG; path='/data/app/~~abc==/'+pkg+'-a_b==/base.apk'; h='a'*64
+        def response(rc=0,stdout='',stderr=''):return CompletedProcess([],rc,stdout,stderr)
+        p=response(stdout='package:'+path+'\n'); good=response(stdout=h+'  '+path+'\n')
+        with patch.object(native_smoke.subprocess,'run',side_effect=[p,good,p]) as call:
+            self.assertEqual(native_smoke.installed_digest(pkg,h),h)
+            self.assertEqual(call.call_args_list[1].args[0][-2:],['sha256sum',path])
+        with patch.object(native_smoke.subprocess,'run',side_effect=[p,response(1,stderr='Permission denied'),good,p]) as call:
+            self.assertEqual(native_smoke.installed_digest(pkg,h),h)
+            self.assertEqual(call.call_args_list[2].args[0][-4:],['run-as',pkg,'sha256sum',path])
+        for results in ([p,response(stdout='cat: Permission denied')], [p,response(1,stderr='transport offline')], [p,response(1,stderr='Permission denied'),response(1,stderr='run-as failed')], [p,response(stdout='b'*64+'  '+path),p], [p,good,response(stdout='package:'+path.replace('~~abc','~~xyz'))], [response(stdout='package:'+path+'\npackage:'+path.replace('base.apk','split.apk'))], [p,response(stdout=h+'  /wrong.apk')], [response(stdout='package:'+path.replace(pkg,'com.other.app'))], [response(stdout='package:'+path.replace('/base.apk','/../base.apk'))]):
+            with self.subTest(results=results),patch.object(native_smoke.subprocess,'run',side_effect=results) as call:
+                with self.assertRaises(ValueError):native_smoke.installed_digest(pkg,h)
+                self.assertEqual(call.call_count,len(results))
     def test_browser_geometry_negative(self):
         r=reference.browser_roster(ROOT);c=r['VIS-001'];g={'viewport':[390,844],'items':[dict(i,index=n,bounds=[0,0,10,10],visible=True) for n,i in enumerate(c['controls'])],'route':c['route'],'theme':c['theme'],'dialog':c['dialog'],'tokens':c['tokens']}
         reference.verify_browser_case(r,'VIS-001',g)
