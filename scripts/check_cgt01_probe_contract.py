@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CGT01-P02/P03: source-only guard. No Gradle; device Copy parity remains independent."""
+"""CGT01-P04: exact APK-symbol source guard; device Copy causality is independent."""
 from pathlib import Path
 import hashlib
 import re
@@ -30,13 +30,13 @@ assert 'ChatGptCodeProbe.TWEAK_ID' in catalog and 'ChatGptCodeProbe.VERSION_CODE
 assert all(x in module for x in ('getRemotePreferences(TweakKeys.GROUP)',
           'settings.getBoolean(TweakKeys.enabled(id), false)',
           'TweakDiagnostics.quarantineKey(id)', 'param.isFirstPackage()'))
-for token in ('PACKAGE="com.openai.chatgpt"','VERSION_NAME="1.2026.314"',
-              'VERSION_CODE=2631431L','"chatgpt.codeblock.copy.probe"',
+for token in ('PACKAGE="com.openai.chatgpt"','VERSION_NAME="1.2026.321"',
+              'VERSION_CODE=2632128L','"chatgpt.codeblock.copy.probe"',
               'getLongVersionCode()!=VERSION_CODE','VERSION_NAME.equals(installed.versionName)',
               'context.framework(XposedInterface.class)','getDeclaredMethod("a",',
-              'EXPECTED_RENDER_OWNER="p4l"','String.class, String.class',
-              'type(loader,"kki0")','type(loader,"yuj0")',
-              'type(loader,"bz11")','type(loader,"qvq")',
+              'EXPECTED_RENDER_OWNER="lxl"','String.class, String.class',
+              'type(loader,"xpm0")','type(loader,"r0o0")',
+              'type(loader,"va41")','type(loader,"rqr")',
               'render.getReturnType()!=void.class','ClipboardManager.class.getDeclaredMethod("setPrimaryClip",ClipData.class)',
               'setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)',
               'chain.proceed()','String source=(String)chain.getArg(1);',
@@ -74,6 +74,19 @@ assert all(x in probe for x in (
     'CGT01_ACTION_COPY_BOUND_VALUE_MATCH',
     'visual_block_identity=UNVERIFIED',
     'button_identity=UNVERIFIED'))
+# P04 must observe the new exact CopyButtonImpl renderer without treating it as a tap.
+assert all(x in probe for x in (
+    'getDeclaredMethod("c",', 'type(loader,"co3")',
+    'copyButton.getReturnType()!=void.class',
+    'hooklab.cgt01.copybutton.render.2632128',
+    'CGT01_COPY_BUTTON_RENDER_OBSERVED',
+    'CGT01_NATIVE_RENDER_OBSERVED',
+    'tap=UNVERIFIED block_identity=UNVERIFIED',
+    'COPY_BUTTON_RENDER_SEEN.compareAndSet(false,true)',
+    'NATIVE_RENDER_SEEN.compareAndSet(false,true)'))
+assert 'Read-only, opt-in diagnostics for ChatGPT 1.2026.321/2632128.' in catalog
+assert 'hooklab.cgt01.codeblock.render.2632128' in probe
+assert '1.2026.314' not in probe and '2631431' not in probe
 assert all(x in actions for x in (
     'WeakReference<Object>', 'ThreadLocal<Frame>', 'HmacSHA256',
     'SHARED_CALLBACK_AMBIGUOUS', 'NO_BOUND_CALLBACK',
@@ -81,5 +94,7 @@ assert all(x in actions for x in (
 assert not any(x in actions for x in (
     'Log.', 'FileOutputStream', 'SharedPreferences', 'getPrimaryClip(', 'termux.RUN_COMMAND'))
 assert (root/'app/src/test/java/com/mikeyphw/hooklab/chatgpt/CodeBlockActionMatcherTest.java').is_file()
+assert (root/'scripts/check_cgt01_p04_apkm.py').is_file()
+assert (root/'docs/CGT01_P04_2026_321.md').is_file()
 assert 'test_missing_chatgpt_refused'  in read('scripts/test_apk_scope.py')
-print('CGT01_P03_SOURCE_CONTRACT=PASS source_only=true hosted_android=NOT_RUN device=NOT_RUN',flush=True)
+print('CGT01_P04_SOURCE_CONTRACT=PASS source_only=true hosted_android=NOT_RUN device=NOT_RUN',flush=True)

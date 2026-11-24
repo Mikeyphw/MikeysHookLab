@@ -51,8 +51,8 @@ public final class TweakCatalog {
                 new TweakSpec(ChatGptCodeProbe.TWEAK_ID, ChatGptCodeProbe.PACKAGE,
                     ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE),
                 "ChatGPT · Code-block action diagnostic (experimental)",
-                "Read-only, opt-in diagnostics for ChatGPT 1.2026.314/2631431. " +
-                "Correlates native callback identities and copied text with session-only HMAC; " +
+                "Read-only, opt-in diagnostics for ChatGPT 1.2026.321/2632128. " +
+                "Observes native CodeBlock/CopyButton renders and callback/clipboard parity; " +
                 "no command execution, message storage, Termux dispatch or raw text logs.",
                 ChatGptCodeProbe::install)
         ));
