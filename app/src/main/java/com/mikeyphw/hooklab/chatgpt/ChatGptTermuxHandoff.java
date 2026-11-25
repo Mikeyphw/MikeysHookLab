@@ -77,7 +77,10 @@ public final class ChatGptTermuxHandoff {
         String source=b.selected(SystemClock.elapsedRealtime());if(source==null){log("STALE_REFUSED");return;}
         Intent intent=new Intent(TermuxCommandPolicy.ACTION_PREVIEW)
             .setComponent(new ComponentName("com.mikeyphw.hooklab","com.mikeyphw.hooklab.termux.TermuxBridgeActivity"))
-            .putExtra(TermuxCommandPolicy.EXTRA_SOURCE,source);
+            .putExtra(TermuxCommandPolicy.EXTRA_SOURCE,source)
+            .putExtra(TermuxCommandPolicy.EXTRA_REQUEST_ID,java.util.UUID.randomUUID().toString())
+            .putExtra(TermuxCommandPolicy.EXTRA_REQUEST_TIME,SystemClock.elapsedRealtime())
+            .putExtra(TermuxCommandPolicy.EXTRA_REQUEST_WALL,System.currentTimeMillis());
         // Calling package is authenticated by Android in the receiver via startActivityForResult.
         try{a.startActivityForResult(intent,0x484c);log("PREVIEW_REQUESTED");}
         catch(RuntimeException unavailable){log("PREVIEW_REFUSED");}
@@ -127,8 +130,8 @@ public final class ChatGptTermuxHandoff {
     private static final class Host {
         final ClassLoader loader;final Class<?> q12,co3,composer,scope,f0,f2,f3,remember,zdr;
         final Field branch,capture,contentCode,codeText,inserting,composite;
-        final Method contentInvoke,factory,begin,end,rowPolicy,locals,materialize,startNode,createNode,reuseNode,set,keySetter,invoke2,invoke3,readSlot,writeSlot,iconButton,text;
-        final Object arrangement,alignment,emptyModifier,nodeFactory,measureSetter,localsSetter,compositeSetter,modifierSetter,unit,emptySlot;
+        final Method contentInvoke,factory,begin,end,rowPolicy,locals,materialize,startNode,createNode,reuseNode,set,keySetter,invoke2,invoke3,readSlot,writeSlot,iconButton,iconPainter,drawIcon;
+        final Object arrangement,alignment,emptyModifier,nodeFactory,measureSetter,localsSetter,compositeSetter,modifierSetter,unit,emptySlot,terminalAsset;
         final AtomicBoolean renderLogged=new AtomicBoolean();
         Host(ClassLoader l)throws Exception {
             loader=l;q12=type("q12");co3=type("co3");composer=type("oba0");scope=type("fm3");f0=type("kotlin.jvm.functions.Function0");f2=type("kotlin.jvm.functions.Function2");f3=type("kotlin.jvm.functions.Function3");remember=type("q4z0");zdr=type("zdr");
@@ -151,7 +154,12 @@ public final class ChatGptTermuxHandoff {
             unit=constant(type("mec1"),"a",type("mec1"));emptySlot=constant(type("by1"),"s",type("qro0"));
             if(!f0.isInstance(nodeFactory)||!f2.isInstance(measureSetter)||!f2.isInstance(localsSetter)||!f2.isInstance(modifierSetter))throw new NoSuchMethodException("Node setters");
             iconButton=method(type("g3v"),"m",void.class,true,f0,r0,type("l5d0"),boolean.class,boolean.class,String.class,f0,type("nfo0"),type("ecc"),f3,rqr,int.class,int.class);
-            text=method(type("cg51"),"u",void.class,true,String.class,r0,type("i9"),int.class,int.class,boolean.class,int.class,int.class,long.class,int.class,type("cbj0"),int.class,type("kotlin.jvm.functions.Function1"),type("b3a1"),rqr,int.class,int.class,int.class);
+            Class<?> drawable=type("da50"),painter=type("f1s0");
+            var assetFactory=type("e950").getDeclaredConstructor(byte.class);assetFactory.setAccessible(true);
+            terminalAsset=method(type("e950"),"invoke",Object.class,false).invoke(assetFactory.newInstance((byte)12));
+            if(!drawable.isInstance(terminalAsset))throw new NoSuchMethodException("Terminal drawable");
+            iconPainter=method(type("lje0"),"a",painter,true,drawable,rqr,int.class);
+            drawIcon=method(type("t6d0"),"a",void.class,true,painter,String.class,r0,long.class,rqr,int.class,int.class);
             // Exercise proxy construction during installation, before editing any Composer state.
             proxy(f3,new Lambda(){Object invokeBody(Object[] a){return unit;}});
             Proxy.newProxyInstance(loader,new Class<?>[]{f0,remember},(p,m,a)->unit);
@@ -177,8 +185,9 @@ public final class ChatGptTermuxHandoff {
             call(end,c,false);
             call(begin,c,ICON_SLOT);
             Object icon=call(factory,null,ICON_KEY,true,proxy(f3,new Lambda(){Object invokeBody(Object[] a)throws Throwable {
-                // Native text composable supplies a compact, legible Run glyph using host defaults.
-                call(text,null,"Run",null,null,0,0,false,0,0,0L,0,null,0,null,null,a[1],0,0,0x3ffe);return unit;
+                // The exact host drawable uses its native painter and inherited content tint.
+                Object painter=call(iconPainter,null,terminalAsset,a[1],0);
+                call(drawIcon,null,painter,null,null,0L,a[1],0,0xC);return unit;
             }}),c);
             call(end,c,false);
             // Default modifier/colors/enabled/selected/secondary action/interaction/style;

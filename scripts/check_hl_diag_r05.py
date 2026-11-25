@@ -19,9 +19,9 @@ assert '.setAction(TermuxCommandPolicy.ACTION_SETTINGS));' in a
 assert 'setIntent(new Intent());' in a  # preview still discards action and payload
 assert 'setIntent(inbound)' not in a and 'new Intent(inbound)' not in a
 assert a.count('startService(request)')==1 and 'setPositiveButton(R.string.termux_r05_execute,(d,w)->dispatch(text,dir,interpreter))' in a
-assert 'if(dispatched||!confirming||source==null' in a and 'dispatched=true;run.setEnabled(false);source=null' in a
+assert 'if(dispatched||(!confirming&&!direct)||source==null' in a and 'dispatched=true;if(run!=null)run.setEnabled(false);source=null' in a
 assert 'requestPermissions(new String[]{TermuxCommandPolicy.PERMISSION}' in a and 'Never dispatch here' in a
-assert '"terminal-session"' in a and '"com.termux.RUN_COMMAND_BACKGROUND",false' in a and 'return new String[]{"-c",checkedCommand(source)}' in policy
+assert '"terminal-session"' in a and '"com.termux.RUN_COMMAND_BACKGROUND",false' in a and 'return new String[]{"-c",BOOTSTRAP,"hooklab",checkedCommand(source),checkedShell(shell),ENV_INIT,RC_INIT}' in policy
 assert 'TermuxBridgeActivity.class' in get('ui/MainActivity.java')
 assert '(flags & IBinder.FLAG_ONEWAY)!=0' in s and 'flags != 0' not in s and 'flags!=0' not in s and 'Binder.getCallingUid()!=allowedUid' in s
 assert all(x in s for x in ('TRANSACTION_REFUSED','DESCRIPTOR_REFUSED','PAYLOAD_REFUSED','CALLER_REFUSED','CONTEXT_RETURNED'))

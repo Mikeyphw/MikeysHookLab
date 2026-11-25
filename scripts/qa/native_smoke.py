@@ -8,7 +8,8 @@ ROUTES={'home':201,'hooks':202,'diagnostics':203}
 TEST='com.mikeyphw.hooklab.qa.NativeBaselineTest#realActivityOfflineNavigation'
 FIXTURE='com.mikeyphw.hooklab.qa.DiagnosticFixtureTest#importedFixtureProjectionAndFilter'
 FRAMEWORK_TEST='com.mikeyphw.hooklab.ui.FrameworkFixtureTest#connectedCommandsStaleCallbackAndClock'
-TESTS=[TEST,TEST,FIXTURE,FRAMEWORK_TEST]
+TERMUX_TEST='com.mikeyphw.hooklab.termux.TermuxBridgeFixtureTest#syntheticAuthorizationAndReceipt'
+TESTS=[TEST,TEST,FIXTURE,FRAMEWORK_TEST,TERMUX_TEST]
 FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','no_real_framework']}
 FIXTURE_EVIDENCE={'schema':'hooklab.diagnostics.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'framework_disconnected':True,'assertions':['three_normalized_events','actual_timeline_projection','filter_one_of_three','raw_marker_not_rendered','store_unchanged','no_framework_service']}
 
@@ -187,11 +188,11 @@ def expected_identity():
     require(all(re.fullmatch('[1-9][0-9]*',os.environ.get(k,'')) for k in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT')),'invalid run identity')
     return {'schema':'hooklab.native.smoke.v1','source_sha':source,'source_tree':git('rev-parse','HEAD^{tree}'),'run_id':os.environ['GITHUB_RUN_ID'],'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'],'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
 
-FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE'))
+FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT'))
 # Restrict exported frames to our three instrumentation classes. Raw stack/message/UI text
 # can contain private or attacker-controlled data; it is never written or printed.
 FRAME_CLASSES={t.split('#')[0]:t.split('#')[0].rsplit('.',1)[-1]+'.java' for t in TESTS}
-SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock'))
+SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock','settledScreenshot','captureGeometry','syntheticAuthorizationAndReceipt'))
 SAFE_EXCEPTION_TYPES=frozenset(('java.lang.AssertionError','java.lang.IllegalStateException','java.lang.IllegalArgumentException','java.lang.NullPointerException','java.lang.RuntimeException','java.lang.SecurityException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.AppNotIdleException','androidx.test.espresso.NoActivityResumedException','androidx.test.espresso.base.RootViewPicker$RootViewWithoutFocusException'))
 
 def failure_details(output,test_id,ordinal,completed,rc,reason):
@@ -234,6 +235,28 @@ def run_instrumentation(out,ident,test_id,completed):
     (out/'receipt.json').write_text(json.dumps({**ident,'status':'IN_PROGRESS','completed_tests':completed},sort_keys=True)+'\n')
     print('INSTRUMENTATION_PASS',test_id,flush=True)
 
+def compare_native_repeats(out,ident,completed,records,repeat_records):
+    from PIL import Image
+    from visual import strict_regression,native_controls,metrics,compare_controls
+    repeat={};failures=[];repeat_details={};tolerances={'bounds_dp':2,'font_sp':1,'rgb_delta':0,'native_ssim_min':.99,'native_changed_pixel_max':.01}
+    for name in ROUTES:
+        try:
+            g=json.loads((out/(name+'.json')).read_text());other=json.loads((out/(name+'-repeat.json')).read_text());require(g['insets_px']==other['insets_px'],'system insets changed');l,t,r,b=g['insets_px'];area=(l,t,780-r,1688-b)
+            with Image.open(out/(name+'.png')) as a,Image.open(out/(name+'-repeat.png')) as b:
+                require(a.size==b.size==(780,1688),'native dimensions changed')
+                first,second=a.crop(area),b.crop(area)
+                expected,actual=native_controls(g,name),native_controls(other,name)
+                repeat_details[name]={'metrics':metrics(first,second),'controls':compare_controls(expected,actual,tolerances)}
+                repeat[name]=strict_regression(expected,actual,first,second,tolerances)
+        except (OSError,ValueError,KeyError,TypeError,AssertionError):
+            failures.append(name);repeat_details.setdefault(name,{'status':'INVALID_OR_INCONSISTENT_CAPTURE'})
+    if failures:
+        receipt={**ident,'status':'NATIVE_REPEAT_FAILED','completed_tests':completed,'failed_routes':failures,'screenshots':records,'repeat_screenshots':repeat_records,'repeat_details':repeat_details,'tolerances':tolerances}
+        (out/'receipt.json').write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+        print('NATIVE_REPEAT_FAILED '+json.dumps({'routes':failures,'details':repeat_details},sort_keys=True),file=sys.stderr,flush=True)
+        raise ValueError('native repeat regression '+','.join(failures))
+    return repeat
+
 def run(out):
     ident=expected_identity();require(not out.exists(),'fresh output required');out.mkdir(parents=True);(out/'receipt.json').write_text(json.dumps({**ident,'status':'IN_PROGRESS','completed_tests':[]}));guard()
     for name in (PKG,PKG+'.test'):
@@ -261,14 +284,8 @@ def run(out):
             records[name]={'png':digest(out/(name+suffix+'.png')),'geometry':digest(out/(name+suffix+'.json'))}
         return records
     instrument(TEST);records=capture('');instrument(TEST);repeat_records=capture('-repeat')
-    from PIL import Image
-    from visual import strict_regression,native_controls
-    repeat={};tolerances={'bounds_dp':2,'font_sp':1,'rgb_delta':0,'native_ssim_min':.99,'native_changed_pixel_max':.01}
-    for name in ROUTES:
-        g=json.loads((out/(name+'.json')).read_text());other=json.loads((out/(name+'-repeat.json')).read_text());require(g['insets_px']==other['insets_px'],'system insets changed');l,t,r,b=g['insets_px'];area=(l,t,780-r,1688-b)
-        with Image.open(out/(name+'.png')) as a,Image.open(out/(name+'-repeat.png')) as b:
-            repeat[name]=strict_regression(native_controls(g,name),native_controls(other,name),a.crop(area),b.crop(area),tolerances)
-    instrument(FIXTURE);instrument(FRAMEWORK_TEST)
+    repeat=compare_native_repeats(out,ident,completed,records,repeat_records)
+    instrument(FIXTURE);instrument(FRAMEWORK_TEST);instrument(TERMUX_TEST)
     for name in ('fixture','framework-fixture'):
         f=out/(name+'.json');f.write_bytes(raw('exec-out','run-as',PKG,'cat','files/uxr00-native-smoke/'+f.name))
     receipt={**ident,'status':'BASELINE_PASS_NOT_VISUAL_APPROVAL','tests':TESTS,'fixture_sha256':digest(out/'fixture.json'),'framework_fixture_sha256':digest(out/'framework-fixture.json'),'release_isolation_sha256':digest(out/'release-isolation.json'),'environment_sha256':digest(out/'environment.json'),'app_apk_sha256':ah,'android_test_apk_sha256':th,'installed_apk_sha256':installed_digest(PKG,ah),'installed_test_apk_sha256':installed_digest(PKG+'.test',th),'debug_certificate_sha256':m.group(1).lower(),'screenshots':records,'repeat_screenshots':repeat_records,'repeat_calibration':repeat}

@@ -71,11 +71,47 @@ public final class NativeBaselineTest {
         rows.put(row);
         if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)project(g.getChildAt(i),rows,density);}
     }
-    private static void capture(ActivityScenario<MainActivity> scenario, String name, int menu, int title) throws Exception {
+    // Compare only the measured app viewport, never compare against the other run
+    // while settling. Capture a stable full screenshot or fail closed.
+    private static final class SettledCapture {
+        final Bitmap screenshot; final JSONObject geometry;
+        SettledCapture(Bitmap screenshot,JSONObject geometry){this.screenshot=screenshot;this.geometry=geometry;}
+    }
+    private static SettledCapture settledScreenshot(ActivityScenario<MainActivity> scenario,String name,int menu,int title) throws Exception {
         var ins=InstrumentationRegistry.getInstrumentation();
-        ins.waitForIdleSync(); UiDevice.getInstance(ins).waitForIdle();
-        File folder=new File(ins.getTargetContext().getFilesDir(),"uxr00-native-smoke");
-        assertTrue(folder.isDirectory()||folder.mkdirs());
+        final long[] fade={0};
+        scenario.onActivity(a->{
+            android.widget.ScrollView scroll=find(a.getWindow().getDecorView(),android.widget.ScrollView.class);
+            if(scroll!=null&&scroll.isVerticalScrollBarEnabled()&&scroll.isScrollbarFadingEnabled())
+                fade[0]=(long)scroll.getScrollBarDefaultDelayBeforeFade()+scroll.getScrollBarFadeDuration();
+        });
+        Thread.sleep(Math.min(3000,Math.max(250,fade[0]+150)));
+        long deadline=android.os.SystemClock.elapsedRealtime()+6000;
+        Bitmap previous=null;String previousGeometry=null;int consecutive=0;
+        try{
+            do{
+                ins.waitForIdleSync();UiDevice.getInstance(ins).waitForIdle(1000);
+                JSONObject before=captureGeometry(scenario,name,menu,title);
+                JSONArray insets=before.getJSONArray("insets_px");int[] bounds=new int[4];for(int n=0;n<4;n++)bounds[n]=insets.getInt(n);
+                Bitmap full=ins.getUiAutomation().takeScreenshot();assertNotNull(full);
+                Bitmap cropped=null;
+                try{
+                    assertTrue(bounds[0]+bounds[2]<full.getWidth()&&bounds[1]+bounds[3]<full.getHeight());
+                    cropped=Bitmap.createBitmap(full,bounds[0],bounds[1],full.getWidth()-bounds[0]-bounds[2],full.getHeight()-bounds[1]-bounds[3]);
+                    if(cropped==full)cropped=full.copy(Bitmap.Config.ARGB_8888,false);
+                    JSONObject after=captureGeometry(scenario,name,menu,title);
+                    boolean coherent=before.toString().equals(after.toString());
+                    consecutive=coherent?(previous!=null&&previous.sameAs(cropped)&&after.toString().equals(previousGeometry)?consecutive+1:1):0;
+                    previousGeometry=coherent?after.toString():null;
+                    if(previous!=null)previous.recycle();previous=cropped;cropped=null;
+                    if(consecutive>=3){Bitmap result=full;full=null;return new SettledCapture(result,after);}
+                }finally{if(full!=null)full.recycle();if(cropped!=null)cropped.recycle();}
+                Thread.sleep(150);
+            }while(android.os.SystemClock.elapsedRealtime()<deadline);
+            throw new AssertionError("Viewport did not settle for three consecutive samples");
+        }finally{if(previous!=null)previous.recycle();}
+    }
+    private static JSONObject captureGeometry(ActivityScenario<MainActivity> scenario,String name,int menu,int title){
         final JSONObject[] geometry={null};
         scenario.onActivity(a->{try{
             assertEquals("com.mikeyphw.hooklab",a.getPackageName());
@@ -105,9 +141,18 @@ public final class NativeBaselineTest {
             g.put("semantic_controls",controls);geometry[0]=g;
         }catch(Exception e){throw new AssertionError(e);}});
         assertNotNull(geometry[0]);
-        try(FileOutputStream f=new FileOutputStream(new File(folder,name+".json"))){f.write(geometry[0].toString().getBytes(StandardCharsets.UTF_8));}
-        Bitmap bitmap=ins.getUiAutomation().takeScreenshot();assertNotNull(bitmap);
-        try(FileOutputStream f=new FileOutputStream(new File(folder,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,f));}finally{bitmap.recycle();}
+        return geometry[0];
+    }
+    private static void capture(ActivityScenario<MainActivity> scenario, String name, int menu, int title) throws Exception {
+        var ins=InstrumentationRegistry.getInstrumentation();
+        ins.waitForIdleSync();UiDevice.getInstance(ins).waitForIdle();
+        File folder=new File(ins.getTargetContext().getFilesDir(),"uxr00-native-smoke");
+        assertTrue(folder.isDirectory()||folder.mkdirs());
+        SettledCapture capture=settledScreenshot(scenario,name,menu,title);
+        try{
+            try(FileOutputStream f=new FileOutputStream(new File(folder,name+".json"))){f.write(capture.geometry.toString().getBytes(StandardCharsets.UTF_8));}
+            try(FileOutputStream f=new FileOutputStream(new File(folder,name+".png"))){assertTrue(capture.screenshot.compress(Bitmap.CompressFormat.PNG,100,f));}
+        }finally{capture.screenshot.recycle();}
     }
     private static boolean containsText(View view,String text){
         if(view instanceof TextView && ((TextView)view).getText().toString().contains(text))return true;

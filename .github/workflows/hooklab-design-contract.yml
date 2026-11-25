@@ -33,11 +33,13 @@ jobs:
       - name: Install deterministic browser and font dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y fonts-roboto
+          sudo apt-get install -y fonts-roboto zsh
           fc-cache -f
           fc-match Roboto -f '%{family}\n' | grep -F Roboto
           python -m pip install 'playwright==1.57.0' 'Pillow==11.3.0'
           python -m playwright install --with-deps chromium
+      - name: Verify actual persistent Zsh session in isolated PTY
+        run: python3 -B scripts/qa/termux_session_check.py --require-zsh
       - name: Repeat all 24 exact browser reference states
         run: |
           python3 -B scripts/qa/visual_image_checks.py

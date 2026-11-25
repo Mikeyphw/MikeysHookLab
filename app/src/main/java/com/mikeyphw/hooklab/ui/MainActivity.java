@@ -784,7 +784,7 @@ public final class MainActivity extends AppCompatActivity {
             // refresh cannot steal search keyboard focus or cursor position.
             if (page == APPS && catalogResults != null) renderCatalogResults();
             else render();
-            scroll.post(() -> scroll.scrollTo(0, previousScroll));
+            scroll.post(() -> { if(scroll.getScrollY()!=previousScroll)scroll.scrollTo(0, previousScroll); });
         });
     }
     @Override protected void onStop() {

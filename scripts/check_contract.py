@@ -33,6 +33,8 @@ check(len(act)==3 and
       and len(act[1].findall('intent-filter'))==0
       and len(act[2].findall('intent-filter'))==0,
       'one launcher and two explicit-only activities')
+receivers=app.findall('receiver')
+check(len(receivers)==1 and receivers[0].get(ns+'name')=='.termux.TermuxSessionReceipt' and receivers[0].get(ns+'exported')=='false' and not receivers[0].findall('intent-filter'),'private Termux session callback only')
 providers = app.findall('provider')
 check(len(providers)==1 and providers[0].get(ns+'name')=='io.github.libxposed.service.XposedProvider'
       and providers[0].get(ns+'authorities')=='${applicationId}.XposedService'
