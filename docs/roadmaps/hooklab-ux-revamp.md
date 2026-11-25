@@ -31,7 +31,7 @@ Both reference files were rehashed from the current workspace; XML inspection co
 | ID | Overlay | Implementation / acceptance | Dependency |
 |---|---|---|---|
 | UX-R00 | Design Contract & Emulator Infrastructure | SOURCE COMPLETE, MERGED / HOSTED FOUNDATION PASS; DEVICE PENDING | None; source and design identities must be confirmed. |
-| UX-R01 | Diagnostics Consolidation | SOURCE IMPLEMENTED CANDIDATE / FRESH HOSTED, DEVICE PENDING | UX-R00; shared row and route interface coordinated with UX-R02. |
+| UX-R01 | Diagnostics Consolidation | SOURCE IMPLEMENTED / PR #31; HOSTED JAVA COMPILE FAILED; F01 REPAIR IN PROGRESS; DEVICE PENDING | UX-R00; shared row and route interface coordinated with UX-R02. |
 | UX-R02 | Navigation & Interaction Redesign | PLANNED / PENDING | UX-R00; coordinate UX-R01 shared row/icon primitives. |
 | UX-R03 | Home & Whole-App Visual Fidelity | PLANNED / PENDING | UX-R01 and UX-R02; UX-R00 reference gates. |
 | UX-R04 | Accessibility, Adaptive Layout & Lifecycle | PLANNED / PENDING | UX-R03; early checks run throughout R00–R03. |
@@ -486,3 +486,16 @@ PR #30 F07 head `cf24ef942ada487251580dbac9e57d10fc7d13a6`, tree `1e2154f04a0548
 | UXR01-P12 | Old inline multi-workspace controls replaced; framework store and explicitly confirmed safety actions preserved | Existing 38 legacy promise checks; native same-package navigation no-write, isolated workspace fixture pending |
 
 Local verification before packaging: 48 source QA checks and 37 direct JDK diagnostic model test methods passed (private JUnit assertion shim, not hosted JUnit); changed Java source syntax parsed, no local Android compile/Gradle. Exact package validation and native transaction evidence recorded separately. No new permissions, hidden collector, root action or device execution. Import-only evidence is unauthenticated. Real SAF provider, Android lifecycle/visual and physical-device gates remain external. No approval or mutation of a future overlay or release.
+
+## UX-R01-F01 + HL-DIAG-R06-F01 — hosted Java API and persistent Termux login repair
+
+Parent PR #31 head `c78b187c7e6bb715bfcf963858265d6c8c7c3f0e`, tree `202991cd8db399bdc800e22a432181cd0a891cc6`; main remains `b82ba80020920cdc840968a726cf81b707dd09b3`. User transaction `20261125T024154Z-9787df13f3e9`, session `9ff0c7aedce04cf4aa0fe525508998a6` remains historical; never reuse it for a changed head. Design run 45541608275 passed; Android run 45541608367 and Native UI run 45541608500 failed at Java compilation (View/Spinner setMinHeight). No CI24 qualification for this head.
+
+| Promise | Implemented source | Required independent proof |
+|---|---|---|
+| UXR01-F01-P01 | FlatUi and filter Spinner use Android View.setMinimumHeight; preserve 48dp touch geometry | Hosted assemble, lint and real diagnostic fixture |
+| R06-F01-P01 | Fixed Termux login route initializes termux-exec via installed login before persistent interactive login Zsh; no system library path assumptions | Login-aware shell fixture, real external Android Termux command and subsequent command |
+| R06-F01-P02 | Four fixed startup shims, no payload in files, noninteractive probe guard, real zshenv/zprofile/zshrc/zlogin, restored ZDOTDIR, explicit NOART and original exit | Real persistent PTY, startup exactly once, failure and cleanup, custom ZDOTDIR, physical Termux |
+| R06-F01-P03 | Explicit packed white sRGB host Compose terminal tint, modifier-only default mask, unchanged Copy action | Exact pinned DEX signature/mask verification and real host rendering |
+
+Source repair does not certify device runtime or native visual approval. No new permission, implicit command, repository reset, or release.

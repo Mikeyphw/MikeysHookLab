@@ -47,7 +47,7 @@ public final class FlatUi {
         android.util.TypedValue value=new android.util.TypedValue();
         if(row.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground,value,true))
             row.setBackgroundResource(value.resourceId);
-        row.setMinHeight(dp(row,Ui08QualityPolicy.MIN_TOUCH_DP));
+        row.setMinimumHeight(dp(row,Ui08QualityPolicy.MIN_TOUCH_DP));
         androidx.core.view.ViewCompat.setScreenReaderFocusable(row,true);
         row.setFocusable(true);row.setClickable(true);row.setOnClickListener(click);
     }

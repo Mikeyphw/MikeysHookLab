@@ -609,7 +609,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private android.widget.Spinner filterChoice(LinearLayout parent,int title,String[] labels,int selected){
         TextView label=text(getString(title),14);parent.addView(label);android.widget.Spinner spinner=new android.widget.Spinner(this);
-        spinner.setId(View.generateViewId());label.setLabelFor(spinner.getId());spinner.setMinHeight(dp(48));
+        spinner.setId(View.generateViewId());label.setLabelFor(spinner.getId());spinner.setMinimumHeight(dp(48));
         android.widget.ArrayAdapter<String> adapter=new android.widget.ArrayAdapter<>(this,android.R.layout.simple_spinner_item,labels);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);spinner.setAdapter(adapter);
         spinner.setSelection(Math.max(0,selected));parent.addView(spinner,new LinearLayout.LayoutParams(-1,-2));return spinner;
