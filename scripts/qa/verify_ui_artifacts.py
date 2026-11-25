@@ -8,7 +8,7 @@ import argparse,hashlib,json,re,struct,sys,zlib
 from pathlib import Path
 import reference
 
-MAP={'home':'VIS-024','hooks':'VIS-002','diagnostics':'VIS-006'}
+MAP={'home':'VIS-024','hooks':'VIS-002','by-app':'VIS-003','group-detail':'VIS-004','hook-detail':'VIS-005','diagnostics':'VIS-006'}
 def need(ok,msg):
     if not ok:raise ValueError(msg)
 def read(p,max_bytes=12*1024*1024):
@@ -49,14 +49,14 @@ def native(root,folder,source,tree,run,attempt):
     for k in ('app_apk_sha256','installed_apk_sha256','android_test_apk_sha256','installed_test_apk_sha256','debug_certificate_sha256'):need(re.fullmatch('[a-f0-9]{64}',r.get(k,'')),'invalid APK receipt')
     need(r['app_apk_sha256']==r['installed_apk_sha256'] and r['android_test_apk_sha256']==r['installed_test_apk_sha256'],'installed APK drift');validate_receipt_files(nat,r)
     need(v['schema']=='hooklab.visual.candidate.v1' and all(v.get(k)==x for k,x in ident.items() if k!='schema') and v['status']=='CANDIDATE_COMPARISON_ONLY' and v['native_goldens_approved'] is False,'visual receipt drift')
-    need(v['coverage']=={'reference_cases':24,'candidate_comparisons':3,'approved_cases':0} and v['uncompared_cases']==sorted(set(f'VIS-{i:03}' for i in range(1,25))-set(MAP.values())),'coverage/approval drift')
+    need(v['coverage']=={'reference_cases':24,'candidate_comparisons':len(MAP),'approved_cases':0} and v['uncompared_cases']==sorted(set(f'VIS-{i:03}' for i in range(1,25))-set(MAP.values())),'coverage/approval drift')
     need(v['reference_manifest_sha256']==sha(ref/'first/manifest.json') and v['native_receipt_sha256']==sha(nat/'receipt.json') and v['contract_sha256']==sha(root/'design/hooklab/02_CONTRACT/visual-contract.json') and v['browser_semantic_roster_sha256']==reference.ROSTER_SHA256,'report binding drift')
     need(v['repeat_calibration']==r['repeat_calibration'],'repeat report binding drift');need([x['route'] for x in v['cases']]==list(MAP),'native report roster drift');roster(report,['visual-report.json',*(i+'-triptych.png' for i in MAP)])
     seen=set()
     for row in v['cases']:
         route=row['route'];png(nat/(route+'-repeat.png'),(780,1688));h=png(nat/(route+'.png'),(780,1688));need(h not in seen and r['screenshots'][route]=={'png':h,'geometry':sha(nat/(route+'.json'))},'native screenshot/geometry drift');seen.add(h)
         need(row['reference_case']==MAP[route] and row['native_sha256']==h and row['reference_sha256']==sha(ref/'first'/(MAP[route]+'.png')) and row['triptych_sha256']==png(report/(route+'-triptych.png'),(1170,868)) and row['visual_approved'] is False and row['fixture_equivalence'] is False,'triptych/approval drift')
-    return {'status':'NATIVE_CANDIDATE_EVIDENCE_REHASHED','source_sha':source,'source_tree':tree,'run_id':str(run),'run_attempt':str(attempt),'candidate_comparisons':3,'approved_cases':0,'native_visual_approved':False,'physical_device_qualified':False,'release_qualified':False,'report_sha256':sha(report/'visual-report.json')}
+    return {'status':'NATIVE_CANDIDATE_EVIDENCE_REHASHED','source_sha':source,'source_tree':tree,'run_id':str(run),'run_attempt':str(attempt),'candidate_comparisons':len(MAP),'approved_cases':0,'native_visual_approved':False,'physical_device_qualified':False,'release_qualified':False,'report_sha256':sha(report/'visual-report.json')}
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['design','native']);p.add_argument('--root',type=Path,required=True);p.add_argument('--artifacts',type=Path,required=True);p.add_argument('--source',required=True);p.add_argument('--tree');p.add_argument('--run-id');p.add_argument('--attempt');a=p.parse_args()

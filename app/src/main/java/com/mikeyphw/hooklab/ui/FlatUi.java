@@ -45,8 +45,8 @@ public final class FlatUi {
     /** Native compact navigation row: one action, no preference mutation. */
     public static void actionRow(View row,View.OnClickListener click){
         android.util.TypedValue value=new android.util.TypedValue();
-        if(row.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground,value,true))
-            row.setBackgroundResource(value.resourceId);
+        if(row.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground,value,true)&&value.resourceId!=0)
+            row.setForeground(androidx.appcompat.content.res.AppCompatResources.getDrawable(row.getContext(),value.resourceId));
         row.setMinimumHeight(dp(row,Ui08QualityPolicy.MIN_TOUCH_DP));
         androidx.core.view.ViewCompat.setScreenReaderFocusable(row,true);
         row.setFocusable(true);row.setClickable(true);row.setOnClickListener(click);

@@ -86,10 +86,13 @@ def run(root,out,shard,source,run_id,attempt):
     require(not out.exists(),'fresh shard output required');out.mkdir(parents=True)
     receipt={'schema':SCHEMA,**ident,'shard':shard,'shards':SHARDS,'classes':expected,'status':'NOT_RUN','release_qualified':False,'physical_device_qualified':False}
     dump(out/'receipt.json',receipt)
-    cmd=['bash','gradlew','--no-daemon','--console=plain',':app:testDebugUnitTest']
+    cmd=['bash','scripts/ci_gradle_retry.sh','bash','gradlew','--no-daemon','--console=plain',':app:testDebugUnitTest']
     for name in expected:cmd+=['--tests',name]
     print('CI24 START',shard,', '.join(expected),flush=True)
-    rc=subprocess.run(cmd,cwd=root,timeout=3000,check=False).returncode
+    try:
+        rc=subprocess.run(cmd,cwd=root,timeout=3000,check=False,env={**os.environ,'HOOKLAB_CI_RETRY_PROFILE':'native'}).returncode
+    except subprocess.TimeoutExpired:
+        receipt['status']='FAIL_TIMEOUT';dump(out/'receipt.json',receipt);return 124
     receipt['gradle_exit']=rc
     if rc:
         receipt['status']='FAIL_GRADLE';dump(out/'receipt.json',receipt);return rc if rc>=0 else 128-rc
@@ -134,12 +137,29 @@ def summarize(root,artifacts,out,source,run_id,attempt,verify_existing=False):
     else:dump(out,s)
     print(json.dumps(s,sort_keys=True),flush=True);return 0
 
+def failed_summary(root,artifacts,out,source,run_id,attempt,matrix_status):
+    ident=identity(root,source,run_id,attempt);inv=inventory(root)
+    prefix=f'hooklab-ci24-{run_id}-{attempt}-shard-';rows=[]
+    for shard in range(1,SHARDS+1):
+        folder=artifacts/(prefix+str(shard))
+        try:
+            require(folder.is_dir() and not folder.is_symlink(),'missing shard')
+            row=verify_shard(folder,assignment(inv,shard),ident,shard)
+            rows.append({**row,'status':'VERIFIED_PASS'})
+        except (ValueError,OSError,TypeError,KeyError,ET.ParseError):
+            rows.append({'shard':shard,'status':'MISSING' if not folder.exists() else 'INVALID_OR_FAILED'})
+    dump(out,{'schema':SUMMARY,**ident,'overall':'FAIL_CI24_VERIFICATION','matrix_status':matrix_status if matrix_status in ('success','failure','cancelled','skipped') else 'unknown','shard_count':SHARDS,'shards':rows,'release_qualified':False,'physical_device_qualified':False,'emulator_ui_qualified':False})
+
 def main():
-    a=argparse.ArgumentParser();a.add_argument('command',choices=['inventory','run','summarize','verify']);a.add_argument('--root',type=Path,default=Path.cwd());a.add_argument('--out',type=Path);a.add_argument('--artifacts',type=Path);a.add_argument('--shard',type=int);a.add_argument('--source',default=os.getenv('GITHUB_SHA'));a.add_argument('--run-id',default=os.getenv('GITHUB_RUN_ID'));a.add_argument('--attempt',default=os.getenv('GITHUB_RUN_ATTEMPT'));v=a.parse_args()
+    a=argparse.ArgumentParser();a.add_argument('command',choices=['inventory','run','summarize','verify']);a.add_argument('--root',type=Path,default=Path.cwd());a.add_argument('--out',type=Path);a.add_argument('--artifacts',type=Path);a.add_argument('--shard',type=int);a.add_argument('--source',default=os.getenv('GITHUB_SHA'));a.add_argument('--run-id',default=os.getenv('GITHUB_RUN_ID'));a.add_argument('--attempt',default=os.getenv('GITHUB_RUN_ATTEMPT'));a.add_argument('--matrix-status',default='success');v=a.parse_args()
     try:
         if v.command=='inventory':print(json.dumps(inventory(v.root),indent=2));return 0
         if v.command=='run':return run(v.root,v.out,v.shard,v.source,v.run_id,v.attempt)
+        if v.command=='summarize':require(v.matrix_status=='success','hosted matrix unsuccessful')
         return summarize(v.root,v.artifacts,v.out,v.source,v.run_id,v.attempt,v.command=='verify')
     except (ValueError,OSError,TypeError,KeyError,subprocess.SubprocessError,ET.ParseError) as e:
+        if v.command=='summarize' and v.artifacts is not None and v.out is not None:
+            try:failed_summary(v.root,v.artifacts,v.out,v.source,v.run_id,v.attempt,v.matrix_status)
+            except (ValueError,OSError,TypeError,KeyError,subprocess.SubprocessError,ET.ParseError):pass
         print('CI24_REFUSED',str(e),file=sys.stderr);return 2
 if __name__=='__main__':raise SystemExit(main())

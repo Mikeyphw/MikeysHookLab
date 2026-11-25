@@ -39,12 +39,13 @@ import static org.junit.Assert.*;
 public final class FrameworkFixtureTest {
     private static final String NEO="neostore.obtainx.manual", DROID="droidify.obtainx.manual";
     private static final String PKG="com.machiav3lli.fdroid";
-    private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","capture_restart_same_route","health_exact_same_package_routes","health_navigation_no_writes","no_real_framework"};
+    private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","capture_restart_same_route","health_exact_same_package_routes","health_navigation_no_writes","filtered_multi_app_route","catalog_recreate_and_return","catalog_navigation_no_writes","installed_package_icon_identity","missing_and_unknown_icon_states","no_real_framework"};
     private static final class FakePort implements UiEnvironment.Port {
         final SharedPreferences flags,safety;
         final Set<String> scope=ConcurrentHashMap.newKeySet();
         final AtomicReference<UiEnvironment.ScopeListener> pending=new AtomicReference<>();
         final AtomicInteger writes=new AtomicInteger();
+        final AtomicInteger scopeCalls=new AtomicInteger();
         volatile boolean denyWrite;
         volatile String requested;
         FakePort(HookLabApp app,String name){
@@ -75,10 +76,10 @@ public final class FrameworkFixtureTest {
             });
         }
         @Override public void requestScope(List<String> packages,UiEnvironment.ScopeListener cb){
-            assertEquals(Collections.singletonList(PKG),packages);requested=packages.get(0);
+            scopeCalls.incrementAndGet();assertEquals(Collections.singletonList(PKG),packages);requested=packages.get(0);
             assertTrue(pending.compareAndSet(null,cb));
         }
-        @Override public void removeScope(List<String> packages){scope.removeAll(packages);}
+        @Override public void removeScope(List<String> packages){scopeCalls.incrementAndGet();scope.removeAll(packages);}
         void answer(boolean approved){
             UiEnvironment.ScopeListener cb=pending.getAndSet(null);assertNotNull(cb);
             if(approved){scope.add(requested);cb.onScopeRequestApproved(Collections.singletonList(requested));}
@@ -134,6 +135,10 @@ public final class FrameworkFixtureTest {
     private static void readyText(ActivityScenario<MainActivity> s,HookLabApp app,int id)throws Exception{
         String label=app.getString(id);await(s,v->v instanceof TextView&&label.contentEquals(((TextView)v).getText())&&v.isEnabled());
     }
+    private static android.graphics.Bitmap iconPixels(android.graphics.drawable.Drawable drawable){
+        android.graphics.Bitmap image=android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);
+        drawable.setBounds(0,0,64,64);drawable.draw(new android.graphics.Canvas(image));return image;
+    }
     private static void press(int id){onView(withText(id)).perform(scrollTo(),click());}
     @Test public void connectedCommandsStaleCallbackAndClock()throws Exception{
         String stage="FRAMEWORK_SETUP";
@@ -159,10 +164,45 @@ public final class FrameworkFixtureTest {
             press(R.string.scope_add);awaitPending(replacement);replacement.answer(true);readyText(s,app,R.string.scope_remove);assertEquals(Collections.singleton(PKG),replacement.scope);
             stage="FRAMEWORK_GROUP";
             // Actual native group page uses the supplied presentation catalog.
-            press(R.string.ui05_group_details);
+            int beforeNavigation=replacement.writes.get(),beforeScope=replacement.scopeCalls.get();
+            press(R.string.ui_group_obtainx);
             assertEquals(2,env.entries().size());assertEquals(1,HookGroupCatalog.groups(env.all()).get(0).packages.size());
-            await(s,v->v instanceof TextView&&PKG.contentEquals(((TextView)v).getText()));
-            s.onActivity(a->{View root=a.getWindow().getDecorView();assertEquals(2,count(root,v->v instanceof TextView&&a.getString(R.string.ui05_open_hook).contentEquals(((TextView)v).getText())));assertEquals(1,count(root,v->v instanceof TextView&&a.getString(R.string.scope_remove).contentEquals(((TextView)v).getText())));});
+            await(s,v->v instanceof TextView&&((TextView)v).getText().toString().contains(PKG));
+            s.onActivity(a->{View root=a.getWindow().getDecorView();
+                for(TweakEngine.Entry<HookContext> e:env.entries())assertEquals(1,count(root,v->v instanceof TextView&&e.title.contentEquals(((TextView)v).getText())));
+                assertEquals(0,count(root,v->v instanceof TextView&&a.getString(R.string.ui05_open_hook).contentEquals(((TextView)v).getText())));
+                assertEquals(1,count(root,v->v instanceof TextView&&a.getString(R.string.scope_remove).contentEquals(((TextView)v).getText())));});
+            for(TweakEngine.Entry<HookContext> e:env.entries()){
+                onView(withText(e.title)).perform(scrollTo(),click());
+                s.onActivity(a->{View root=a.getWindow().getDecorView();assertEquals(1,count(root,v->v instanceof com.google.android.material.appbar.MaterialToolbar&&a.getString(R.string.r02_hook_configuration).contentEquals(((com.google.android.material.appbar.MaterialToolbar)v).getTitle())));assertEquals(1,count(root,v->v instanceof TextView&&e.title.contentEquals(((TextView)v).getText())));});
+                androidx.test.espresso.Espresso.pressBack();
+            }
+            assertEquals(beforeNavigation,replacement.writes.get());assertEquals(beforeScope,replacement.scopeCalls.get());assertEquals(Collections.singleton(PKG),replacement.scope);assertNull(replacement.pending.get());
+            stage="R02_ICON_PROVIDER";
+            s.onActivity(a->{
+                AppIconProvider icons=new AppIconProvider(a,Set.of(a.getPackageName(),PKG));
+                AppIconProvider.Entry actual=icons.load(a.getPackageName());
+                assertEquals(AppIconProvider.Availability.AVAILABLE,actual.availability);assertNotNull(actual.drawable);
+                try{android.graphics.drawable.Drawable expected=a.getPackageManager().getApplicationIcon(a.getPackageName());
+                    assertTrue(iconPixels(actual.drawable).sameAs(iconPixels(expected)));
+                    AppIconProvider.Entry repeated=icons.load(a.getPackageName());assertNotSame(actual.drawable,repeated.drawable);
+                    icons.invalidate(a.getPackageName());assertTrue(iconPixels(icons.load(a.getPackageName()).drawable).sameAs(iconPixels(expected)));
+                }catch(android.content.pm.PackageManager.NameNotFoundException absent){throw new AssertionError(absent);}
+                assertEquals(AppIconProvider.Availability.NOT_INSTALLED,icons.load(PKG).availability);
+                assertEquals(AppIconProvider.Availability.UNKNOWN,icons.load("com.hooklab.unreviewed.fixture").availability);
+            });
+            stage="R02_CATALOG_ROUTES";
+            androidx.test.espresso.Espresso.pressBack();
+            onView(withId(202)).perform(click());
+            press(R.string.ui_by_app);
+            onView(withHint(R.string.ui_search_hooks)).perform(replaceText("Neo Store"),closeSoftKeyboard());
+            onView(withContentDescription(org.hamcrest.Matchers.startsWith(PKG+", "))).perform(scrollTo(),click());
+            s.onActivity(a->{View root=a.getWindow().getDecorView();for(TweakEngine.Entry<HookContext> e:env.entries())assertEquals(1,count(root,v->v instanceof TextView&&e.title.contentEquals(((TextView)v).getText())));});
+            s.recreate();
+            s.onActivity(a->{View root=a.getWindow().getDecorView();for(TweakEngine.Entry<HookContext> e:env.entries())assertEquals(1,count(root,v->v instanceof TextView&&e.title.contentEquals(((TextView)v).getText())));});
+            androidx.test.espresso.Espresso.pressBack();
+            onView(withHint(R.string.ui_search_hooks)).check(androidx.test.espresso.assertion.ViewAssertions.matches(withText("Neo Store")));
+            assertEquals(beforeNavigation,replacement.writes.get());assertEquals(beforeScope,replacement.scopeCalls.get());assertEquals(Collections.singleton(PKG),replacement.scope);assertNull(replacement.pending.get());
             stage="HEALTH_EXACT_ROUTE";
             int beforeHealth=replacement.writes.get();
             onView(withId(203)).perform(click());press(R.string.r01_health);

@@ -33,7 +33,7 @@ class VisualReportChecks(unittest.TestCase):
             calibrations={route:{'changed_pixel_ratio':0.0,'ssim':1.0,'mean_abs_rgb':0.0,'max_rgb_delta':0} for route in visual.MAP}
             visual.dump(nat/'receipt.json',{**ident,'status':'BASELINE_PASS_NOT_VISUAL_APPROVAL','tests':native_smoke.TESTS,**{n.replace('-','_')+'_sha256':visual.digest(nat/(n+'.json')) for n in ('fixture','framework-fixture','release-isolation','environment')},'app_apk_sha256':'a'*64,'installed_apk_sha256':'a'*64,'android_test_apk_sha256':'b'*64,'installed_test_apk_sha256':'b'*64,'debug_certificate_sha256':'c'*64,'screenshots':records,'repeat_screenshots':records,'repeat_calibration':calibrations})
             with patch.object(native_smoke,'expected_identity',return_value=ident):
-                report=visual.evaluate(ROOT,ref,nat,out);self.assertEqual(report['coverage'],{'reference_cases':24,'candidate_comparisons':3,'approved_cases':0});self.assertFalse(report['visual_approved']);self.assertTrue(all(not x['semantic_controls'][0]['within_candidate_tolerance'] for x in report['cases']))
+                report=visual.evaluate(ROOT,ref,nat,out);self.assertEqual(report['coverage'],{'reference_cases':24,'candidate_comparisons':len(visual.MAP),'approved_cases':0});self.assertFalse(report['visual_approved']);self.assertTrue(all(not x['semantic_controls'][0]['within_candidate_tolerance'] for x in report['cases']))
                 self.assertEqual(visual.evaluate(ROOT,ref,nat,out,True),report)
                 # Same stdlib rehash function that the operator invokes after exact
                 # GitHub run/job/attempt observation, no Pillow in verifier itself.

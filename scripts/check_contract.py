@@ -278,7 +278,7 @@ check('selectedHookId = entry.spec.id' in main_source
     and (r/'app/src/test/java/com/mikeyphw/hooklab/core/HookDetailRouteTest.java').is_file(),
     'UI-04/UI-05 independent hook-ID routing and invalid-selection rejection')
 check('appearance.edit().putInt(UI04_VIEW_KEY, mode).apply()' in main_source
-    and 'appearance.edit().putString(UI04_QUERY_KEY, catalogQuery).apply()' in main_source
+    and 'appearance.edit().putString(UI04_QUERY_KEY, catalogQuery).remove("catalog.search.collapsed").apply()' in main_source
     and 'HookGroupCatalog.groups(environment.all())' in main_source,
     'UI-04 local group/app persistence and catalog discovery')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/core/HookGroupCatalogTest.java').is_file(),
@@ -290,7 +290,7 @@ main_ui05 = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 store_ui05 = read('app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkStateStore.java')
 check('HookDetailRoute.hook(environment.all(), selectedHookId)' in main_ui05
       and 'HookDetailRoute.group(HookGroupCatalog.groups(environment.all()), selectedGroupId)' in main_ui05
-      and 'page == APP_DETAIL || page == APPS || page == GROUP_DETAIL ? NAV_APPS' in main_ui05,
+      and 'page == APP_DETAIL || page == APPS || page == GROUP_DETAIL || page==PACKAGE_DETAIL ? NAV_APPS' in main_ui05,
       'UI-05 exact hook/group identity and Hooks nav')
 check('group.packages' in main_ui05 and 'removeScope(expected, pkg)' in main_ui05
       and 'requestScope(expected, pkg)' in main_ui05
@@ -301,7 +301,7 @@ check('saved = prefs != null && prefs.edit().putBoolean(key, value).commit()' in
       and 'refresh(); // Re-read framework truth' in store_ui05,
       'UI-05 framework remote preference commit/readback source contract')
 check('showGroup(HookGroupCatalog.Group group)' in main_ui05
-      and 'goTo(GROUP_DETAIL); // Navigation only' in main_ui05
+      and 'goTo(GROUP_DETAIL,true)' in main_ui05
       and 'selectedHookId = entry.spec.id' in main_ui05
       and 'HookDetailRoute.hook(environment.all(), requested) != null' in main_ui05
       and 'new androidx.appcompat.app.AlertDialog.Builder(this)' in main_ui05,
@@ -399,7 +399,7 @@ check('spec.id.equals(event.hookId)' in health_model
       'DX-03 exact-ID source/error attribution and collector-gap disclosure')
 check('v->goTo(CAPTURE)' in health_ui
       and 'openHookHealth(TweakSpec spec)' in health_ui
-      and 'goTo(HEALTH_REPORT)' in health_ui
+      and 'goTo(HEALTH_REPORT,true)' in health_ui
       and 'showApp(entry)' in health_ui
       and 'copyDiagnosticText(redacted)' in health_ui,
       'DX-03 real safe setup/capture/evidence navigation and redacted copy')
@@ -438,7 +438,7 @@ check('getPackageInfo(' in ui07_main and 'GET_SIGNING_CERTIFICATES' in ui07_main
       'UI-07 P03 runtime app identity, signing fingerprint, privacy and native Help')
 check('case HELP: helpPage(); break;' in ui07_main
       and 'out.putInt("page", page)' in ui07_main
-      and 'Math.min(EVENT_REPORT, state.getInt("page"))' in ui07_main
+      and 'Math.min(PACKAGE_DETAIL, state.getInt("page"))' in ui07_main
       and 'out.putInt("helpReturnPage", helpReturnPage)' in ui07_main
       and 'status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE)' in ui07_mcc
       and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui07ScopeModelTest.java').is_file()
