@@ -77,6 +77,23 @@ public final class NativeBaselineTest {
         final Bitmap screenshot; final JSONObject geometry;
         SettledCapture(Bitmap screenshot,JSONObject geometry){this.screenshot=screenshot;this.geometry=geometry;}
     }
+    // Force each sample to observe a newly submitted hardware-rendered frame,
+    // not repeated readback of one retained surface buffer. No pixel editing.
+    private static void awaitCommittedFrame(ActivityScenario<MainActivity> scenario) throws Exception {
+        java.util.concurrent.CountDownLatch committed=new java.util.concurrent.CountDownLatch(1);
+        scenario.onActivity(a->{
+            View decor=a.getWindow().getDecorView();
+            assertTrue("Hardware rendering required",decor.isHardwareAccelerated());
+            android.view.ViewTreeObserver observer=decor.getViewTreeObserver();
+            assertTrue(observer.isAlive());
+            observer.registerFrameCommitCallback(committed::countDown);
+            decor.invalidate();
+        });
+        assertTrue("Fresh frame was not committed",committed.await(2,java.util.concurrent.TimeUnit.SECONDS));
+        // Frame commit signals submission, not display presentation. Give the
+        // compositor time to latch the frame before the ordinary screenshot.
+        Thread.sleep(100);
+    }
     private static SettledCapture settledScreenshot(ActivityScenario<MainActivity> scenario,String name,int menu,int title) throws Exception {
         var ins=InstrumentationRegistry.getInstrumentation();
         final long[] fade={0};
@@ -90,6 +107,7 @@ public final class NativeBaselineTest {
         Bitmap previous=null;String previousGeometry=null;int consecutive=0;
         try{
             do{
+                awaitCommittedFrame(scenario);
                 ins.waitForIdleSync();UiDevice.getInstance(ins).waitForIdle(1000);
                 JSONObject before=captureGeometry(scenario,name,menu,title);
                 JSONArray insets=before.getJSONArray("insets_px");int[] bounds=new int[4];for(int n=0;n<4;n++)bounds[n]=insets.getInt(n);

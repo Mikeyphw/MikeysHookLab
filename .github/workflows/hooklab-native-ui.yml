@@ -69,7 +69,7 @@ jobs:
           ram-size: 2048M
           disk-size: 3072M
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           script: python3 -B scripts/qa/native_smoke.py run --out "$RUNNER_TEMP/hooklab-native-smoke"
       - name: Independently verify screenshot hashes, identity and route evidence
         run: python3 -B scripts/qa/native_smoke.py verify --out "$RUNNER_TEMP/hooklab-native-smoke"

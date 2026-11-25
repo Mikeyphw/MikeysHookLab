@@ -130,7 +130,7 @@ class FoundationTests(unittest.TestCase):
             for key,package in native_smoke.SDK_PACKAGES.items():
                 folder=sdk/package;folder.mkdir(parents=True)
                 (folder/'source.properties').write_text('Pkg.Desc=SDK fixture\nPkg.Revision=37.3.10\nPkg.Path='+package.replace('/',';')+'\n')
-            with patch.object(native_smoke.subprocess,'check_output',side_effect=AssertionError('emulator process forbidden')),patch.object(native_smoke,'txt',side_effect=lambda *a:{'ro.build.version.sdk':'36','ro.product.cpu.abi':'x86_64','ro.kernel.qemu':'1','ro.build.fingerprint':'fixture/fingerprint'}[a[-1]]),patch.dict(native_smoke.os.environ,{'ANDROID_HOME':str(sdk)}):
+            with patch.object(native_smoke.subprocess,'check_output',side_effect=AssertionError('emulator process forbidden')),patch.object(native_smoke,'txt',side_effect=lambda *a:{'ro.build.version.sdk':'36','ro.product.cpu.abi':'x86_64','ro.kernel.qemu':'1','ro.build.fingerprint':'fixture/fingerprint','debug.hwui.renderer':'skiagl','SurfaceFlinger':'GLES: Google, Android Emulator OpenGL ES Translator (Google SwiftShader), OpenGL ES 3.0'}[a[-1]]),patch.dict(native_smoke.os.environ,{'ANDROID_HOME':str(sdk)}):
                 proof=native_smoke.environment()
             self.assertEqual(proof['emulator_version'],'sdk-package:37.3.10')
             native_smoke.validate_environment(proof)
@@ -144,6 +144,34 @@ class FoundationTests(unittest.TestCase):
             with self.assertRaises(ValueError):native_smoke.sdk_environment(sdk)
             file.symlink_to(sdk/'platform-tools/source.properties')
             with self.assertRaises(ValueError):native_smoke.sdk_environment(sdk)
+    def test_guest_renderer_identity_and_refusal(self):
+        from unittest.mock import patch
+        fixture='GLES: Google, Android Emulator OpenGL ES Translator (Google SwiftShader), OpenGL ES 3.0'
+        self.assertEqual(native_smoke.gles_backend(fixture),'swiftshader')
+        for bad in ('','GLES: Mesa, llvmpipe','GLES: SwiftShader\nGLES: host','GLES: '+'x'*600+'SwiftShader'):
+            with self.subTest(bad=bad),self.assertRaises(ValueError):native_smoke.gles_backend(bad)
+        with patch.object(native_smoke,'txt',side_effect=['other','skiagl',fixture]),patch.object(native_smoke,'adb') as command:
+            self.assertEqual(native_smoke.configure_renderer()['hwui_renderer'],'skiagl')
+            command.assert_called_once_with('shell','setprop','debug.hwui.renderer','skiagl')
+        with patch.object(native_smoke,'txt',side_effect=['skiagl','skiagl',fixture]),patch.object(native_smoke,'adb') as command:
+            self.assertEqual(native_smoke.configure_renderer()['gles_backend'],'swiftshader')
+            command.assert_not_called()
+        with patch.object(native_smoke,'txt',side_effect=['other','other']),patch.object(native_smoke,'adb'):
+            with self.assertRaises(ValueError):native_smoke.configure_renderer()
+    def test_capture_and_functional_gates_remain_mandatory(self):
+        import inspect
+        s=inspect.getsource(native_smoke.run)
+        self.assertLess(s.index('instrument(TEST)'),s.index('instrument(FIXTURE)'))
+        self.assertLess(s.index('instrument(TERMUX_TEST)'),s.index('repeat=compare_native_repeats'))
+        self.assertLess(s.index('repeat=compare_native_repeats'),s.index("'BASELINE_PASS_NOT_VISUAL_APPROVAL'"))
+        self.assertEqual(s.count('instrument(TEST)'),2)
+        self.assertEqual(s.count('renderer_environment()==configured_renderer'),2)
+        w=next((ROOT/'.github/workflows').glob('*native*')).read_text()
+        self.assertIn('-gpu swiftshader -feature -Vulkan -no-snapshot',w)
+        self.assertNotIn('swiftshader_indirect',w)
+        n=(ROOT/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/NativeBaselineTest.java').read_text()
+        for marker in ('registerFrameCommitCallback(committed::countDown)','decor.invalidate()','committed.await(2,java.util.concurrent.TimeUnit.SECONDS)','awaitCommittedFrame(scenario)','getUiAutomation().takeScreenshot()','previous.sameAs(cropped)','consecutive>=3'):
+            self.assertIn(marker,n)
     def test_sdk_revision_accepts_standard_sdk_revisions(self):
         with tempfile.TemporaryDirectory() as tmp:
             sdk=Path(tmp);folder=sdk/'emulator';folder.mkdir();file=folder/'source.properties'

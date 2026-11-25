@@ -12,6 +12,10 @@ class VisualImageTest(unittest.TestCase):
         b=Image.new('RGB',self.a.size,(13,18,20));ImageDraw.Draw(b).rectangle((10,18,90,38),fill=(183,236,203));self.assertRaisesRegex(ValueError,'image regression',visual.strict_regression,self.c,self.c,self.a,b,self.tol)
     def test_changed_color_refused(self):
         b=self.a.copy();ImageDraw.Draw(b).rectangle((10,10,90,30),fill=(1,2,3));self.assertRaisesRegex(ValueError,'image regression',visual.strict_regression,self.c,self.c,self.a,b,self.tol)
+    def test_subtle_raster_drift_is_not_a_pass(self):
+        b=self.a.copy();ImageDraw.Draw(b).rectangle((10,10,40,30),fill=(184,237,204))
+        m=visual.metrics(self.a,b);self.assertGreater(m['changed_pixel_ratio'],.01);self.assertGreater(m['ssim'],.99);self.assertEqual(m['max_rgb_delta'],1)
+        self.assertRaisesRegex(ValueError,'image regression',visual.strict_regression,self.c,self.c,self.a,b,self.tol)
     def test_wrong_size_refused(self):self.assertRaisesRegex(ValueError,'dimensions',visual.metrics,self.a,Image.new('RGB',(99,120)))
     def test_geometry_fails_even_if_image_same(self):
         c=copy.deepcopy(self.c);c['title']['bounds'][1]+=3;self.assertRaisesRegex(ValueError,'geometry',visual.strict_regression,self.c,c,self.a,self.a,self.tol)

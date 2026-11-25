@@ -168,8 +168,27 @@ def sdk_environment(sdk):
     revisions['emulator_version']='sdk-package:'+revisions['emulator_version']
     return revisions
 
+# One measured GLES backend, not a claim inferred from the workflow command.
+# The renderer is verified on the already booted guest; never start a second emulator.
+RENDERER_PROFILE='swiftshader-gles-skiagl-coldboot-v1'
+def gles_backend(surfaceflinger):
+    lines=re.findall(r'(?m)^\s*GLES:\s*([^\r\n]+)$',surfaceflinger)
+    require(len(lines)==1 and 0<len(lines[0])<=512 and 'swiftshader' in lines[0].lower(),'unexpected guest GLES backend')
+    return 'swiftshader'
+
+def configure_renderer():
+    if txt('shell','getprop','debug.hwui.renderer')!='skiagl':
+        adb('shell','setprop','debug.hwui.renderer','skiagl')
+    return renderer_environment()
+
+def renderer_environment():
+    renderer=txt('shell','getprop','debug.hwui.renderer')
+    require(renderer=='skiagl','unexpected guest HWUI renderer')
+    return {'renderer_profile':RENDERER_PROFILE,'hwui_renderer':renderer,'gles_backend':gles_backend(txt('shell','dumpsys','SurfaceFlinger'))}
+
 def validate_environment(e):
-    require(set(e)=={'api','abi','serial','qemu','fingerprint','emulator_version','platform_tools_revision','system_image_revision','width_px','height_px','density_dpi','font_scale','offline'} and e['api']=='36' and e['abi']=='x86_64' and e['qemu']=='1' and e['serial']==SERIAL and e['offline'] is True and [e['width_px'],e['height_px'],e['density_dpi'],e['font_scale']]==[780,1688,320,1.0],'environment evidence drift')
+    require(set(e)=={'api','abi','serial','qemu','fingerprint','emulator_version','platform_tools_revision','system_image_revision','width_px','height_px','density_dpi','font_scale','offline','renderer_profile','hwui_renderer','gles_backend'} and e['api']=='36' and e['abi']=='x86_64' and e['qemu']=='1' and e['serial']==SERIAL and e['offline'] is True and [e['width_px'],e['height_px'],e['density_dpi'],e['font_scale']]==[780,1688,320,1.0],'environment evidence drift')
+    require(e['renderer_profile']==RENDERER_PROFILE and e['hwui_renderer']=='skiagl' and e['gles_backend']=='swiftshader','renderer evidence drift')
     require(isinstance(e['fingerprint'],str) and 0<len(e['fingerprint'])<=256,'invalid emulator fingerprint')
     version=e['emulator_version'];require(isinstance(version,str) and version.startswith('sdk-package:') and SDK_REVISION.fullmatch(version.removeprefix('sdk-package:')) is not None,'invalid emulator package evidence')
     for key in ('platform_tools_revision','system_image_revision'):
@@ -177,7 +196,7 @@ def validate_environment(e):
 
 def environment():
     sdk=Path(os.environ['ANDROID_HOME']);revisions=sdk_environment(sdk)
-    value={'api':txt('shell','getprop','ro.build.version.sdk'),'abi':txt('shell','getprop','ro.product.cpu.abi'),'serial':SERIAL,'qemu':txt('shell','getprop','ro.kernel.qemu'),'fingerprint':txt('shell','getprop','ro.build.fingerprint'),**revisions,'width_px':780,'height_px':1688,'density_dpi':320,'font_scale':1.0,'offline':True}
+    value={'api':txt('shell','getprop','ro.build.version.sdk'),'abi':txt('shell','getprop','ro.product.cpu.abi'),'serial':SERIAL,'qemu':txt('shell','getprop','ro.kernel.qemu'),'fingerprint':txt('shell','getprop','ro.build.fingerprint'),**revisions,**renderer_environment(),'width_px':780,'height_px':1688,'density_dpi':320,'font_scale':1.0,'offline':True}
     validate_environment(value)
     print('SDK_PACKAGE_REVISIONS_VERIFIED '+json.dumps(revisions,sort_keys=True),flush=True)
     return value
@@ -192,7 +211,7 @@ FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','H
 # Restrict exported frames to our three instrumentation classes. Raw stack/message/UI text
 # can contain private or attacker-controlled data; it is never written or printed.
 FRAME_CLASSES={t.split('#')[0]:t.split('#')[0].rsplit('.',1)[-1]+'.java' for t in TESTS}
-SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock','press','readyText','switchState','await','awaitPending','settledScreenshot','captureGeometry','syntheticAuthorizationAndReceipt'))
+SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock','press','readyText','switchState','await','awaitPending','settledScreenshot','awaitCommittedFrame','captureGeometry','syntheticAuthorizationAndReceipt'))
 SAFE_EXCEPTION_TYPES=frozenset(('java.lang.AssertionError','java.lang.IllegalStateException','java.lang.IllegalArgumentException','java.lang.NullPointerException','java.lang.RuntimeException','java.lang.SecurityException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.AppNotIdleException','androidx.test.espresso.NoActivityResumedException','androidx.test.espresso.base.RootViewPicker$RootViewWithoutFocusException'))
 
 def failure_details(output,test_id,ordinal,completed,rc,reason):
@@ -251,7 +270,7 @@ def compare_native_repeats(out,ident,completed,records,repeat_records):
         except (OSError,ValueError,KeyError,TypeError,AssertionError):
             failures.append(name);repeat_details.setdefault(name,{'status':'INVALID_OR_INCONSISTENT_CAPTURE'})
     if failures:
-        receipt={**ident,'status':'NATIVE_REPEAT_FAILED','completed_tests':completed,'failed_routes':failures,'screenshots':records,'repeat_screenshots':repeat_records,'repeat_details':repeat_details,'tolerances':tolerances}
+        receipt={**ident,'status':'NATIVE_REPEAT_FAILED','completed_tests':completed,'failed_routes':failures,'screenshots':records,'repeat_screenshots':repeat_records,'repeat_details':repeat_details,'tolerances':tolerances,'fixture_sha256':digest(out/'fixture.json'),'framework_fixture_sha256':digest(out/'framework-fixture.json'),'environment_sha256':digest(out/'environment.json')}
         (out/'receipt.json').write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
         print('NATIVE_REPEAT_FAILED '+json.dumps({'routes':failures,'details':repeat_details},sort_keys=True),file=sys.stderr,flush=True)
         raise ValueError('native repeat regression '+','.join(failures))
@@ -259,6 +278,7 @@ def compare_native_repeats(out,ident,completed,records,repeat_records):
 
 def run(out):
     ident=expected_identity();require(not out.exists(),'fresh output required');out.mkdir(parents=True);(out/'receipt.json').write_text(json.dumps({**ident,'status':'IN_PROGRESS','completed_tests':[]}));guard()
+    configured_renderer=configure_renderer()
     for name in (PKG,PKG+'.test'):
         res=subprocess.run(['adb','-s',SERIAL,'shell','pm','path',name],capture_output=True,text=True,timeout=20);require(not res.stdout.strip(),'preexisting app refused')
     app=one('app/build/outputs/apk/debug/*.apk');test=one('app/build/outputs/apk/androidTest/debug/*.apk')
@@ -273,7 +293,7 @@ def run(out):
     from release_isolation import check as release_check
     release=one('app/build/outputs/apk/release/*.apk');isolation=release_check(app,release,test)
     def dump(path,value):path.write_text(json.dumps(value,indent=2,sort_keys=True)+'\n')
-    dump(out/'release-isolation.json',isolation);dump(out/'environment.json',environment())
+    dump(out/'release-isolation.json',isolation);initial_environment=environment();require(all(initial_environment[k]==v for k,v in configured_renderer.items()),'renderer changed before capture');dump(out/'environment.json',initial_environment)
     completed=[]
     def instrument(test_id):run_instrumentation(out,ident,test_id,completed)
     def capture(suffix):
@@ -283,11 +303,14 @@ def run(out):
                 p=out/(name+suffix+ext);p.write_bytes(raw('exec-out','run-as',PKG,'cat','files/uxr00-native-smoke/'+name+ext))
             records[name]={'png':digest(out/(name+suffix+'.png')),'geometry':digest(out/(name+suffix+'.json'))}
         return records
-    instrument(TEST);records=capture('');instrument(TEST);repeat_records=capture('-repeat')
-    repeat=compare_native_repeats(out,ident,completed,records,repeat_records)
+    instrument(TEST);records=capture('');require(renderer_environment()==configured_renderer,'renderer changed after first capture')
+    instrument(TEST);repeat_records=capture('-repeat');require(renderer_environment()==configured_renderer,'renderer changed after repeat capture')
+    # Run the independent functional fixtures even if the already captured
+    # pixels later fail strict comparison. No retry or selection of a passing pair.
     instrument(FIXTURE);instrument(FRAMEWORK_TEST);instrument(TERMUX_TEST)
     for name in ('fixture','framework-fixture'):
         f=out/(name+'.json');f.write_bytes(raw('exec-out','run-as',PKG,'cat','files/uxr00-native-smoke/'+f.name))
+    repeat=compare_native_repeats(out,ident,completed,records,repeat_records)
     receipt={**ident,'status':'BASELINE_PASS_NOT_VISUAL_APPROVAL','tests':TESTS,'fixture_sha256':digest(out/'fixture.json'),'framework_fixture_sha256':digest(out/'framework-fixture.json'),'release_isolation_sha256':digest(out/'release-isolation.json'),'environment_sha256':digest(out/'environment.json'),'app_apk_sha256':ah,'android_test_apk_sha256':th,'installed_apk_sha256':installed_digest(PKG,ah),'installed_test_apk_sha256':installed_digest(PKG+'.test',th),'debug_certificate_sha256':m.group(1).lower(),'screenshots':records,'repeat_screenshots':repeat_records,'repeat_calibration':repeat}
     dump(out/'receipt.json',receipt)
     try:verify(out,ident)
