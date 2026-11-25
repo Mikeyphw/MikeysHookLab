@@ -30,6 +30,24 @@ class FoundationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'isolation'):release_isolation.check(d,bad,t)
             proof['release_qualified']=True
             with self.assertRaisesRegex(ValueError,'qualification'):release_isolation.verify(proof,release_isolation.sha(d),release_isolation.sha(t))
+    def test_capture_refresh_and_restart_contract(self):
+        source=(ROOT/(P+'main/'+UI+'MainActivity.java')).read_text()
+        test=(ROOT/(P+'androidTest/'+UI+'FrameworkFixtureTest.java')).read_text()
+        # Test source guard complements, never substitutes for the real Android test.
+        callback=source.split('if(!captureApp().startCapture(next))',1)[1].split('}).show();',1)[0]
+        self.assertIn('goTo(CAPTURE, true);',callback)
+        self.assertIn('goTo(target, false);',source)
+        self.assertIn('if (target == page && !refreshSamePage) return;',source)
+        for term in ('CAPTURE_ACTIVE_RENDER','CAPTURE_RESTART','assertNotSame(previous,app.capture())','assertEquals(0,app.capture().markersCount())','assertEquals(1,previous.markersCount())'):
+            self.assertIn(term,test)
+        self.assertIn('capture_restart_same_route',native_smoke.FRAMEWORK_EVIDENCE['assertions'])
+        stage='CAPTURE_ACTIVE_RENDER'; klass=native_smoke.FRAMEWORK_TEST.split('#')[0]
+        raw=f'INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: UXR00_STAGE_{stage}\nCaused by: androidx.test.espresso.NoMatchingViewException: PRIVATE_UI_TEXT\n at {klass}.press(FrameworkFixtureTest.java:137)\nINSTRUMENTATION_STATUS_CODE: -2'
+        details=native_smoke.failure_details(raw,native_smoke.FRAMEWORK_TEST,4,native_smoke.TESTS[:3],0,'TEST_FAILED')
+        self.assertEqual(details['stage'],stage);self.assertIn('androidx.test.espresso.NoMatchingViewException',details['exception_types'])
+        self.assertNotIn('PRIVATE_UI_TEXT',json.dumps(details));self.assertEqual(details['source_frames'][0]['method'],'press')
+        unknown=native_smoke.failure_details(raw.replace(stage,'UNTRUSTED_STAGE'),native_smoke.FRAMEWORK_TEST,4,native_smoke.TESTS[:3],0,'TEST_FAILED')
+        self.assertEqual(unknown['stage'],'UNKNOWN')
     def test_instrumentation_exact_roster(self):
         t=native_smoke.TEST;k,m=t.split('#');record=f'INSTRUMENTATION_STATUS: class={k}\nINSTRUMENTATION_STATUS: test={m}\n'
         ok=record+'INSTRUMENTATION_STATUS_CODE: 1\n'+record+'INSTRUMENTATION_STATUS_CODE: 0\nOK (1 test)\nINSTRUMENTATION_CODE: -1\n'

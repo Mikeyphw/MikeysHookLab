@@ -39,7 +39,7 @@ import static org.junit.Assert.*;
 public final class FrameworkFixtureTest {
     private static final String NEO="neostore.obtainx.manual", DROID="droidify.obtainx.manual";
     private static final String PKG="com.machiav3lli.fdroid";
-    private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","no_real_framework"};
+    private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","capture_restart_same_route","no_real_framework"};
     private static final class FakePort implements UiEnvironment.Port {
         final SharedPreferences flags,safety;
         final Set<String> scope=ConcurrentHashMap.newKeySet();
@@ -136,6 +136,8 @@ public final class FrameworkFixtureTest {
     }
     private static void press(int id){onView(withText(id)).perform(scrollTo(),click());}
     @Test public void connectedCommandsStaleCallbackAndClock()throws Exception{
+        String stage="FRAMEWORK_SETUP";
+        try {
         HookLabApp app=(HookLabApp)InstrumentationRegistry.getInstrumentation().getTargetContext().getApplicationContext();
         assertNull(app.currentService());
         FakePort first=new FakePort(app,"first"),replacement=new FakePort(app,"replacement");
@@ -143,32 +145,56 @@ public final class FrameworkFixtureTest {
         assertEquals(1,HookGroupCatalog.byPackage(env.all()).size());
         Intent intent=new Intent(app,MainActivity.class).setAction("com.mikeyphw.hooklab.action.OPEN_HOOK").putExtra("hook_id",NEO).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try(AutoCloseable lease=UiEnvironmentFactory.installInstrumentationFixture(env);ActivityScenario<MainActivity> s=ActivityScenario.launch(intent)){
+            stage="FRAMEWORK_PREFERENCES";
             switchState(s,false);assertEquals(0,first.writes.get());
             press(R.string.ui_enable_tweak);switchState(s,true);
             assertTrue(first.flags.getBoolean(TweakKeys.enabled(NEO),false));assertFalse(first.flags.getBoolean(TweakKeys.enabled(DROID),false));
             int writes=first.writes.get();first.denyWrite=true;
             press(R.string.ui_enable_tweak);switchState(s,true);
             assertTrue(first.writes.get()>writes);assertTrue(first.flags.getBoolean(TweakKeys.enabled(NEO),false));first.denyWrite=false;
+            stage="FRAMEWORK_SCOPE";
             readyText(s,app,R.string.scope_add);press(R.string.scope_add);awaitPending(first);first.answer(false);readyText(s,app,R.string.scope_add);assertTrue(first.scope.isEmpty());
             press(R.string.scope_add);awaitPending(first);env.port=replacement;first.answer(true);
             switchState(s,false);readyText(s,app,R.string.scope_add);assertTrue(replacement.scope.isEmpty());
             press(R.string.scope_add);awaitPending(replacement);replacement.answer(true);readyText(s,app,R.string.scope_remove);assertEquals(Collections.singleton(PKG),replacement.scope);
+            stage="FRAMEWORK_GROUP";
             // Actual native group page uses the supplied presentation catalog.
             press(R.string.ui05_group_details);
             assertEquals(2,env.entries().size());assertEquals(1,HookGroupCatalog.groups(env.all()).get(0).packages.size());
             await(s,v->v instanceof TextView&&PKG.contentEquals(((TextView)v).getText()));
             s.onActivity(a->{View root=a.getWindow().getDecorView();assertEquals(2,count(root,v->v instanceof TextView&&a.getString(R.string.ui05_open_hook).contentEquals(((TextView)v).getText())));assertEquals(1,count(root,v->v instanceof TextView&&a.getString(R.string.scope_remove).contentEquals(((TextView)v).getText())));});
+            stage="CAPTURE_START";
             onView(withId(203)).perform(click());press(R.string.dx02_capture);press(R.string.dx02_choose_target);
             TweakEngine.Entry<HookContext> neo=env.entries().stream().filter(e->NEO.equals(e.spec.id)).findFirst().orElseThrow();
             onView(withText(neo.title+" · "+PKG)).perform(click());onView(withText(R.string.dx01_module)).perform(click());
             assertNotNull(app.capture());assertEquals(NEO,app.capture().targetHookId);assertEquals(CaptureSession.State.ACTIVE,app.capture().state());
+            stage="CAPTURE_ACTIVE_RENDER";
+            // The screen is already CAPTURE; require the real active controls immediately
+            // after the source dialog, rather than waiting for an unrelated framework refresh.
+            onView(withText(R.string.dx02_mark_repro)).check(androidx.test.espresso.assertion.ViewAssertions.matches(isEnabled()));
+            onView(withText(R.string.dx02_stop)).check(androidx.test.espresso.assertion.ViewAssertions.matches(isEnabled()));
+            stage="CAPTURE_MARKER";
             env.elapsed+=5000;press(R.string.dx02_mark_repro);assertEquals(5000,app.capture().markers().get(0).elapsedMillis);
+            stage="CAPTURE_STOP";
             env.elapsed+=2000;press(R.string.dx02_stop);assertEquals(CaptureSession.State.STOPPED,app.capture().state());assertEquals(7000,app.capture().elapsed(env.elapsed));
+            CaptureSession previous=app.capture();
+            stage="CAPTURE_RESTART";
+            press(R.string.dx02_new);
+            onView(withText(neo.title+" · "+PKG)).perform(click());onView(withText(R.string.dx01_module)).perform(click());
+            assertNotSame(previous,app.capture());assertEquals(CaptureSession.State.ACTIVE,app.capture().state());
+            assertEquals(0,app.capture().markersCount());
+            onView(withText(R.string.dx02_mark_repro)).check(androidx.test.espresso.assertion.ViewAssertions.matches(isEnabled()));
+            env.elapsed+=1000;press(R.string.dx02_mark_repro);assertEquals(1000,app.capture().markers().get(0).elapsedMillis);
+            assertEquals(1,previous.markersCount());
+            press(R.string.dx02_stop);assertEquals(CaptureSession.State.STOPPED,app.capture().state());
+            assertEquals(1000,app.capture().elapsed(env.elapsed));
             assertNull(app.currentService());
         }
+        stage="FRAMEWORK_RECEIPT";
         // No raw logs, credentials, package content, or runtime claims in receipt.
         JSONObject result=new JSONObject().put("schema","hooklab.framework.fixture.v1").put("synthetic",true).put("runtime_qualified",false).put("real_activity",true).put("assertions",new JSONArray(Arrays.asList(ASSERTIONS)));
         File folder=new File(app.getFilesDir(),"uxr00-native-smoke");assertTrue(folder.isDirectory()||folder.mkdirs());
         try(FileOutputStream out=new FileOutputStream(new File(folder,"framework-fixture.json"))){out.write(result.toString().getBytes(StandardCharsets.UTF_8));}
+        } catch(Throwable failure){throw new AssertionError("UXR00_STAGE_"+stage,failure);}
     }
 }

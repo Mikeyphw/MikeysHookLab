@@ -299,7 +299,9 @@ public final class MainActivity extends AppCompatActivity {
                         : com.mikeyphw.hooklab.diagnostics.CaptureSession.forResearch(researchPackage,ids[which],elapsed,wall,mark,timeline.dropped());
                 }catch(IllegalArgumentException rejected){toast(R.string.dx02_target_invalid);return;}
                 if(!captureApp().startCapture(next)){toast(R.string.dx02_active_exists);return;}
-                goTo(CAPTURE);
+                // Starting or replacing a capture changes the current page model.
+                // A same-page navigation normally does nothing; explicitly render this transition.
+                goTo(CAPTURE, true);
             }).show();
     }
     private void selectCaptureTarget(){
@@ -755,7 +757,10 @@ public final class MainActivity extends AppCompatActivity {
         } else goTo(page == CAPTURE ? DIAGNOSTICS : page == GROUP_DETAIL ? APPS : HOME);
     }
     private void goTo(int target) {
-        if (target == page) return;
+        goTo(target, false);
+    }
+    private void goTo(int target, boolean refreshSamePage) {
+        if (target == page && !refreshSamePage) return;
         page = target;
         render();
         scroll.scrollTo(0, 0);
