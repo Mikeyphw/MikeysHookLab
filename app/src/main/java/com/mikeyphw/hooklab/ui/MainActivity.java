@@ -285,9 +285,19 @@ public final class MainActivity extends AppCompatActivity {
         chip.setChecked(catalogView == mode);
         chip.setOnClickListener(v -> {
             if (catalogView == mode) return;
+            // An explicit presentation-mode change begins at its header/search,
+            // not a stale pixel offset or focused row belonging to the old mode.
             catalogView = mode;
-            appearance.edit().putInt(UI04_VIEW_KEY, mode).apply();
-            renderCatalogResults(); // UI-only state; keep the live search field and IME.
+            catalogScroll=0;catalogFocusedRow=null;
+            appearance.edit().putInt(UI04_VIEW_KEY, mode).putInt("catalog.scroll",0).apply();
+            renderCatalogResults(); // Keep the same live search input and IME.
+            final android.widget.EditText field=catalogSearch;
+            final long generation=++userInteractionGeneration;
+            scroll.post(()->{
+                if(page!=APPS||field!=catalogSearch||generation!=userInteractionGeneration||isDestroyed()||isFinishing())return;
+                scroll.scrollTo(0,0);
+                if(field!=null&&field.hasFocus())field.requestRectangleOnScreen(new android.graphics.Rect(0,0,field.getWidth(),field.getHeight()),true);
+            });
         });
         return chip;
     }

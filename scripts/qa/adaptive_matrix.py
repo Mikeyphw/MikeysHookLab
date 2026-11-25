@@ -32,7 +32,7 @@ def config(case):
  api,w,h,font,theme=CASES[case];return dict(api=api,width_px=w*2,height_px=h*2,density_dpi=DENSITY,font_scale=font,theme=theme)
 # Only fixed phase IDs, selected framework exception classes and source-frame
 # locations are exported. Raw Espresso view dumps and test output remain private.
-PHASES=frozenset(['SETUP','VIEWPORT_READY','LAUNCH_HOME','HOME_SCROLL','OPEN_HOOKS','SEARCH_OPEN','SEARCH_TYPE','SEARCH_CLOSE_IME','SEARCH_RECREATE','SEARCH_ROTATE','SEARCH_ROTATE_RETURN','SEARCH_CLEAR','CATALOG_HIT_TARGETS','OPEN_GROUP','OPEN_HOOK','OPEN_DIAGNOSTICS','IMPORT_CANCEL','OPEN_SETTINGS','THEME_CANCEL','SETTINGS_KEYBOARD_FOCUS','OPEN_SCOPE','SOURCE_PROVENANCE','OPEN_HELP','PRIVACY_RECREATE','MCC_CANCEL','PERF_IMPORT','PERF_LAUNCH','PERF_PAGE','PERF_NATIVE_FRAMES','PERF_WRITE']+['CAPTURE_'+x.upper() for x in ROUTES])
+PHASES=frozenset(['SETUP','VIEWPORT_READY','LAUNCH_HOME','HOME_SCROLL','HOME_SHORTCUT_VISIBLE','OPEN_HOOKS','SEARCH_OPEN','SEARCH_TYPE','SEARCH_CLOSE_IME','SEARCH_RECREATE','SEARCH_ROTATE','SEARCH_ROTATE_RETURN','SEARCH_CLEAR','CATALOG_HIT_TARGETS','OPEN_GROUP','OPEN_HOOK','OPEN_DIAGNOSTICS','IMPORT_CANCEL','OPEN_SETTINGS','THEME_CANCEL','SETTINGS_KEYBOARD_FOCUS','OPEN_SCOPE','SOURCE_PROVENANCE','OPEN_HELP','PRIVACY_RECREATE','MCC_CANCEL','PERF_IMPORT','PERF_LAUNCH','PERF_PAGE','PERF_NATIVE_FRAMES','PERF_WRITE']+['CAPTURE_'+x.upper() for x in ROUTES])
 EXCEPTIONS=frozenset(['java.lang.AssertionError','java.lang.IllegalStateException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.base.DefaultFailureHandler$AssertionFailedWithCauseError','com.google.android.apps.common.testing.accessibility.framework.AccessibilityViewCheckException','androidx.test.espresso.accessibility.AccessibilityViewCheckException'])
 def failure_info(output,test,rc):
  phases=[];frames=[];codes=[];categories=[]
@@ -57,15 +57,24 @@ def checkpoint_phase(source,test):
  except (OSError,ValueError,TypeError,subprocess.SubprocessError):pass
  return None
 
+def lock_matrix_rotation(cfg):
+ rotation='1' if cfg['width_px']>cfg['height_px'] else '0'
+ # WindowManager lock, not merely a settings write. UiAutomation teardown
+ # may unfreeze rotation when its instrumentation process exits.
+ n.adb('shell','wm','user-rotation','lock',rotation)
+ require(n.txt('shell','wm','user-rotation').strip()=='lock '+rotation,'matrix rotation lock not confirmed')
+
 def instrument(test,cfg,source,out):
+ lock_matrix_rotation(cfg)
  # A checkpoint from a different invocation must never be accepted as current.
+ n.clear_failure_checkpoint()
  if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp')
  result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
  try:
   require(result.returncode==0,'instrument transport failed: '+test)
   n.parse_instrumentation(result.stdout,test)
  except ValueError:
-  failure=failure_info(result.stdout,test,result.returncode);failure['checkpoint_phase']=checkpoint_phase(source,test);dump(out/'failure.json',failure)
+  failure=failure_info(result.stdout,test,result.returncode);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES);dump(out/'failure.json',failure)
   print('ADAPTIVE_FAILURE '+json.dumps(failure,sort_keys=True),flush=True)
   raise ValueError('instrumentation failed: '+test) from None
  print('ADAPTIVE_TEST_PASS '+test,flush=True)
@@ -241,6 +250,7 @@ def run(out,case):
    for route in ROUTES:capture_hierarchy(out,route,cfg)
   elif method==PERF:pull(out,'performance.json')
  # Performance sampling is deliberately separate from screenshot capture.
+ lock_matrix_rotation(cfg)
  launch_perf=launch_performance(json.loads((out/'performance.json').read_text()));dump(out/'launch-performance.json',launch_perf)
  if case=='api36-390':dump(out/'process-death.json',process_death(cfg))
  j=json.loads((out/'journey.json').read_text());p=json.loads((out/'performance.json').read_text())

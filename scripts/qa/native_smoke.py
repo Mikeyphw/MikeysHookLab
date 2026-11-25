@@ -209,7 +209,7 @@ def expected_identity():
     require(all(re.fullmatch('[1-9][0-9]*',os.environ.get(k,'')) for k in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT')),'invalid run identity')
     return {'schema':'hooklab.native.smoke.v1','source_sha':source,'source_tree':git('rev-parse','HEAD^{tree}'),'run_id':os.environ['GITHUB_RUN_ID'],'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'],'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
 
-FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','R02_EXPAND','R02_GROUP_CAPTURE','R02_HOOK_CAPTURE','R02_BY_APP_CAPTURE','R02_CATALOG_ROUTES','R02_SINGLE_GROUP','R02_ICON_PROVIDER','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT','FRAMEWORK_SETUP','FRAMEWORK_PREFERENCES','FRAMEWORK_SCOPE','FRAMEWORK_GROUP','HEALTH_EXACT_ROUTE','CAPTURE_START','CAPTURE_ACTIVE_RENDER','CAPTURE_MARKER','CAPTURE_STOP','CAPTURE_RESTART','FRAMEWORK_RECEIPT','R03_CONNECTED','R03_SETTINGS','R03_SCOPE','R03_ABOUT','R03_HELP','R03_PRIVACY','R03_LIGHT','R03_MCC'))
+FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','R02_EXPAND','R02_GROUP_CAPTURE','R02_HOOK_CAPTURE','R02_BY_APP_CAPTURE','R02_CATALOG_ROUTES','R02_CATALOG_SEARCH_REVEAL','R02_CATALOG_SEARCH_EDIT','R02_CATALOG_SEARCH_IME','R02_CATALOG_SEARCH_RESULT','R02_SINGLE_GROUP','R02_ICON_PROVIDER','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT','FRAMEWORK_SETUP','FRAMEWORK_PREFERENCES','FRAMEWORK_SCOPE','FRAMEWORK_GROUP','HEALTH_EXACT_ROUTE','CAPTURE_START','CAPTURE_ACTIVE_RENDER','CAPTURE_MARKER','CAPTURE_STOP','CAPTURE_RESTART','FRAMEWORK_RECEIPT','R03_CONNECTED','R03_SETTINGS','R03_SCOPE','R03_ABOUT','R03_HELP','R03_PRIVACY','R03_LIGHT','R03_MCC'))
 # Restrict exported frames to our three instrumentation classes. Raw stack/message/UI text
 # can contain private or attacker-controlled data; it is never written or printed.
 FRAME_CLASSES={t.split('#')[0]:t.split('#')[0].rsplit('.',1)[-1]+'.java' for t in TESTS}
@@ -236,9 +236,27 @@ def failure_details(output,test_id,ordinal,completed,rc,reason):
         if match and len(codes)<32:codes.append({'kind':match[1],'code':int(match[2])})
     return {'test_id':test_id,'ordinal':ordinal,'completed_tests':list(completed),'child_exit_code':rc,'reason':reason,'stage':stages[0] if len(stages)==1 else 'UNKNOWN','exception_types':exceptions,'source_frames':frames,'status_codes':codes}
 
+FAILURE_CHECKS=frozenset(('TouchTargetSizeCheck','TextContrastCheck','DuplicateSpeakableTextCheck','SpeakableTextPresentCheck','RedundantDescriptionCheck','EditableContentDescCheck','ClickableSpanCheck','ImageContrastCheck','TraversalOrderCheck','AccessibilityViewCheckException'))
+FAILURE_CAUSE_CLASS=re.compile(r'(?:java\.lang|androidx\.test\.espresso(?:\.[a-z]+)*|com\.google\.android\.apps\.common\.testing\.accessibility\.framework(?:\.[a-z]+)*)\.[A-Za-z0-9_$]+')
+FAILURE_CAUSE_FRAME=re.compile(r'com\.mikeyphw\.hooklab\.(?:qa|ui)\.[A-Za-z0-9_$]+\.[A-Za-z0-9_$]+\([A-Za-z0-9_]+\.java:[1-9][0-9]{0,4}\)')
+def clear_failure_checkpoint():
+    adb('shell','run-as',PKG,'rm','-f','files/uxr04-adaptive/failure-detail.json','files/uxr04-adaptive/failure-detail.tmp')
+def failure_checkpoint(source,test_id,phases):
+    try:
+        data=raw('exec-out','run-as',PKG,'cat','files/uxr04-adaptive/failure-detail.json')
+        if not 0<len(data)<=16384:return None
+        row=json.loads(data)
+        if set(row)!={'schema','source','test','phase','exception_classes','accessibility_checks','source_frames'} or row['schema']!='hooklab.qa.failure.v1' or row['source']!=source or row['test']!=test_id.split('#')[-1] or row['phase'] not in phases:return None
+        for key,limit,matcher in [('exception_classes',8,lambda x:FAILURE_CAUSE_CLASS.fullmatch(x)),('accessibility_checks',10,lambda x:x in FAILURE_CHECKS),('source_frames',32,lambda x:FAILURE_CAUSE_FRAME.fullmatch(x))]:
+            values=row[key]
+            if not isinstance(values,list) or len(values)>limit or any(not isinstance(x,str) or not matcher(x) for x in values) or len(set(values))!=len(values):return None
+        return row
+    except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
+
 def run_instrumentation(out,ident,test_id,completed):
     ordinal=len(completed)+1;reason='TRANSPORT_FAILED';output='';rc=None
     try:
+        if test_id==FRAMEWORK_TEST:clear_failure_checkpoint()
         result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',test_id,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=480 if test_id==TEST else 240)
         rc=result.returncode;output=result.stdout
         require(rc==0,'instrumentation child failed '+test_id)
@@ -247,6 +265,8 @@ def run_instrumentation(out,ident,test_id,completed):
         if isinstance(failure,subprocess.TimeoutExpired):reason='TIMEOUT';output=failure.stdout or ''
         elif isinstance(failure,OSError):reason='SPAWN_FAILED'
         details=failure_details(output,test_id,ordinal,completed,rc,reason)
+        details['cause_checkpoint']=failure_checkpoint(ident['source_sha'],test_id,FAILURE_STAGES) if test_id==FRAMEWORK_TEST else None
+        if details['cause_checkpoint'] is not None:details['stage']=details['cause_checkpoint']['phase']
         # Receipt is exact-source/run bound, not a success or a full visual receipt.
         record={**ident,'status':'INSTRUMENTATION_FAILED','failure':details}
         (out/'receipt.json').write_text(json.dumps(record,indent=2,sort_keys=True)+'\n')

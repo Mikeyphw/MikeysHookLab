@@ -40,6 +40,27 @@ class AdaptiveMatrixTests(unittest.TestCase):
    r=a.launch_performance({'native_frames':self.frames()});self.assertEqual(r['cold_launch_pids'],[101,102,103,104,105]);self.assertEqual(r['cold_launch_p95_ms'],500);self.assertEqual(r['frame_p95_ms'],19.);self.assertEqual(adb.call_count,5)
   with patch.object(a.n,'adb'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='101')):
    with self.assertRaisesRegex(ValueError,'preexisting process'):a.launch_performance({'native_frames':self.frames()})
+ def test_matrix_rotation_is_reasserted_at_every_instrumentation_boundary(self):
+  from unittest.mock import patch
+  from types import SimpleNamespace
+  cfg=a.config('api36-landscape')
+  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',return_value='lock 1'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'parse_instrumentation'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='')):
+   for method in (a.JOURNEY,a.PERF):a.instrument(method,cfg,'a'*40,Path('.'))
+   self.assertEqual([x.args for x in adb.call_args_list if x.args[:3]==('shell','wm','user-rotation')],[('shell','wm','user-rotation','lock','1')]*2)
+  with patch.object(a.n,'adb'),patch.object(a.n,'txt',return_value='free'),patch.object(a.subprocess,'run') as child:
+   with self.assertRaisesRegex(ValueError,'rotation lock'):a.instrument(a.PERF,cfg,'a'*40,Path('.'))
+   child.assert_not_called()
+  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',return_value='lock 0'):
+   a.lock_matrix_rotation(a.config('api29-compact'));adb.assert_called_once_with('shell','wm','user-rotation','lock','0')
+ def test_home_uses_semantic_action_and_keeps_full_accessibility_gate(self):
+  root=Path(__file__).resolve().parents[2];test=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text();activity=(root/'app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java').read_text()
+  home=test.split('phase("HOME_SCROLL")',1)[1].split('phase("OPEN_HOOKS")',1)[0]
+  self.assertIn('"r04:action:"+R.string.ui06_browse_hooks',home);self.assertIn('isDisplayingAtLeast(90)',home);self.assertIn('target.isClickable()',home);self.assertIn('capture(s,"home",records)',home)
+  self.assertIn('AccessibilityChecks.enable().setRunChecksFromRootView(true)',test);self.assertNotIn('setSuppressingResultMatcher',test)
+  self.assertIn('row(shortcuts,R.string.ui06_browse_hooks',activity)
+  fixture=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/ui/FrameworkFixtureTest.java').read_text();section=fixture.split('stage="R02_CATALOG_SEARCH_REVEAL"',1)[1].split('stage="HEALTH_EXACT_ROUTE"',1)[0]
+  self.assertIn('withId(R.id.hooklab_catalog_search)).perform(scrollTo(),click())',section);self.assertIn('replaceText("Neo Store")',section);self.assertIn('closeSoftKeyboard()',section);self.assertIn('s.recreate()',section);self.assertIn('assertEquals(beforeNavigation,replacement.writes.get())',section)
+  mode=activity.split('private Chip catalogChip',1)[1].split('private boolean searchExpanded',1)[0];self.assertIn('catalogScroll=0;catalogFocusedRow=null',mode);self.assertIn('generation!=userInteractionGeneration',mode);self.assertIn('field!=catalogSearch',mode)
  def test_hierarchy_projection_does_not_export_text(self):
   row='<hierarchy><node package="com.mikeyphw.hooklab" text="PRIVATE" content-desc="PRIVATE" bounds="[0,0][100,100]" clickable="true" enabled="true" focusable="true" checked="false"/></hierarchy>'
   nodes=a.hierarchy(row,a.config('api29-compact'));self.assertEqual(nodes,[{'bounds':[0,0,100,100],'clickable':True,'enabled':True,'focusable':True,'checked':False,'labelled':True}]);self.assertNotIn('PRIVATE',json.dumps(nodes))

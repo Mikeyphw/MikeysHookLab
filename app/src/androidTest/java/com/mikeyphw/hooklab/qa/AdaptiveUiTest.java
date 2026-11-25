@@ -190,7 +190,7 @@ public final class AdaptiveUiTest {
     @Test public void adaptiveJourney()throws Exception{
         activeTest="adaptiveJourney";
         try{phase("SETUP");runAdaptiveJourney();}
-        catch(Exception|AssertionError failure){throw new AssertionError("ADAPTIVE_PHASE_"+phase,failure);}
+        catch(Exception|AssertionError failure){QaFailureEvidence.record(app,activeTest,phase,failure);throw new AssertionError("ADAPTIVE_PHASE_"+phase,failure);}
     }
     private void runAdaptiveJourney()throws Exception{
         androidx.test.espresso.accessibility.AccessibilityChecks.enable().setRunChecksFromRootView(true);
@@ -204,7 +204,17 @@ public final class AdaptiveUiTest {
         try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
             long launch=SystemClock.elapsedRealtime()-started;
             phase("VIEWPORT_READY");awaitInitialViewport(s);
-            phase("HOME_SCROLL");onView(withText(R.string.ui06_browse_hooks)).perform(scrollTo());capture(s,"home",records);
+            phase("HOME_SCROLL");
+            // The real shortcut row owns accessibility and the click target; its
+            // decorative child text is deliberately hidden from AT. Scroll the
+            // actual action, then assert it is exposed before capturing Home.
+            onView(withTagValue(org.hamcrest.Matchers.is((Object)("r04:action:"+R.string.ui06_browse_hooks))))
+                .perform(scrollTo()).check(matches(isDisplayingAtLeast(90)));
+            phase("HOME_SHORTCUT_VISIBLE");
+            s.onActivity(a->{View target=a.getWindow().getDecorView().findViewWithTag("r04:action:"+R.string.ui06_browse_hooks);
+                assertNotNull(target);assertTrue(target.isEnabled()&&target.isClickable()&&target.isFocusable());
+                assertTrue(target.getContentDescription()!=null&&target.getContentDescription().length()>0);
+            });capture(s,"home",records);
             phase("OPEN_HOOKS");onView(withId(202)).perform(click());capture(s,"hooks",records);
             phase("SEARCH_OPEN");onView(withId(R.id.hooklab_catalog_search)).perform(scrollTo(),click());
             awaitSearch(s,true,"");
@@ -303,7 +313,7 @@ public final class AdaptiveUiTest {
     @Test public void boundedTimelinePerformance() throws Exception {
         activeTest="boundedTimelinePerformance";
         try{phase("SETUP");runBoundedTimelinePerformance();}
-        catch(Exception|AssertionError failure){throw new AssertionError("ADAPTIVE_PHASE_"+phase,failure);}
+        catch(Exception|AssertionError failure){QaFailureEvidence.record(app,activeTest,phase,failure);throw new AssertionError("ADAPTIVE_PHASE_"+phase,failure);}
     }
     private void runBoundedTimelinePerformance() throws Exception {
         phase("PERF_IMPORT");assertNull(app.currentService());assertEquals(0,app.diagnostics().size());

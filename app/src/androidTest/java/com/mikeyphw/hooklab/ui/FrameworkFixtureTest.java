@@ -191,8 +191,8 @@ public final class FrameworkFixtureTest {
     }
     @Test public void connectedCommandsStaleCallbackAndClock()throws Exception{
         String stage="FRAMEWORK_SETUP";
-        try {
         HookLabApp app=(HookLabApp)InstrumentationRegistry.getInstrumentation().getTargetContext().getApplicationContext();
+        try {
         assertNull(app.currentService());
         FakePort first=new FakePort(app,"first"),replacement=new FakePort(app,"replacement");
         FixtureEnvironment env=new FixtureEnvironment(app,first);
@@ -248,7 +248,16 @@ public final class FrameworkFixtureTest {
             androidx.test.espresso.Espresso.pressBack();
             onView(withId(202)).perform(click());
             press(R.string.ui_by_app);
-            onView(withHint(R.string.ui_search_hooks)).perform(replaceText("Neo Store"),closeSoftKeyboard());
+            // The catalog may restore a scroll offset from the previous route.
+            // Interact with the real stable input, not its hint or an offscreen field.
+            stage="R02_CATALOG_SEARCH_REVEAL";
+            onView(withId(R.id.hooklab_catalog_search)).perform(scrollTo(),click());
+            stage="R02_CATALOG_SEARCH_EDIT";
+            onView(withId(R.id.hooklab_catalog_search)).perform(replaceText("Neo Store"));
+            onView(withId(R.id.hooklab_catalog_search)).check(androidx.test.espresso.assertion.ViewAssertions.matches(withText("Neo Store")));
+            stage="R02_CATALOG_SEARCH_IME";
+            onView(withId(R.id.hooklab_catalog_search)).perform(closeSoftKeyboard());
+            stage="R02_CATALOG_SEARCH_RESULT";
             onView(withContentDescription(org.hamcrest.Matchers.startsWith(PKG+", "))).perform(scrollTo(),click());
             s.onActivity(a->{View root=a.getWindow().getDecorView();for(TweakEngine.Entry<HookContext> e:env.entries())assertEquals(1,count(root,v->v instanceof TextView&&e.title.contentEquals(((TextView)v).getText())));});
             s.recreate();
@@ -300,6 +309,6 @@ public final class FrameworkFixtureTest {
         JSONObject result=new JSONObject().put("schema","hooklab.framework.fixture.v1").put("synthetic",true).put("runtime_qualified",false).put("real_activity",true).put("assertions",new JSONArray(Arrays.asList(ASSERTIONS)));
         File folder=new File(app.getFilesDir(),"uxr00-native-smoke");assertTrue(folder.isDirectory()||folder.mkdirs());
         try(FileOutputStream out=new FileOutputStream(new File(folder,"framework-fixture.json"))){out.write(result.toString().getBytes(StandardCharsets.UTF_8));}
-        } catch(Throwable failure){throw new AssertionError("UXR00_STAGE_"+stage,failure);}
+        } catch(Throwable failure){com.mikeyphw.hooklab.qa.QaFailureEvidence.record(app,"connectedCommandsStaleCallbackAndClock",stage,failure);throw new AssertionError("UXR00_STAGE_"+stage,failure);}
     }
 }

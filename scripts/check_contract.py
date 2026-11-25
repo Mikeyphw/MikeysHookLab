@@ -277,7 +277,7 @@ check('selectedHookId = entry.spec.id' in main_source
     and 'HookDetailRoute.hook(environment.all(), requested) != null' in main_source
     and (r/'app/src/test/java/com/mikeyphw/hooklab/core/HookDetailRouteTest.java').is_file(),
     'UI-04/UI-05 independent hook-ID routing and invalid-selection rejection')
-check('appearance.edit().putInt(UI04_VIEW_KEY, mode).apply()' in main_source
+check('appearance.edit().putInt(UI04_VIEW_KEY, mode).putInt("catalog.scroll",0).apply()' in main_source
     and 'appearance.edit().putString(UI04_QUERY_KEY, catalogQuery).remove("catalog.search.collapsed").apply()' in main_source
     and 'HookGroupCatalog.groups(environment.all())' in main_source,
     'UI-04 local group/app persistence and catalog discovery')

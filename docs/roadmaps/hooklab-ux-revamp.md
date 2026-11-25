@@ -1,7 +1,7 @@
 # HookLab — Final UI/UX Revamp & Native Fidelity Roadmap
 
-**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.11-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
-**Status:** UX-R00 merged PR #30 at `b82ba80020920cdc840968a726cf81b707dd09b3`; qualified F08 tree `e1e95913842dac6347a930b5a74baba87d6ee066`. UX-R01/F01 merged PR #31 at `b37a4a27447cbdcfaabda08da90942d1de83f5e3`; source-bound hosted qualification complete; physical acceptance pending. UX-R02 merged PR #32 at `a76361eacad31ec072c3ef13563ea26be5b380a2`; qualified tree `26fa5c749deb9b0a1d7168d946030a7da6688b62`; 4 hosted workflows and CI24 224 tests. UX-R03-F01 + UX-R04 delivered on PR #33 at `29644ecdf752f7fae405696f1477d3e8cf84b640`; Android and CI24 workflows succeeded, Design/native/extended failed. UX-R04-F01 was delivered on PR #33 at `d40521c183f43e97b6e3f14556409a3fc6ba1086`: Android, Design, Native UI and CI24 workflows succeeded; Extended UI failed (1/10 matrix cases). UX-R04-F02 is the current forward repair; no successor acceptance inferred.
+**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.12-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
+**Status:** UX-R00 merged PR #30 at `b82ba80020920cdc840968a726cf81b707dd09b3`; qualified F08 tree `e1e95913842dac6347a930b5a74baba87d6ee066`. UX-R01/F01 merged PR #31 at `b37a4a27447cbdcfaabda08da90942d1de83f5e3`; source-bound hosted qualification complete; physical acceptance pending. UX-R02 merged PR #32 at `a76361eacad31ec072c3ef13563ea26be5b380a2`; qualified tree `26fa5c749deb9b0a1d7168d946030a7da6688b62`; 4 hosted workflows and CI24 224 tests. UX-R03-F01 + UX-R04 delivered on PR #33 at `29644ecdf752f7fae405696f1477d3e8cf84b640`; Android and CI24 workflows succeeded, Design/native/extended failed. UX-R04-F01 was delivered on PR #33 at `d40521c183f43e97b6e3f14556409a3fc6ba1086`: Android, Design, Native UI and CI24 workflows succeeded; Extended UI failed (1/10 matrix cases). UX-R04-F02 delivered on PR #33 at `68a9269ef41cfdfb3d24ffbd38e1b57017e7848e`; Android, Design and CI24 succeeded; Native UI and Extended UI failed. UX-R04-F03 is the forward qualification repair; no successor acceptance inferred.
 **Proposed repository path:** `docs/roadmaps/hooklab-ux-revamp.md` (retain `hooklab-flat-ux.md` and its historical acceptance matrix).  
 **Operator:** continue the existing `devop-hooklab` cumulative command; do not create an independent executable for this roadmap.  
 
@@ -24,7 +24,7 @@ Both reference files were rehashed from the current workspace; XML inspection co
 ## 2. Progress and complete active pipeline
 
 **Coverage:** complete for the six proposed revamp overlays; known subset of the wider HookLab project.  
-**Source implementation:** 3/6 merged; R03/R04 delivered on PR #33; F02 repairs concrete source defects, all fresh runtime gates pending `[████░░░░░░░░]`
+**Source implementation:** 3/6 merged; R03/R04 delivered on PR #33; F02 delivered; F03 repairs observed qualification failures; all fresh runtime gates pending `[████░░░░░░░░]`
 **Independently hosted-qualified:** 3/6; full device-inclusive acceptance 0/6 `[░░░░░░░░░░░░]`
 **Delivered/merged:** 3/6 delivered and merged (PR #30, #31, #32); **remaining source implementation:** 3 (R03 candidate included); **remaining device-inclusive acceptance:** 6. All promise counts below describe planned scope, not code coverage. Existing nine-overlay tranche: 9/9 merged, 0/9 fully accepted on evidence inspected; complete source count inconclusive (known DX gaps). Not a project-wide percentage.
 
@@ -34,10 +34,10 @@ Both reference files were rehashed from the current workspace; XML inspection co
 | UX-R01 | Diagnostics Consolidation | SOURCE COMPLETE, MERGED PR #31 / HOSTED QUALIFIED; DEVICE PENDING | UX-R00; shared row and route interface coordinated with UX-R02. |
 | UX-R02 | Navigation & Interaction Redesign | SOURCE COMPLETE, MERGED PR #32 / HOSTED QUALIFIED; DEVICE PENDING | UX-R00; coordinate UX-R01 shared row/icon primitives. |
 | UX-R03 | Home & Whole-App Visual Fidelity | DELIVERED; F01 ANDROID/NATIVE/DESIGN PASS; EXACT SUCCESSOR ACCEPTANCE PENDING; DEVICE PENDING | UX-R01 and UX-R02; UX-R00 reference gates. |
-| UX-R04 | Accessibility, Adaptive Layout & Lifecycle | DELIVERED; F01 EXTENDED UI FAILED / F02 REPAIR | UX-R03; early checks run throughout R00–R03. |
+| UX-R04 | Accessibility, Adaptive Layout & Lifecycle | DELIVERED; F02 NATIVE AND EXTENDED FAILED / F03 REPAIR | UX-R03; early checks run throughout R00–R03. |
 | UX-R05 | Full Native Visual Acceptance & Regression Enforcement | PLANNED / PENDING | UX-R00–R04 source-complete and exact-source hosted results; reference changes reviewed. |
 
-Current focus: **UX-R04-F02**, PR #33 F01 head `d40521c183f43e97b6e3f14556409a3fc6ba1086`, tree `1a502dc0eb5e67359bf5b5a88ce36e16bac4dda4`, main unchanged at merged R02 `a76361eacad31ec072c3ef13563ea26be5b380a2`. F01 Android CI 45710769345, Design 45710772488, Native UI 45710769333 and CI24 45710769331 succeeded; Extended UI 45710770410 attempt 1 failed: five cases refused empty native frame evidence, API36 compact failed the search-focus assertion, and three tablet cases failed their journey without retaining the underlying exception. The exact tablet failure causes remain unobserved. F02 corrects the identified focus, adaptive geometry, viewport settling and frame collection paths and preserves privacy-safe diagnostic phase evidence if a journey fails. All five fresh exact-source workflows and all ten matrix cases must pass; no acceptance inferred. R05 remains dependent; F02 does not add a milestone to the six-overlay denominator.
+Current focus: **UX-R04-F03**, PR #33 exact F02 head `68a9269ef41cfdfb3d24ffbd38e1b57017e7848e`, tree `f3c22ba9d141159784c6a86ac432ad979fa6fb32`, main `a76361eacad31ec072c3ef13563ea26be5b380a2`. F02 Android 45721444178, Design 45721443968, CI24 45721444020 passed; Native UI 45721444158 and Extended UI 45721443951 failed. Five extended cases passed; three tablet cases stop at HOME_SCROLL before capture, primary API36-390 fails the same FrameworkFixtureTest catalog edit as Native UI, landscape performance starts with an unsettled viewport. F03 preserves the ten-case matrix, all native accessibility checks, actual source/fixture/geometry/frame evidence and historical receipts. All five fresh exact-source workflows are required. UX-R05 remains gated. No new milestone is added to the six-overlay denominator.
 
 ### Original tranche — retain all nine obligations
 
@@ -531,3 +531,18 @@ Forward-only successor of F01 on existing draft PR #33. Preserve R03, R04 and F0
 | UXR04-F02-P05 | Keep exact ten-case roster, eleven-route evidence, contrast and touch assertions, real process-death and synthetic fixture boundaries; all five hosted workflows must qualify | Independent same-head/same-attempt receipts and CI24 shard/summary hashes |
 
 Physical-device, release and visual approval remain pending. No local Gradle. Shared Devtool gateway read retry belongs to the separately tracked `DT-20261125-CI-GATEWAY-READ`; do not change HookLab source to replay remote mutations.
+
+
+## UX-R04-F03 — Adaptive Interaction and Instrumentation Boundary Repair
+
+Forward only on PR #33, exact F02 preimage. Preserve R03, R04, F01 and F02 native transaction/session histories.
+
+| Promise | Production / QA repair | Required evidence |
+|---|---|---|
+| UXR04-F03-P01 | Catalog mode change invalidates old scroll/focus restoration without replacing the EditText; fixture reveals and edits the real stable search target and verifies route/readback | Native and API36-390 fixture success; compact search and recreate/rotation unchanged |
+| UXR04-F03-P02 | Home uses real tagged accessible shortcut row, scroll and visible/action assertions; no AccessibilityChecks suppression | All three tablet journeys; original exception category beyond HOME_SCROLL was lost, so root cause must be confirmed by fresh runtime evidence |
+| UXR04-F03-P03 | Lock and read back WindowManager rotation before every instrumentation and subsequent performance sequence; actual Activity viewport assertions unchanged | Landscape performance and all ten cases |
+| UXR04-F03-P04 | Structured source/test/phase-bound exception chain, fixed accessibility check identifiers and source frames; no raw exception or hierarchy content | Negative stale/private checkpoint tests and hosted failure diagnostics if needed |
+| UXR04-F03-P05 | Keep exact native evidence, CI24, full matrix and four committed predecessor journals | Source-bound native, independent CI and artifact rehash |
+
+Physical-device, visual and release gates remain pending. No local Gradle.
