@@ -30,15 +30,43 @@ def dump(p,x):p.write_text(json.dumps(x,sort_keys=True,indent=2)+'\n')
 def roster(case):return [JOURNEY,PERF]+(FIXTURES if case=='api36-390' else [])
 def config(case):
  api,w,h,font,theme=CASES[case];return dict(api=api,width_px=w*2,height_px=h*2,density_dpi=DENSITY,font_scale=font,theme=theme)
-def instrument(test,theme,source):
- result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',theme,'-e','uxr04_source',source,n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
- require(result.returncode==0,'instrument transport failed: '+test)
- # Do not publish raw test output or arbitrary UI/log values. Emit exact roster
- # markers and bounded source-frame locations on failure.
- try:n.parse_instrumentation(result.stdout,test)
+# Only fixed phase IDs, selected framework exception classes and source-frame
+# locations are exported. Raw Espresso view dumps and test output remain private.
+PHASES=frozenset(['SETUP','VIEWPORT_READY','LAUNCH_HOME','HOME_SCROLL','OPEN_HOOKS','SEARCH_OPEN','SEARCH_TYPE','SEARCH_CLOSE_IME','SEARCH_RECREATE','SEARCH_ROTATE','SEARCH_ROTATE_RETURN','SEARCH_CLEAR','CATALOG_HIT_TARGETS','OPEN_GROUP','OPEN_HOOK','OPEN_DIAGNOSTICS','IMPORT_CANCEL','OPEN_SETTINGS','THEME_CANCEL','SETTINGS_KEYBOARD_FOCUS','OPEN_SCOPE','SOURCE_PROVENANCE','OPEN_HELP','PRIVACY_RECREATE','MCC_CANCEL','PERF_IMPORT','PERF_LAUNCH','PERF_PAGE','PERF_NATIVE_FRAMES','PERF_WRITE']+['CAPTURE_'+x.upper() for x in ROUTES])
+EXCEPTIONS=frozenset(['java.lang.AssertionError','java.lang.IllegalStateException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.base.DefaultFailureHandler$AssertionFailedWithCauseError','com.google.android.apps.common.testing.accessibility.framework.AccessibilityViewCheckException','androidx.test.espresso.accessibility.AccessibilityViewCheckException'])
+def failure_info(output,test,rc):
+ phases=[];frames=[];codes=[];categories=[]
+ for line in output.splitlines():
+  clean=line.strip()
+  m=re.fullmatch(r'(?:INSTRUMENTATION_STATUS: stack=|Caused by: )?java\.lang\.AssertionError: ADAPTIVE_PHASE_([A-Z0-9_]+)',clean)
+  if m and m[1] in PHASES and m[1] not in phases:phases.append(m[1])
+  m=re.fullmatch(r'at (com\.mikeyphw\.hooklab\.[\w.$]+\([\w]+\.java:\d+\))',clean)
+  if m and m[1] not in frames and len(frames)<32:frames.append(m[1])
+  m=re.fullmatch(r'INSTRUMENTATION_(STATUS_CODE|CODE): (-?\d+)',clean)
+  if m and len(codes)<32 and -1000<=int(m[2])<=1000:codes.append([m[1],int(m[2])])
+  m=re.match(r'^(?:INSTRUMENTATION_STATUS: stack=|Caused by: )?([\w.$]+)(?::|$)',clean)
+  if m and m[1] in EXCEPTIONS and m[1] not in categories:categories.append(m[1])
+ return {'schema':'hooklab.uxr04.instrumentation-failure.v1','test':test,'transport_exit':rc,'phases':phases,'exception_classes':categories,'status_codes':codes,'source_frames':frames}
+def checkpoint_phase(source,test):
+ if test not in (JOURNEY,PERF):return None
+ try:
+  data=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/phase.json')
+  if not 0<len(data)<=4096:return None
+  row=json.loads(data)
+  if set(row)=={'schema','phase','test','source'} and row['schema']=='hooklab.uxr04.phase.v1' and row['source']==source and row['test']==test.split('#')[1] and row['phase'] in PHASES:return row['phase']
+ except (OSError,ValueError,TypeError,subprocess.SubprocessError):pass
+ return None
+
+def instrument(test,cfg,source,out):
+ # A checkpoint from a different invocation must never be accepted as current.
+ if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp')
+ result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
+ try:
+  require(result.returncode==0,'instrument transport failed: '+test)
+  n.parse_instrumentation(result.stdout,test)
  except ValueError:
-  for line in result.stdout.splitlines():
-   if re.fullmatch(r'INSTRUMENTATION_(STATUS_CODE|CODE): -?\d+',line.strip()) or re.fullmatch(r'\s*at com\.mikeyphw\.hooklab\.[\w.$]+\([\w]+\.java:\d+\)',line):print(line,flush=True)
+  failure=failure_info(result.stdout,test,result.returncode);failure['checkpoint_phase']=checkpoint_phase(source,test);dump(out/'failure.json',failure)
+  print('ADAPTIVE_FAILURE '+json.dumps(failure,sort_keys=True),flush=True)
   raise ValueError('instrumentation failed: '+test) from None
  print('ADAPTIVE_TEST_PASS '+test,flush=True)
 def pull(out,name):
@@ -127,24 +155,29 @@ def process_death(cfg):
  require(not label_node(root,'Stop capture') and not label_node(root,'Mark reproduced action'),'interrupted capture not represented truthfully')
  return {'old_pid':int(before),'new_pid':int(after),'background_process_killed':True,'capture_interrupted':True,'active_controls_absent':True}
 
-def frame_durations(raw):
- samples=[];header=None
- for line in raw.splitlines():
-  if line.startswith('Flags,IntendedVsync,'):header=line.rstrip(',').split(',');continue
-  if line.startswith('---PROFILEDATA---'):header=None;continue
-  if header is None or not re.match(r'^\d+,',line):continue
-  vals=line.rstrip(',').split(',');require(len(vals)==len(header),'framestats row malformed');row=dict(zip(header,vals))
-  if row['Flags']!='0':continue
-  start,end=int(row['IntendedVsync']),int(row['FrameCompleted'])
-  if 0<start<=end<2**63-1:samples.append((end-start)/1_000_000)
- require(samples,'no completed native frame samples');return samples[-512:]
+def frame_durations(evidence):
+ require(isinstance(evidence,dict) and set(evidence)=={'schema','workload','requested_scroll_steps','completed_scroll_steps','dropped_callbacks','samples'},'native frame evidence schema drift')
+ require(evidence['schema']=='hooklab.uxr04.native-frames.v1' and evidence['workload']=='timeline_scroll_4000_events','native frame workload drift')
+ require(type(evidence['requested_scroll_steps']) is int and evidence['requested_scroll_steps']==80 and type(evidence['completed_scroll_steps']) is int and evidence['completed_scroll_steps']==80,'native frame workload incomplete')
+ require(type(evidence['dropped_callbacks']) is int and evidence['dropped_callbacks']>=0,'invalid native callback drop count')
+ rows=evidence['samples'];require(isinstance(rows,list) and 20<=len(rows)<=512,'insufficient completed native frame samples')
+ frames=[];previous=0
+ for row in rows:
+  require(isinstance(row,dict) and set(row)=={'intended_vsync_ns','duration_ns'},'native frame record drift')
+  stamp,duration=row['intended_vsync_ns'],row['duration_ns']
+  require(type(stamp) is int and previous<stamp<2**63-1 and type(duration) is int and 0<duration<2**63-1,'invalid or duplicate completed native frame')
+  frames.append(duration/1_000_000);previous=stamp
+ return frames
 
-def launch_performance():
- starts=[];frames=[]
+def launch_performance(perf):
+ starts=[];pids=[];frames=frame_durations(perf['native_frames'])
  for _ in range(5):
-  n.adb('shell','am','force-stop',n.PKG);text=launch();m=re.search(r'(?m)^TotalTime: (\d+)$',text);require(m is not None,'cold launch duration missing');starts.append(int(m[1]))
-  time.sleep(.5);frames.extend(frame_durations(n.txt('shell','dumpsys','gfxinfo',n.PKG,'framestats')))
- return {'cold_launch_ms':starts,'cold_launch_p95_ms':p95(starts),'frame_ms':frames,'frame_p95_ms':p95(frames),'budget_enforced':False}
+  n.adb('shell','am','force-stop',n.PKG)
+  q=subprocess.run(['adb','-s',n.SERIAL,'shell','pidof',n.PKG],capture_output=True,text=True,timeout=10)
+  require(q.returncode==1 and not q.stdout.strip(),'cold launch preexisting process')
+  text=launch();m=re.search(r'(?m)^TotalTime: ([1-9][0-9]*)$',text);require(m is not None,'cold launch duration missing');starts.append(int(m[1]))
+  pid=n.txt('shell','pidof',n.PKG);require(re.fullmatch('[1-9][0-9]*',pid) is not None and int(pid) not in pids,'cold launch process identity drift');pids.append(int(pid))
+ return {'cold_launch_ms':starts,'cold_launch_pids':pids,'cold_launch_p95_ms':p95(starts),'frame_ms':frames,'frame_p95_ms':p95(frames),'frame_workload':perf['native_frames']['workload'],'budget_enforced':False}
 
 def validate(out,case,expected):
  from PIL import Image
@@ -171,9 +204,12 @@ def validate(out,case,expected):
   if row['route'] in ('home','hooks','diagnostics'):require(row.get('rail') is (row['width_dp']>=760),'navigation configuration mismatch')
   require(row['headings']>0 and row['actions']>0 and row['focusable']>0 and row['visible_actions']>0 and 4.5<=row['text_contrast_min']<=21 and 4.5<=row['primary_contrast']<=21,'accessibility evidence incomplete')
   with Image.open(out/(row['route']+'.png')) as im:require(im.format=='PNG' and im.size==(cfg['width_px'],cfg['height_px']) and any(lo!=hi for lo,hi in im.convert('RGB').getextrema()),'blank or wrong-sized screenshot')
- perf=json.loads((out/'performance.json').read_text());require(perf.get('schema')=='hooklab.uxr04.performance.v1' and perf.get('events')==4000 and perf.get('dropped')==1 and perf.get('page_size')==30 and perf.get('budget_enforced') is False and finite(perf.get('import_ms')),'performance fixture drift')
+ perf=json.loads((out/'performance.json').read_text());require(perf.get('schema')=='hooklab.uxr04.performance.v2' and perf.get('events')==4000 and perf.get('dropped')==1 and perf.get('page_size')==30 and perf.get('budget_enforced') is False and finite(perf.get('import_ms')),'performance fixture drift')
  require(len(perf['page_action_ms'])==len(perf['sampled_pss_kb'])==5 and all(finite(x) and x>0 for x in perf['sampled_pss_kb']),'performance sample roster drift')
- launch_perf=json.loads((out/'launch-performance.json').read_text());require(len(launch_perf['cold_launch_ms'])==5 and launch_perf['cold_launch_p95_ms']==p95(launch_perf['cold_launch_ms']) and launch_perf['frame_p95_ms']==p95(launch_perf['frame_ms']) and launch_perf['budget_enforced'] is False,'launch/frame evidence drift')
+ launch_perf=json.loads((out/'launch-performance.json').read_text());frames=frame_durations(perf['native_frames'])
+ require(len(launch_perf['cold_launch_ms'])==5 and all(type(x) is int and x>0 for x in launch_perf['cold_launch_ms']) and launch_perf['cold_launch_p95_ms']==p95(launch_perf['cold_launch_ms']),'cold launch evidence drift')
+ pids=launch_perf['cold_launch_pids'];require(isinstance(pids,list) and len(pids)==5 and all(type(x) is int and x>0 for x in pids) and len(set(pids))==5,'cold launch PID evidence drift')
+ require(launch_perf['frame_ms']==frames and launch_perf['frame_p95_ms']==p95(frames) and launch_perf['frame_workload']==perf['native_frames']['workload'] and launch_perf['budget_enforced'] is False,'launch/frame evidence drift')
  if case=='api36-390':
   d=json.loads((out/'process-death.json').read_text());require(type(d['old_pid']) is int and type(d['new_pid']) is int and d['old_pid']>0 and d['new_pid']>0 and d['old_pid']!=d['new_pid'] and all(d.get(k) is True for k in ('background_process_killed','capture_interrupted','active_controls_absent')),'real process-death evidence missing')
  require(finite(j['scenario_launch_ms']),'invalid launch sample')
@@ -196,13 +232,16 @@ def run(out,case):
  for name in ('window_animation_scale','transition_animation_scale','animator_duration_scale'):n.adb('shell','settings','put','global',name,'0')
  require(n.txt('shell','wm','size').splitlines()[-1]==f'Override size: {natural}' and n.txt('shell','wm','density').splitlines()[-1]==f'Override density: {DENSITY}' and abs(float(n.txt('shell','settings','get','system','font_scale'))-cfg['font_scale'])<.01,'viewport readback mismatch')
  for method in roster(case):
-  instrument(method,cfg['theme'],ident['source_sha']);receipt['completed_tests'].append(method);dump(out/'receipt.json',receipt)
+  try:instrument(method,cfg,ident['source_sha'],out)
+  except (ValueError,subprocess.SubprocessError):
+   receipt.update(status='FAIL_INSTRUMENTATION',failed_test=method);dump(out/'receipt.json',receipt);raise
+  receipt['completed_tests'].append(method);dump(out/'receipt.json',receipt)
   if method==JOURNEY:
    for name in ['journey.json']+[x+'.png' for x in ROUTES]:pull(out,name)
    for route in ROUTES:capture_hierarchy(out,route,cfg)
   elif method==PERF:pull(out,'performance.json')
  # Performance sampling is deliberately separate from screenshot capture.
- launch_perf=launch_performance();dump(out/'launch-performance.json',launch_perf)
+ launch_perf=launch_performance(json.loads((out/'performance.json').read_text()));dump(out/'launch-performance.json',launch_perf)
  if case=='api36-390':dump(out/'process-death.json',process_death(cfg))
  j=json.loads((out/'journey.json').read_text());p=json.loads((out/'performance.json').read_text())
  receipt.update(status='PASS_EXTENDED_NOT_DEVICE_APPROVAL',files={f.name:sha(f) for f in sorted(out.iterdir()) if f.name!='receipt.json'},performance_summary={'scenario_launch_ms':j['scenario_launch_ms'],'page_action_p95_ms':p95(p['page_action_ms']),'sampled_peak_pss_kb':max(p['sampled_pss_kb']),'cold_launch_p95_ms':launch_perf['cold_launch_p95_ms'],'frame_p95_ms':launch_perf['frame_p95_ms'],'budget_enforced':False});dump(out/'receipt.json',receipt)

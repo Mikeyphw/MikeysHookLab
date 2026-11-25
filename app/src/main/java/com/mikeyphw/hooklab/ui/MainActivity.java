@@ -95,6 +95,9 @@ public final class MainActivity extends AppCompatActivity {
     private android.widget.EditText catalogSearch;
     private int catalogScroll, catalogCursor;
     private boolean catalogSearchFocused, catalogKeyboard;
+    private boolean imeVisible;
+    private long userInteractionGeneration;
+    @Override public void onUserInteraction(){super.onUserInteraction();userInteractionGeneration++;}
     private String catalogFocusedRow;
     private String selectedAppPackage;
     private AppIconProvider icons;
@@ -137,7 +140,11 @@ public final class MainActivity extends AppCompatActivity {
     }
     private static final int MAX_RESTORED_SCROLL=1_000_000;
     private static int boundedScroll(int value){return Math.max(0,Math.min(MAX_RESTORED_SCROLL,value));}
-    private boolean stackActions(){return UiLayoutPolicy.stackActions(getResources().getConfiguration().screenWidthDp,getResources().getConfiguration().fontScale);}
+    private int contentWidthDp(){
+        android.content.res.Configuration config=getResources().getConfiguration();
+        return UiLayoutPolicy.contentWidthDp(config.screenWidthDp,config.fontScale);
+    }
+    private boolean stackActions(){return UiLayoutPolicy.stackActions(contentWidthDp(),getResources().getConfiguration().fontScale);}
     private LinearLayout actionGroup(){LinearLayout line=horizontal();if(stackActions())line.setOrientation(LinearLayout.VERTICAL);return line;}
     private void addAction(LinearLayout line,View child){line.addView(child,line.getOrientation()==LinearLayout.VERTICAL?new LinearLayout.LayoutParams(-1,-2):new LinearLayout.LayoutParams(0,-2,1));}
     private Bundle routeFrame(){
@@ -172,12 +179,30 @@ public final class MainActivity extends AppCompatActivity {
     }
     private void restoreCatalog(){
         final android.widget.EditText field=catalogSearch;
+        if(field==null)return;
+        final boolean restoreSearch=catalogSearchFocused, restoreKeyboard=catalogKeyboard;
+        final int cursor=catalogCursor, position=catalogScroll;
+        final String rowKey=catalogFocusedRow;
+        final long generation=userInteractionGeneration;
         scroll.post(()->{
-            if(page!=APPS||field!=catalogSearch)return;
-            if(catalogSearchFocused){field.requestFocus();field.setSelection(Math.min(catalogCursor,field.length()));
-                if(catalogKeyboard){android.view.inputmethod.InputMethodManager ime=getSystemService(android.view.inputmethod.InputMethodManager.class);if(ime!=null)ime.showSoftInput(field,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);}}
-            else if(catalogFocusedRow!=null&&catalogResults!=null){View row=catalogResults.findViewWithTag(catalogFocusedRow);if(row!=null)row.requestFocus();}
-            scroll.scrollTo(0,catalogScroll);
+            // A new user interaction supersedes pending restoration; framework
+            // auto-focus during layout does not supersede saved user focus.
+            if(page!=APPS||field!=catalogSearch||isFinishing()||isDestroyed()||generation!=userInteractionGeneration)return;
+            if(restoreSearch){
+                if(field.requestFocus()){
+                    field.setSelection(Math.min(cursor,field.length()));
+                    if(restoreKeyboard)field.post(()->{
+                        if(page==APPS&&field==catalogSearch&&field.hasFocus()&&!isFinishing()&&!isDestroyed()&&generation==userInteractionGeneration){
+                            android.view.inputmethod.InputMethodManager ime=getSystemService(android.view.inputmethod.InputMethodManager.class);
+                            if(ime!=null)ime.showSoftInput(field,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                        }
+                    });
+                }
+            }else if(rowKey!=null&&catalogResults!=null){
+                View row=catalogResults.findViewWithTag(rowKey);if(row!=null)row.requestFocus();
+            }
+            scroll.scrollTo(0,position);
+            if(restoreSearch&&field.hasFocus())field.requestRectangleOnScreen(new android.graphics.Rect(0,0,field.getWidth(),field.getHeight()),true);
         });
     }
 
@@ -275,6 +300,9 @@ public final class MainActivity extends AppCompatActivity {
     private void renderCatalogResults(){
         if(catalogResults==null)return;
         View focused=catalogResults.findFocus();Object tag=focused==null?null:focused.getTag();
+        android.widget.EditText search=catalogSearch;
+        boolean searchOwned=search!=null&&search.hasFocus();
+        int selectionStart=searchOwned?search.getSelectionStart():-1, selectionEnd=searchOwned?search.getSelectionEnd():-1;
         catalogResults.removeAllViews();int visible=0;boolean searching=!catalogQuery.trim().isEmpty();
         if(catalogView==UI04_GROUPS){
             for(HookGroupCatalog.Group group:HookGroupCatalog.groups(environment.all())){
@@ -299,7 +327,10 @@ public final class MainActivity extends AppCompatActivity {
             }
         }
         if(visible==0)catalogResults.addView(text(getString(R.string.ui_catalog_empty),16));
-        if(tag instanceof String){View next=catalogResults.findViewWithTag(tag);if(next!=null)next.requestFocus();}
+        if(searchOwned&&search==catalogSearch){
+            if(!search.hasFocus()&&search.requestFocus()&&selectionStart>=0&&selectionEnd>=0)
+                search.setSelection(Math.min(selectionStart,search.length()),Math.min(selectionEnd,search.length()));
+        }else if(tag instanceof String){View next=catalogResults.findViewWithTag(tag);if(next!=null)next.requestFocus();}
     }
     private void hooksCatalog() {
         heading(R.string.ui_hooks);
@@ -312,6 +343,8 @@ public final class MainActivity extends AppCompatActivity {
         body.addView(modes);
         android.widget.EditText search = new android.widget.EditText(this);
         catalogSearch=search;
+        search.setId(R.id.hooklab_catalog_search);
+        search.setFocusableInTouchMode(true);
         search.setSingleLine(true);
         search.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(256)});
         search.setHint(R.string.ui_search_hooks);
@@ -846,7 +879,14 @@ public final class MainActivity extends AppCompatActivity {
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, w) -> {
             Insets i = w.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             int ime=w.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            boolean keyboard=w.isVisible(WindowInsetsCompat.Type.ime());
+            // Keep the real input field focused when the IME changes the usable
+            // viewport. Bottom navigation yields vertical room; rail stays put.
+            android.widget.EditText field=catalogSearch;
+            boolean preserve=page==APPS&&field!=null&&field.hasFocus();
+            if(imeVisible!=keyboard){imeVisible=keyboard;updateNavigationVisibility();}
             v.setPadding(i.left, i.top, i.right, Math.max(i.bottom,ime));
+            if(preserve&&!field.hasFocus()&&page==APPS&&field==catalogSearch)field.requestFocus();
             return w;
         });
         LinearLayout content = new LinearLayout(this);
@@ -992,10 +1032,11 @@ public final class MainActivity extends AppCompatActivity {
         // UI-08: keyboard/TalkBack navigation begins at the new page heading.
         // Only user-directed navigation changes focus; asynchronous framework
         // snapshot updates keep their existing search-focus/scroll preservation.
+        final long navigationGeneration=userInteractionGeneration;
         scroll.post(() -> {
-            if (page != target || body == null || body.getChildCount() == 0) return;
+            if (page != target || body == null || body.getChildCount() == 0 || navigationGeneration!=userInteractionGeneration) return;
             View first = body.getChildAt(0);
-            if (first instanceof TextView) {
+            if (first instanceof TextView && !(target==APPS&&catalogSearchFocused)) {
                 first.setFocusableInTouchMode(true);
                 first.requestFocus();
             }
@@ -1352,7 +1393,7 @@ public final class MainActivity extends AppCompatActivity {
         row(framework,R.string.r03_scope,getString(R.string.ui06_scoped,
                 summary.scopedPackageCount<0?getString(R.string.ui_unknown):Integer.toString(summary.scopedPackageCount)),v->goTo(SCOPE));
         LinearLayout metrics=new LinearLayout(this);
-        int width=getResources().getConfiguration().screenWidthDp-2*UiLayoutPolicy.contentInsetDp(getResources().getConfiguration().screenWidthDp);
+        int width=Math.max(0,contentWidthDp()-2*UiLayoutPolicy.contentInsetDp(getResources().getConfiguration().screenWidthDp));
         boolean columns=DesignTokens.columns(width,getResources().getConfiguration().fontScale)==3;
         metrics.setOrientation(columns?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL);
         body.addView(metrics,new LinearLayout.LayoutParams(-1,-2));
@@ -1702,6 +1743,12 @@ public final class MainActivity extends AppCompatActivity {
         row(support,R.string.about,getString(R.string.r03_repository),v->goTo(ABOUT));
         row(support,R.string.ui07_open_help,getString(R.string.ui07_settings_support),v->openHelp());
     }
+    private void updateNavigationVisibility(){
+        if(navigation==null)return;
+        boolean secondary=page>=SETTINGS&&!diagnosticRoot(page);
+        boolean rail=navigation instanceof NavigationRailView;
+        navigation.setVisibility(UiLayoutPolicy.showNavigation(secondary,rail,imeVisible)?View.VISIBLE:View.GONE);
+    }
     private void render() {
         if (body == null) return;
         String focus=renderedPage==page?staticFocusKey():pendingStaticFocus;
@@ -1710,7 +1757,7 @@ public final class MainActivity extends AppCompatActivity {
                 : diagnosticRoute(page) ? NAV_DIAGNOSTICS : NAV_HOME;
         navigation.getMenu().findItem(navId).setChecked(true);
         boolean secondary = page >= SETTINGS && !diagnosticRoot(page);
-        navigation.setVisibility(secondary?View.GONE:View.VISIBLE);
+        updateNavigationVisibility();
         for(int item:new int[]{MENU_SETTINGS,MENU_SCOPE,MENU_ABOUT})toolbar.getMenu().findItem(item).setVisible(!secondary);
         if (secondary) {
             toolbar.setNavigationIcon(R.drawable.ic_nav_back);

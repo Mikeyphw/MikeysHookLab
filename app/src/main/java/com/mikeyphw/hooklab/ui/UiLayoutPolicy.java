@@ -10,6 +10,10 @@ public final class UiLayoutPolicy {
     public static boolean useRail(int screenWidthDp) {
         return screenWidthDp >= RAIL_BREAKPOINT_DP;
     }
+    /** Secondary routes hide navigation; the bottom bar yields to an open IME. */
+    public static boolean showNavigation(boolean secondary,boolean rail,boolean imeVisible){
+        return !secondary&&(rail||!imeVisible);
+    }
     public static int railWidthDp(float fontScale){return fontScale>=2f?144:fontScale>=1.6f?112:RAIL_WIDTH_DP;}
     public static int contentInsetDp(int screenWidthDp) {
         return useRail(screenWidthDp) ? 32 : screenWidthDp <= 350 ? 12 : 20;
@@ -18,9 +22,9 @@ public final class UiLayoutPolicy {
     public static boolean stackActions(int widthDp,float fontScale) {
         return widthDp < 360 || fontScale >= 1.6f;
     }
-    public static int contentWidthDp(int screenWidthDp) {
+    public static int contentWidthDp(int screenWidthDp,float fontScale) {
         if (!useRail(screenWidthDp)) return Math.max(0, screenWidthDp);
         return Math.min(MAX_CONTENT_WIDTH_DP,
-                Math.max(0, screenWidthDp - RAIL_WIDTH_DP));
+                Math.max(0, screenWidthDp - railWidthDp(fontScale)));
     }
 }
