@@ -1,8 +1,11 @@
 {
   "approval": "CANDIDATE_ONLY",
   "baseline_map": {
+    "by-app": "VIS-003",
     "diagnostics": "VIS-006",
+    "group-detail": "VIS-004",
     "home": "VIS-024",
+    "hook-detail": "VIS-005",
     "hooks": "VIS-002"
   },
   "cases": [
@@ -185,8 +188,11 @@
     "hooks": "Hooks"
   },
   "required_title": {
+    "by-app": "Hooks",
     "diagnostics": "Diagnostics",
+    "group-detail": "Group details",
     "home": "HookLab",
+    "hook-detail": "Hook configuration",
     "hooks": "Hooks"
   },
   "schema": "hooklab.visual.contract.v1",

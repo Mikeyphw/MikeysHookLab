@@ -72,9 +72,10 @@ jobs:
           path: artifacts
           merge-multiple: false
       - name: Independently verify class/method roster, source, exact attempt and XML hashes
+        if: always()
         run: |
           set -Eeuo pipefail
-          python3 -B scripts/qa/ci24.py summarize --source "$SOURCE_SHA" --artifacts artifacts --out out/CI24_SUMMARY.json
+          python3 -B scripts/qa/ci24.py summarize --source "$SOURCE_SHA" --artifacts artifacts --out out/CI24_SUMMARY.json --matrix-status '${{ needs.junit.result }}'
           test '${{ needs.junit.result }}' = success
       - uses: actions/upload-artifact@v7.0.2
         if: always()

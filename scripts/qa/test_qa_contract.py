@@ -56,6 +56,18 @@ class Ci24Test(unittest.TestCase):
     def test_no_local_gradle(self):
         with patch.dict(os.environ,{'GITHUB_ACTIONS':'false'},clear=True):
             with self.assertRaisesRegex(ValueError,'HOSTED_ONLY'):ci24.run(self.root,Path(self.tmp.name)/'out',1,self.source,'123','1')
+    def test_failed_summary_preserves_verified_shards(self):
+        self.seed();(self.art/'hooklab-ci24-123-1-shard-24').rename(self.art/'lost')
+        out=Path(self.tmp.name)/'summary.json';ci24.failed_summary(self.root,self.art,out,self.source,'123','1','failure')
+        data=json.loads(out.read_text());self.assertEqual(data['overall'],'FAIL_CI24_VERIFICATION');self.assertEqual(len(data['shards']),24);self.assertEqual(data['shards'][-1]['status'],'MISSING');self.assertEqual(data['shards'][0]['status'],'VERIFIED_PASS')
+    def test_ci24_retry_adapter_and_timeout(self):
+        out=Path(self.tmp.name)/'out';original=subprocess.run
+        def execute(argv,*args,**kwargs):
+            if argv[0]=='git':return original(argv,*args,**kwargs)
+            self.assertEqual(argv[:3],['bash','scripts/ci_gradle_retry.sh','bash']);self.assertEqual(kwargs['env']['HOOKLAB_CI_RETRY_PROFILE'],'native');raise subprocess.TimeoutExpired(argv,3000)
+        with patch.dict(os.environ,{'GITHUB_ACTIONS':'true','RUNNER_OS':'Linux','SOURCE_SHA':self.source,'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1'}),patch.object(ci24.subprocess,'run',side_effect=execute):
+            self.assertEqual(ci24.run(self.root,out,1,self.source,'123','1'),124)
+        self.assertEqual(json.loads((out/'receipt.json').read_text())['status'],'FAIL_TIMEOUT')
     def test_source_drift(self):
         with self.assertRaisesRegex(ValueError,'source drift'):ci24.identity(self.root,'1'*40,'123','1')
 if __name__=='__main__':unittest.main()

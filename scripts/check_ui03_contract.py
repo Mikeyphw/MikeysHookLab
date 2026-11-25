@@ -17,8 +17,10 @@ ui = read("app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java")
 
 # A JavaSyntaxCheck parser does not resolve Android SDK imports.
 # Guard the verified CI regression from run 44973294781 before Gradle compiles.
-check("import android.content.pm.PackageManager;" in ui
-      and "PackageManager.NameNotFoundException" in ui,
+icons = read("app/src/main/java/com/mikeyphw/hooklab/ui/AppIconProvider.java")
+check("import android.content.pm.PackageManager;" in icons
+      and "PackageManager.NameNotFoundException" in icons
+      and "icons.load(pkg).drawable" in ui,
       "android_package_manager_import_for_host_icon")
 
 store = read("app/src/main/java/com/mikeyphw/hooklab/ui/FrameworkStateStore.java")

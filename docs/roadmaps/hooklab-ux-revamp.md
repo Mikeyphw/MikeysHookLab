@@ -1,7 +1,7 @@
 # HookLab — Final UI/UX Revamp & Native Fidelity Roadmap
 
-**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.6-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
-**Status:** UX-R00 merged PR #30 at `b82ba80020920cdc840968a726cf81b707dd09b3`; qualified F08 tree `e1e95913842dac6347a930b5a74baba87d6ee066`. UX-R01 production implementation candidate; fresh source-bound hosted and physical acceptance pending.
+**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.7-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
+**Status:** UX-R00 merged PR #30 at `b82ba80020920cdc840968a726cf81b707dd09b3`; qualified F08 tree `e1e95913842dac6347a930b5a74baba87d6ee066`. UX-R01/F01 merged PR #31 at `b37a4a27447cbdcfaabda08da90942d1de83f5e3`; source-bound hosted qualification complete; physical acceptance pending. UX-R02 is the current source candidate.
 **Proposed repository path:** `docs/roadmaps/hooklab-ux-revamp.md` (retain `hooklab-flat-ux.md` and its historical acceptance matrix).  
 **Operator:** continue the existing `devop-hooklab` cumulative command; do not create an independent executable for this roadmap.  
 
@@ -24,20 +24,20 @@ Both reference files were rehashed from the current workspace; XML inspection co
 ## 2. Progress and complete active pipeline
 
 **Coverage:** complete for the six proposed revamp overlays; known subset of the wider HookLab project.  
-**Source implementation:** 2/6 authored (33.3%, including R01 candidate; hosted acceptance pending) `[████░░░░░░░░]`
-**Independently hosted-qualified foundation:** 1/6; full device-inclusive acceptance 0/6 `[░░░░░░░░░░░░]`
-**Delivered/merged:** 1/6 delivered and merged (PR #30); **remaining source implementation after R01 candidate:** 4; **remaining device-inclusive acceptance:** 6. All promise counts below describe planned scope, not code coverage. Existing nine-overlay tranche: 9/9 merged, 0/9 fully accepted on evidence inspected; complete source count inconclusive (known DX gaps). Not a project-wide percentage.
+**Source implementation:** 2/6 merged; UX-R02 candidate authored, local qualification in progress `[████░░░░░░░░]`
+**Independently hosted-qualified:** 2/6; full device-inclusive acceptance 0/6 `[░░░░░░░░░░░░]`
+**Delivered/merged:** 2/6 delivered and merged (PR #30 and #31); **remaining source implementation:** 4 (R02 candidate included); **remaining device-inclusive acceptance:** 6. All promise counts below describe planned scope, not code coverage. Existing nine-overlay tranche: 9/9 merged, 0/9 fully accepted on evidence inspected; complete source count inconclusive (known DX gaps). Not a project-wide percentage.
 
 | ID | Overlay | Implementation / acceptance | Dependency |
 |---|---|---|---|
 | UX-R00 | Design Contract & Emulator Infrastructure | SOURCE COMPLETE, MERGED / HOSTED FOUNDATION PASS; DEVICE PENDING | None; source and design identities must be confirmed. |
-| UX-R01 | Diagnostics Consolidation | SOURCE IMPLEMENTED / PR #31; HOSTED JAVA COMPILE FAILED; F01 REPAIR IN PROGRESS; DEVICE PENDING | UX-R00; shared row and route interface coordinated with UX-R02. |
-| UX-R02 | Navigation & Interaction Redesign | PLANNED / PENDING | UX-R00; coordinate UX-R01 shared row/icon primitives. |
+| UX-R01 | Diagnostics Consolidation | SOURCE COMPLETE, MERGED PR #31 / HOSTED QUALIFIED; DEVICE PENDING | UX-R00; shared row and route interface coordinated with UX-R02. |
+| UX-R02 | Navigation & Interaction Redesign | CANDIDATE AUTHORED / HOSTED AND DEVICE PENDING | UX-R00; coordinate UX-R01 shared row/icon primitives. |
 | UX-R03 | Home & Whole-App Visual Fidelity | PLANNED / PENDING | UX-R01 and UX-R02; UX-R00 reference gates. |
 | UX-R04 | Accessibility, Adaptive Layout & Lifecycle | PLANNED / PENDING | UX-R03; early checks run throughout R00–R03. |
 | UX-R05 | Full Native Visual Acceptance & Regression Enforcement | PLANNED / PENDING | UX-R00–R04 source-complete and exact-source hosted results; reference changes reviewed. |
 
-Current focus: **UX-R01**, against verified merged F08 tree. UX-R02 is next after source/hosted reconciliation and merge. R01/R02 may be coordinated in one dependency-aware wave, but must not mutate the same stale source concurrently. R03 depends on both; R04 and R05 follow. Shared governance is independently enforced at actual merge/release boundaries.
+Current focus: **UX-R02**, against verified merged R01/F01 tree `045b9a5567a2a44a05a3244cc0e26e706c961f16`. CI24 R01/F01 run 45608751736 attempt 2 independently verified 216 tests. R02 acceptance remains pending. R01/R02 may be coordinated in one dependency-aware wave, but must not mutate the same stale source concurrently. R03 depends on both; R04 and R05 follow. Shared governance is independently enforced at actual merge/release boundaries.
 
 ### Original tranche — retain all nine obligations
 
@@ -499,3 +499,7 @@ Parent PR #31 head `c78b187c7e6bb715bfcf963858265d6c8c7c3f0e`, tree `202991cd8db
 | R06-F01-P03 | Explicit packed white sRGB host Compose terminal tint, modifier-only default mask, unchanged Copy action | Exact pinned DEX signature/mask verification and real host rendering |
 
 Source repair does not certify device runtime or native visual approval. No new permission, implicit command, repository reset, or release.
+
+### UX-R02 candidate evidence (2026-11-25)
+
+Source: exact merged PR31 tree. Native catalog routing, scoped icon provider, stable route frames, visual candidate capture for VIS-002–005 and CI24 bounded Maven-429 retry/failure summaries are authored. See `docs/qa/hooklab-uxr02-acceptance.md` for evidence boundaries; no device, release, visual or hosted acceptance is asserted for R02. Historical accepted evidence remains bound to its own source.

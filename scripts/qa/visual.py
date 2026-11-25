@@ -8,10 +8,12 @@ from pathlib import Path
 import reference
 
 SCHEMA='hooklab.visual.candidate.v1'
-MAP={'home':'VIS-024','hooks':'VIS-002','diagnostics':'VIS-006'}
-NAV={'home':201,'hooks':202,'diagnostics':203}
+MAP={'home':'VIS-024','hooks':'VIS-002','by-app':'VIS-003','group-detail':'VIS-004','hook-detail':'VIS-005','diagnostics':'VIS-006'}
+NAV={'home':201,'hooks':202,'by-app':202,'group-detail':202,'hook-detail':202,'diagnostics':203}
+DEEP={'group-detail','hook-detail'}
+def root_route(route):return 'hooks' if route=='by-app' else route
 LABELS={'home':'Home','hooks':'Hooks','diagnostics':'Diagnostics'}
-TITLE={'home':'HookLab','hooks':'Hooks','diagnostics':'Diagnostics'}
+TITLE={'home':'HookLab','hooks':'Hooks','by-app':'Hooks','group-detail':'Group details','hook-detail':'Hook configuration','diagnostics':'Diagnostics'}
 
 def need(ok,msg):
     if not ok:raise ValueError(msg)
@@ -67,7 +69,8 @@ def browser_controls(g,route):
         if i['tag']=='button' and i['action']=='root' and i['visible'] and i['class_name'] in ('active',''):
             key=i['argument'];need(key in LABELS and key not in controls and i['label']==LABELS[key],'reference navigation mismatch')
             controls[key]={'label':i['label'],'bounds':box(i['bounds']),'selected':'active' in i['class_name'].split(),'font_sp':float(i['font_size'].removesuffix('px')),'color':rgb(i['color'])}
-    need(set(controls)=={'title',*LABELS} and [k for k in LABELS if controls[k]['selected']]==[route],'reference controls missing or wrong selection')
+    if route in DEEP:need(set(controls)=={'title'},'deep reference controls mismatch')
+    else:need(set(controls)=={'title',*LABELS} and [k for k in LABELS if controls[k]['selected']]==[root_route(route)],'reference controls missing or wrong selection')
     return controls
 
 def rgb(s):
@@ -75,12 +78,12 @@ def rgb(s):
 
 def native_controls(g,route):
     need(g['route']==route and g['selected_menu']==NAV[route] and g['real_activity'] is True and g['density']==2,'native route/density mismatch')
-    v=g['semantic_controls'];need(isinstance(v,dict) and set(v)=={'title',*LABELS},'missing/extra native semantic controls')
+    v=g['semantic_controls'];need(isinstance(v,dict) and set(v)==({'title'} if route in DEEP else {'title',*LABELS}),'missing/extra native semantic controls')
     for k in v:
         r=v[k];need(set(r)==({'label','bounds','font_sp','color'} if k=='title' else {'label','bounds','font_sp','color','selected'}),'invalid native semantic fields')
         box(r['bounds']);need(numeric(r['font_sp']) and 0<r['font_sp']<=100 and isinstance(r['color'],list) and len(r['color'])==3 and all(type(x) is int and 0<=x<=255 for x in r['color']),'invalid native typography')
         need(isinstance(r['label'],str) and r['label'] in ({TITLE[route],"Mikey's HookLab"} if k=='title' and route=='home' else {TITLE[route] if k=='title' else LABELS[k]}),'unapproved native label '+k)
-        if k!='title':need(type(r['selected']) is bool and r['selected']==(k==route),'wrong native selection')
+        if k!='title':need(type(r['selected']) is bool and r['selected']==(k==root_route(route)),'wrong native selection')
     return v
 
 def metrics(a,b):
@@ -144,11 +147,11 @@ def evaluate(root,ref,native,out,verify=False):
                     with Image.open(q) as expected,Image.open(p) as actual_img:need(expected.size==actual_img.size and ImageChops.difference(expected.convert('RGB'),actual_img.convert('RGB')).getbbox() is None,'triptych drift')
             else:triptych(r,n,p)
         records.append({'route':route,'reference_case':case,'native_sha256':digest(native/(route+'.png')),'reference_sha256':digest(ref/(case+'.png')),'candidate_metrics':m,'region_metrics':regions,'semantic_controls':rows,'triptych_sha256':digest(p),'fixture_equivalence':False,'visual_approved':False})
-    result={**ident,'schema':SCHEMA,'reference_manifest_sha256':digest(ref/'manifest.json'),'native_receipt_sha256':digest(native/'receipt.json'),'contract_sha256':digest(root/'design/hooklab/02_CONTRACT/visual-contract.json'),'browser_semantic_roster_sha256':reference.ROSTER_SHA256,'coverage':{'reference_cases':24,'candidate_comparisons':3,'approved_cases':0},'uncompared_cases':sorted(set(f'VIS-{i:03}' for i in range(1,25))-set(MAP.values())),'status':'CANDIDATE_COMPARISON_ONLY','native_goldens_approved':False,'repeat_calibration':nr['repeat_calibration'],'cases':records}
+    result={**ident,'schema':SCHEMA,'reference_manifest_sha256':digest(ref/'manifest.json'),'native_receipt_sha256':digest(native/'receipt.json'),'contract_sha256':digest(root/'design/hooklab/02_CONTRACT/visual-contract.json'),'browser_semantic_roster_sha256':reference.ROSTER_SHA256,'coverage':{'reference_cases':24,'candidate_comparisons':len(MAP),'approved_cases':0},'uncompared_cases':sorted(set(f'VIS-{i:03}' for i in range(1,25))-set(MAP.values())),'status':'CANDIDATE_COMPARISON_ONLY','native_goldens_approved':False,'repeat_calibration':nr['repeat_calibration'],'cases':records}
     path=out/'visual-report.json'
     if verify:need(load(path)==result and {p.name for p in out.iterdir()}=={'visual-report.json',*(r+'-triptych.png' for r in MAP)},'comparison report/file drift')
     else:dump(path,result)
-    print('CANDIDATE_COMPARISON_VERIFIED 3/24; 0 APPROVED; NO VISUAL ACCEPTANCE',flush=True)
+    print('CANDIDATE_COMPARISON_VERIFIED 6/24; 0 APPROVED; NO VISUAL ACCEPTANCE',flush=True)
     return result
 
 def main():

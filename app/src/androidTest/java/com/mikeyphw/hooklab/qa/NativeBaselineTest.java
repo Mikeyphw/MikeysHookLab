@@ -140,6 +140,9 @@ public final class NativeBaselineTest {
             assertEquals(a.getString(title),String.valueOf(toolbar.getTitle()));
             NavigationBarView nav=find(decor,NavigationBarView.class);assertNotNull(nav);
             assertEquals(3,nav.getMenu().size());assertEquals(menu,nav.getSelectedItemId());
+            boolean deep=name.equals("group-detail")||name.equals("hook-detail");
+            assertEquals(!deep,nav.isShown());
+            if(deep){assertNotNull(toolbar.getNavigationIcon());assertEquals(a.getString(R.string.ui_back),String.valueOf(toolbar.getNavigationContentDescription()));}
             float density=a.getResources().getDisplayMetrics().density;
             JSONObject g=new JSONObject(); g.put("route",name);g.put("selected_menu",menu);g.put("real_activity",true);g.put("disconnected",true);g.put("density",density);
             g.put("width_dp",a.getResources().getConfiguration().screenWidthDp);
@@ -151,7 +154,7 @@ public final class NativeBaselineTest {
             JSONObject controls=new JSONObject();TextView titleView=label(toolbar,a.getString(title));
             controls.put("title",semantic(titleView,titleView,density));
             int[] ids={HOME,HOOKS,DIAGNOSTICS};String[] keys={"home","hooks","diagnostics"};
-            for(int n=0;n<ids.length;n++){
+            if(!deep)for(int n=0;n<ids.length;n++){
                 View item=nav.findViewById(ids[n]);assertNotNull(item);
                 String nameLabel=String.valueOf(nav.getMenu().findItem(ids[n]).getTitle());
                 controls.put(keys[n],semantic(item,label(item,nameLabel),density).put("selected",nav.getSelectedItemId()==ids[n]));
@@ -197,7 +200,28 @@ public final class NativeBaselineTest {
             assertTrue("Disconnected framework did not settle",settled);
             stage="HOME_CAPTURE";capture(s,"home",HOME,R.string.app_name);
             stage="HOOKS_TAP";onView(withId(HOOKS)).perform(click());
+            stage="R02_EXPAND";
+            onView(androidx.test.espresso.matcher.ViewMatchers.withContentDescription(app.getString(R.string.r02_expand,app.getString(R.string.ui_group_obtainx)))).perform(androidx.test.espresso.action.ViewActions.scrollTo(),click());
+            onView(androidx.test.espresso.matcher.ViewMatchers.withContentDescription(app.getString(R.string.r02_collapse,app.getString(R.string.ui_group_obtainx)))).check(androidx.test.espresso.assertion.ViewAssertions.matches(androidx.test.espresso.matcher.ViewMatchers.isDisplayed()));
             stage="HOOKS_CAPTURE";capture(s,"hooks",HOOKS,R.string.ui_hooks);
+            stage="R02_GROUP_CAPTURE";
+            // Touch the actual parent action independently of its chevron, then return.
+            onView(androidx.test.espresso.matcher.ViewMatchers.withContentDescription(org.hamcrest.Matchers.startsWith(app.getString(R.string.ui_group_obtainx)+", "))).perform(androidx.test.espresso.action.ViewActions.scrollTo(),new androidx.test.espresso.action.GeneralClickAction(androidx.test.espresso.action.Tap.SINGLE,androidx.test.espresso.action.GeneralLocation.CENTER_LEFT,androidx.test.espresso.action.Press.FINGER));
+            androidx.test.espresso.Espresso.pressBack();
+            onView(androidx.test.espresso.matcher.ViewMatchers.withText(R.string.ui_group_obtainx)).perform(androidx.test.espresso.action.ViewActions.scrollTo(),click());
+            capture(s,"group-detail",HOOKS,R.string.r02_group_details);
+            stage="R02_HOOK_CAPTURE";
+            String neo=com.mikeyphw.hooklab.core.TweakCatalog.entries().stream().filter(e->"neostore.obtainx.manual".equals(e.spec.id)).findFirst().orElseThrow().title;
+            onView(androidx.test.espresso.matcher.ViewMatchers.withText(neo)).perform(androidx.test.espresso.action.ViewActions.scrollTo(),click());
+            capture(s,"hook-detail",HOOKS,R.string.r02_hook_configuration);
+            androidx.test.espresso.Espresso.pressBack();androidx.test.espresso.Espresso.pressBack();
+            stage="R02_SINGLE_GROUP";
+            onView(androidx.test.espresso.matcher.ViewMatchers.withText(R.string.ui_group_wordmaster)).perform(androidx.test.espresso.action.ViewActions.scrollTo(),click());
+            s.onActivity(a->{MaterialToolbar toolbar=find(a.getWindow().getDecorView(),MaterialToolbar.class);assertEquals(a.getString(R.string.r02_hook_configuration),String.valueOf(toolbar.getTitle()));assertTrue(containsText(a.getWindow().getDecorView(),"wordmaster.night.filter"));});
+            androidx.test.espresso.Espresso.pressBack();
+            stage="R02_BY_APP_CAPTURE";
+            onView(androidx.test.espresso.matcher.ViewMatchers.withText(R.string.ui_by_app)).perform(androidx.test.espresso.action.ViewActions.scrollTo(),click());
+            capture(s,"by-app",HOOKS,R.string.ui_hooks);
             stage="DIAGNOSTICS_TAP";onView(withId(DIAGNOSTICS)).perform(click());
             stage="DIAGNOSTICS_CAPTURE";capture(s,"diagnostics",DIAGNOSTICS,R.string.diagnostics);
             stage="HOME_TAP";onView(withId(HOME)).perform(click());
