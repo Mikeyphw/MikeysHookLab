@@ -10,6 +10,59 @@ public final class TermuxCommandPolicy {
     public static final String ACTION_PREVIEW="com.mikeyphw.hooklab.termux.PREVIEW";
     public static final String ACTION_SETTINGS="com.mikeyphw.hooklab.termux.SETTINGS";
     public static final String EXTRA_SOURCE="com.mikeyphw.hooklab.termux.SOURCE";
+    public static final String EXTRA_REQUEST_ID="com.mikeyphw.hooklab.termux.REQUEST_ID";
+    public static final String EXTRA_REQUEST_TIME="com.mikeyphw.hooklab.termux.REQUEST_TIME";
+    public static final String EXTRA_REQUEST_WALL="com.mikeyphw.hooklab.termux.REQUEST_WALL";
+    public static final String HOST_CERT_SHA256="b24f4bfbb3cf293f938703b9d87027c1102cc36dc4fa206910e08927db40473c";
+    public static final long REQUEST_TTL_MS=15000;
+    public static final String EXECUTABLE=PREFIX+"sh";
+    // Fixed bootstrap; source is a separate argument, never embedded in this script or a file.
+    private static final String BOOTSTRAP="""
+        umask 077
+        export NOART=1
+        if [ ! -x /data/data/com.termux/files/usr/bin/zsh ]; then
+          printf '%s\\n' '[HookLab] zsh is required; install it with pkg install zsh' >&2
+          exit 127
+        fi
+        _hl_dir=$(mktemp -d /data/data/com.termux/files/usr/tmp/hooklab.XXXXXXXX) || exit 1
+        trap 'rm -f -- "$_hl_dir/.zshenv" "$_hl_dir/.zshrc"; rmdir -- "$_hl_dir"' EXIT
+        printf '%s\\n' "$3" > "$_hl_dir/.zshenv" || exit 1
+        printf '%s\\n' "$4" > "$_hl_dir/.zshrc" || exit 1
+        export HOOKLAB_R06_SOURCE="$1" HOOKLAB_R06_SHELL="$2"
+        export HOOKLAB_R06_ORIG_SET="${ZDOTDIR+x}" HOOKLAB_R06_ORIG="${ZDOTDIR-}"
+        export ZDOTDIR="$_hl_dir"
+        exec /data/data/com.termux/files/usr/bin/zsh -i
+        """;
+    private static final String ENV_INIT="""
+        typeset -g _hl_r06_dir="$ZDOTDIR" _hl_r06_code="$HOOKLAB_R06_SOURCE" _hl_r06_shell="$HOOKLAB_R06_SHELL"
+        if [[ $HOOKLAB_R06_ORIG_SET == x ]]; then export ZDOTDIR="$HOOKLAB_R06_ORIG"; else unset ZDOTDIR; fi
+        typeset +x _hl_r06_code _hl_r06_shell
+        unset HOOKLAB_R06_SOURCE HOOKLAB_R06_SHELL HOOKLAB_R06_ORIG_SET HOOKLAB_R06_ORIG
+        if [[ -r ${ZDOTDIR-$HOME}/.zshenv ]]; then builtin source "${ZDOTDIR-$HOME}/.zshenv"; fi
+        typeset -g _hl_r06_orig_set=${ZDOTDIR+x} _hl_r06_orig=${ZDOTDIR-}
+        export ZDOTDIR="$_hl_r06_dir"
+        """;
+    private static final String RC_INIT="""
+        if [[ $_hl_r06_orig_set == x ]]; then export ZDOTDIR="$_hl_r06_orig"; else unset ZDOTDIR; fi
+        command rm -f -- "$_hl_r06_dir/.zshenv" "$_hl_r06_dir/.zshrc"
+        command rmdir -- "$_hl_r06_dir"
+        unset _hl_r06_dir _hl_r06_orig_set _hl_r06_orig
+        if [[ -r ${ZDOTDIR-$HOME}/.zshrc ]]; then builtin source "${ZDOTDIR-$HOME}/.zshrc"; fi
+        function _hooklab_r06_run_once() {
+          setopt localoptions noerrexit noerrreturn
+          local _hl_r06_status
+          if [[ $_hl_r06_shell == zsh ]]; then
+            ( builtin eval "$_hl_r06_code" )
+          else
+            ( "/data/data/com.termux/files/usr/bin/$_hl_r06_shell" -c "$_hl_r06_code" )
+          fi
+          _hl_r06_status=$?
+          unset _hl_r06_code _hl_r06_shell
+          builtin printf '\\n[HookLab] Command exit: %d\\n' "$_hl_r06_status"
+        }
+        _hooklab_r06_run_once
+        unfunction _hooklab_r06_run_once
+        """;
     public static final int MAX_BYTES=48*1024;
     private TermuxCommandPolicy() {}
     public static String checkedCommand(String text) {
@@ -38,6 +91,11 @@ public final class TermuxCommandPolicy {
         return name;
     }
     public static String[] arguments(String source,String shell) {
-        checkedShell(shell);return new String[]{"-c",checkedCommand(source)};
+        return new String[]{"-c",BOOTSTRAP,"hooklab",checkedCommand(source),checkedShell(shell),ENV_INIT,RC_INIT};
+    }
+    public static boolean freshWall(long sent,long now){return sent>0&&now>=sent&&now-sent<=REQUEST_TTL_MS;}
+    public static boolean freshRequest(String id,long sent,long now) {
+        return id!=null&&id.matches("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+                &&sent>=0&&now>=sent&&now-sent<=REQUEST_TTL_MS;
     }
 }

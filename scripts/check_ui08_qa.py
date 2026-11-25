@@ -18,7 +18,7 @@ ns='{http://schemas.android.com/apk/res/android}'
 must([p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND'],'only explicit Termux command permission')
 must('private void appCard(' not in main and 'hooksCatalog();' in main,
      'retired unused legacy cards; catalog remains the only hooks view')
-must('Ui08LegacySelection.resolveUnique(TweakCatalog.all(),oldPackage)' in main
+must('Ui08LegacySelection.resolveUnique(environment.all(),oldPackage)' in main
      and 'if (unique != null) return null;' in model,
      'legacy package migration rejects ambiguous multiple hooks')
 must(main.count('FlatUi.sectionHeading(titleView);')==2

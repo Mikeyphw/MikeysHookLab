@@ -30,15 +30,15 @@ check("private void render()" in ui and "stateStore.start(next ->" in ui
       and "snapshot.equals(next)" in ui and "previousScroll" in ui,
       "snapshot_driven_current_screen_updates")
 check("newSingleThreadExecutor" in store and "ticket != generation" in store
-      and "bound != app.currentService()" in store and "observer == null" in store,
+      and "bound != environment.currentService()" in store and "observer == null" in store,
       "single_worker_generation_and_lifecycle_gates")
 check("prefs.edit().putBoolean(key, value).commit()" in store
       and "prefs.getBoolean(key, !value) == value" in store
       and "if (isReady(expected))" in store,
       "framework_confirmed_writes_not_optimistic")
-check("writeSafetyLock(String id" in store
+check("writeSafetyLock(UiEnvironment.Port expected, String id" in store
       and "TweakDiagnostics.quarantineKey(id)" in store
-      and "stateStore.writeSafetyLock(id, locked" in ui,
+      and "stateStore.writeSafetyLock(s, id, locked" in ui,
       "existing_safety_locks_remain_framework_owned")
 check("requestScope(Collections.singletonList(pkg)" in store
       and "removeScope(Collections.singletonList(pkg)" in store

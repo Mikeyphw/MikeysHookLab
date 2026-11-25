@@ -22,6 +22,7 @@
         </activity>
         <activity android:name=".mcc.MccControlActivity" android:exported="true" />
         <activity android:name=".termux.TermuxBridgeActivity" android:exported="true" android:excludeFromRecents="true" />
+        <receiver android:name=".termux.TermuxSessionReceipt" android:exported="false" />
         <provider android:name="io.github.libxposed.service.XposedProvider"
             android:authorities="${applicationId}.XposedService"
             android:exported="true" android:directBootAware="true" />

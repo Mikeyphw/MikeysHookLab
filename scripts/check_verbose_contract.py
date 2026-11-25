@@ -19,11 +19,11 @@ must('getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false)' in logs
      and 'getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false)' in store
      and 'Boolean.TRUE.equals(snapshot.verboseLogging)' in ui,
      'default-off toggle both app and host')
-must('write(TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb)' in store
+must('write(expected, TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb)' in store
      and 'prefs.edit().putBoolean(key, value).commit()' in store
      and 'prefs.getBoolean(key, !value) == value' in store
-     and 'expected == app.currentService()' in store
-     and 'ready(expected)' in ui and 'stateStore.writeVerbose(value,' in ui,
+     and 'expected == environment.currentService()' in store
+     and 'ready(expected)' in ui and 'stateStore.writeVerbose(expected, value,' in ui,
      'framework preference write with connection gate and verified commit')
 must('VerboseLogs.bind(settings, this)' in module and
      'getRemotePreferences(TweakKeys.GROUP)' in module,

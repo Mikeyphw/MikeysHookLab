@@ -1,17 +1,12 @@
 package com.mikeyphw.hooklab.ui;
 
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
-import com.mikeyphw.hooklab.HookLabApp;
-import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.TweakDiagnostics;
 import com.mikeyphw.hooklab.core.TweakEngine;
 import com.mikeyphw.hooklab.core.TweakKeys;
 import com.mikeyphw.hooklab.core.HookContext;
-import com.mikeyphw.hooklab.mcc.MccIds;
-import io.github.libxposed.service.XposedService;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,7 +21,7 @@ public final class FrameworkStateStore {
     public interface Observer { void onSnapshot(FrameworkSnapshot snapshot); }
     public interface Completion { void complete(boolean confirmed); }
 
-    private final HookLabApp app;
+    private final UiEnvironment environment;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor(task -> {
         Thread t = new Thread(task, "hooklab-framework-state");
@@ -38,8 +33,14 @@ public final class FrameworkStateStore {
     private volatile long generation;
     private volatile boolean closed;
     private long settledGeneration = -1;
+    private long lifecycleEpoch;
+    private UiEnvironment.Port publishedPort;
 
-    public FrameworkStateStore(HookLabApp app) { this.app = app; }
+    FrameworkStateStore(UiEnvironment environment) { this.environment = java.util.Objects.requireNonNull(environment); }
+
+    boolean ownsReadySnapshot(UiEnvironment.Port expected) {
+        return expected != null && expected == publishedPort && expected == environment.currentService();
+    }
 
     public void start(Observer listener) {
         if (closed) return;
@@ -48,6 +49,8 @@ public final class FrameworkStateStore {
     }
     public void stop() {
         generation++;
+        lifecycleEpoch++;
+        publishedPort = null;
         observer = null;
     }
     public void close() {
@@ -63,7 +66,8 @@ public final class FrameworkStateStore {
     public void refresh() {
         if (observer == null || closed) return;
         long ticket = ++generation;
-        XposedService bound = app.currentService();
+        UiEnvironment.Port bound = environment.currentService();
+        publishedPort = null;
         publish(FrameworkSnapshot.loading());
         // A stuck framework binder must not leave the UI spinning forever.
         main.postDelayed(() -> {
@@ -80,17 +84,18 @@ public final class FrameworkStateStore {
             FrameworkSnapshot resolved = result;
             main.post(() -> {
                 if (closed || observer == null || ticket != generation) return;
-                if (bound != app.currentService()) {
+                if (bound != environment.currentService()) {
                     refresh();
                     return;
                 }
                 settledGeneration = ticket;
+                publishedPort = resolved.ready() ? bound : null;
                 publish(resolved);
             });
         });
     }
 
-    private FrameworkSnapshot read(XposedService bound) {
+    private FrameworkSnapshot read(UiEnvironment.Port bound) {
         if (bound == null) return FrameworkSnapshot.disconnected();
         final int api;
         try { api = bound.getApiVersion(); }
@@ -112,7 +117,7 @@ public final class FrameworkStateStore {
         try { safety = bound.getRemotePreferences(TweakDiagnostics.GROUP); }
         catch (RuntimeException | LinkageError ignored) { /* safety unavailable */ }
         Map<String, FrameworkSnapshot.Flag> states = new HashMap<>();
-        for (TweakEngine.Entry<HookContext> entry : TweakCatalog.entries()) {
+        for (TweakEngine.Entry<HookContext> entry : environment.entries()) {
             Boolean enabled = null, locked = null;
             if (flags != null) {
                 try { enabled = flags.getBoolean(TweakKeys.enabled(entry.spec.id), false); }
@@ -122,15 +127,7 @@ public final class FrameworkStateStore {
                 try { locked = safety.getBoolean(TweakDiagnostics.quarantineKey(entry.spec.id), false); }
                 catch (RuntimeException | LinkageError ignored) { /* unreadable: no false assumption */ }
             }
-            Long installed = null;
-            if (!MccIds.PACKAGE.equals(entry.spec.packageName)) {
-                try {
-                    installed = app.getPackageManager().getPackageInfo(
-                            entry.spec.packageName, 0).getLongVersionCode();
-                } catch (PackageManager.NameNotFoundException | SecurityException ignored) {
-                    // Uninstalled, invisible or inaccessible: never assume eligibility.
-                }
-            }
+            Long installed = environment.installedVersion(entry.spec);
             states.put(entry.spec.id, new FrameworkSnapshot.Flag(enabled, locked, installed));
         }
         Boolean verbose = null;
@@ -141,23 +138,23 @@ public final class FrameworkStateStore {
         return FrameworkSnapshot.connected(name, version, api, scope, states, verbose);
     }
 
-    private boolean isReady(XposedService expected) {
+    private boolean isReady(UiEnvironment.Port expected) {
         try {
-            return expected != null && expected == app.currentService()
+            return expected != null && expected == environment.currentService()
                     && expected.getApiVersion() >= 102;
         } catch (RuntimeException | LinkageError error) { return false; }
     }
-    private void completed(XposedService expected, boolean success, Completion cb) {
+    private void completed(UiEnvironment.Port expected, long epoch, boolean success, Completion cb) {
         main.post(() -> {
-            if (closed || observer == null) return;
-            boolean current = expected == app.currentService();
+            if (closed || observer == null || epoch != lifecycleEpoch) return;
+            boolean current = expected == environment.currentService();
             cb.complete(success && current);
             refresh(); // Re-read framework truth; never optimistically flip the switch.
         });
     }
-    private void write(String group, String key, boolean value, Completion cb) {
-        XposedService expected = app.currentService();
-        if (observer == null || closed) { cb.complete(false); return; }
+    private void write(UiEnvironment.Port expected, String group, String key, boolean value, Completion cb) {
+        if (observer == null || closed || !ownsReadySnapshot(expected)) { cb.complete(false); return; }
+        long epoch = lifecycleEpoch;
         worker.execute(() -> {
             boolean saved = false;
             if (isReady(expected)) {
@@ -167,42 +164,44 @@ public final class FrameworkStateStore {
                             && prefs.getBoolean(key, !value) == value;
                 } catch (RuntimeException | LinkageError ignored) { saved = false; }
             }
-            completed(expected, saved, cb);
+            completed(expected, epoch, saved, cb);
         });
     }
-    public void writeTweak(String id, boolean enabled, Completion cb) {
-        write(TweakKeys.GROUP, TweakKeys.enabled(id), enabled, cb);
+    public void writeTweak(UiEnvironment.Port expected, String id, boolean enabled, Completion cb) {
+        write(expected, TweakKeys.GROUP, TweakKeys.enabled(id), enabled, cb);
     }
-    public void writeSafetyLock(String id, boolean locked, Completion cb) {
-        write(TweakDiagnostics.GROUP, TweakDiagnostics.quarantineKey(id), locked, cb);
+    public void writeSafetyLock(UiEnvironment.Port expected, String id, boolean locked, Completion cb) {
+        write(expected, TweakDiagnostics.GROUP, TweakDiagnostics.quarantineKey(id), locked, cb);
     }
-    public void writeVerbose(boolean enabled, Completion cb) {
-        write(TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb);
+    public void writeVerbose(UiEnvironment.Port expected, boolean enabled, Completion cb) {
+        write(expected, TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb);
     }
-    public void requestScope(String pkg, Completion cb) {
-        XposedService expected = app.currentService();
-        if (observer == null || closed || !TweakCatalog.knowsPackage(pkg)) {
+    public void requestScope(UiEnvironment.Port expected, String pkg, Completion cb) {
+        if (observer == null || closed || !ownsReadySnapshot(expected) || !environment.knowsPackage(pkg)) {
             cb.complete(false); return;
         }
+        long epoch = lifecycleEpoch;
+        java.util.concurrent.atomic.AtomicBoolean once = new java.util.concurrent.atomic.AtomicBoolean();
+        Completion single = success -> { if (once.compareAndSet(false, true)) completed(expected, epoch, success, cb); };
         worker.execute(() -> {
-            if (!isReady(expected)) { completed(expected, false, cb); return; }
+            if (!isReady(expected)) { single.complete(false); return; }
             try {
-                expected.requestScope(Collections.singletonList(pkg), new XposedService.OnScopeEventListener() {
+                expected.requestScope(Collections.singletonList(pkg), new UiEnvironment.ScopeListener() {
                     @Override public void onScopeRequestApproved(List<String> approved) {
-                        completed(expected, approved != null && approved.contains(pkg), cb);
+                        single.complete(approved != null && approved.contains(pkg));
                     }
                     @Override public void onScopeRequestFailed(String reason) {
-                        completed(expected, false, cb);
+                        single.complete(false);
                     }
                 });
-            } catch (RuntimeException | LinkageError error) { completed(expected, false, cb); }
+            } catch (RuntimeException | LinkageError error) { single.complete(false); }
         });
     }
-    public void removeScope(String pkg, Completion cb) {
-        XposedService expected = app.currentService();
-        if (observer == null || closed || !TweakCatalog.knowsPackage(pkg)) {
+    public void removeScope(UiEnvironment.Port expected, String pkg, Completion cb) {
+        if (observer == null || closed || !ownsReadySnapshot(expected) || !environment.knowsPackage(pkg)) {
             cb.complete(false); return;
         }
+        long epoch = lifecycleEpoch;
         worker.execute(() -> {
             boolean requested = false;
             if (isReady(expected)) {
@@ -211,7 +210,7 @@ public final class FrameworkStateStore {
                     requested = true; // Request submitted; snapshot later verifies actual scope.
                 } catch (RuntimeException | LinkageError ignored) { /* request failed */ }
             }
-            completed(expected, requested, cb);
+            completed(expected, epoch, requested, cb);
         });
     }
 }

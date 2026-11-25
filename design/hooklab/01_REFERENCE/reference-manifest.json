@@ -1,0 +1,444 @@
+{
+  "approval": "user-selected prototype; native golden approval pending",
+  "cases": [
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-001",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "home",
+      "sheet": null,
+      "svg_label": "01 \u00b7 Home",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-002",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R02",
+      "root": "hooks",
+      "route": "hooks",
+      "sheet": null,
+      "svg_label": "02 \u00b7 Hooks / Groups",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "apps",
+      "fixture": "sample_reference_only",
+      "id": "VIS-003",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R02",
+      "root": "hooks",
+      "route": "hooks",
+      "sheet": null,
+      "svg_label": "03 \u00b7 Hooks / By app",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "obtainx",
+      "fixture": "sample_reference_only",
+      "id": "VIS-004",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R02",
+      "root": "hooks",
+      "route": "group",
+      "sheet": null,
+      "svg_label": "04 \u00b7 Group detail",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "neo",
+      "fixture": "sample_reference_only",
+      "id": "VIS-005",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R02",
+      "root": "hooks",
+      "route": "hook",
+      "sheet": null,
+      "svg_label": "05 \u00b7 Hook configuration",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "timeline",
+      "fixture": "sample_reference_only",
+      "id": "VIS-006",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "diagnostics",
+      "sheet": null,
+      "svg_label": "06 \u00b7 Diagnostics / Timeline",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "timeline",
+      "fixture": "sample_reference_only",
+      "id": "VIS-007",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "diagnostics",
+      "sheet": "filters",
+      "svg_label": "07 \u00b7 Filter sheet",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "1",
+      "fixture": "sample_reference_only",
+      "id": "VIS-008",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "event",
+      "sheet": null,
+      "svg_label": "08 \u00b7 Event inspector",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "health",
+      "fixture": "sample_reference_only",
+      "id": "VIS-009",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "diagnostics",
+      "sheet": null,
+      "svg_label": "09 \u00b7 Diagnostics / Health",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "mcc",
+      "fixture": "sample_reference_only",
+      "id": "VIS-010",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "health",
+      "sheet": null,
+      "svg_label": "10 \u00b7 Health report",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "capture",
+      "fixture": "sample_reference_only",
+      "id": "VIS-011",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "diagnostics",
+      "sheet": null,
+      "svg_label": "11 \u00b7 Diagnostics / Capture",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "capture",
+      "fixture": "sample_reference_only",
+      "id": "VIS-012",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "diagnostics",
+      "sheet": "capture_setup",
+      "svg_label": "12 \u00b7 Capture setup",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "neo",
+      "fixture": "sample_reference_only",
+      "id": "VIS-013",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "session",
+      "sheet": null,
+      "svg_label": "13 \u00b7 Capture session",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "neo",
+      "fixture": "sample_reference_only",
+      "id": "VIS-014",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "report",
+      "sheet": null,
+      "svg_label": "14 \u00b7 Session report",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-015",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "settings",
+      "sheet": null,
+      "svg_label": "15 \u00b7 Settings",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-016",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "scope",
+      "sheet": null,
+      "svg_label": "16 \u00b7 Scope & permissions",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-017",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "mcc",
+      "sheet": null,
+      "svg_label": "17 \u00b7 MCC manual control",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-018",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "about",
+      "sheet": null,
+      "svg_label": "18 \u00b7 About",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-019",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "help",
+      "sheet": null,
+      "svg_label": "19 \u00b7 Help",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-020",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "privacy",
+      "sheet": null,
+      "svg_label": "20 \u00b7 Privacy & logs",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-021",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "home",
+      "sheet": null,
+      "svg_label": "21 \u00b7 Light theme",
+      "theme": "light",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "timeline",
+      "fixture": "sample_reference_only",
+      "id": "VIS-022",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "diagnostics",
+      "sheet": null,
+      "svg_label": "22 \u00b7 AMOLED / Empty timeline",
+      "theme": "amoled",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": "timeline",
+      "fixture": "sample_reference_only",
+      "id": "VIS-023",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R01",
+      "root": "diagnostics",
+      "route": "diagnostics",
+      "sheet": "import",
+      "svg_label": "23 \u00b7 Import sheet",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "admission": "CANDIDATE",
+      "arg": null,
+      "fixture": "sample_reference_only",
+      "id": "VIS-024",
+      "mask_regions": [],
+      "native_approved": false,
+      "owner": "UX-R03",
+      "root": "home",
+      "route": "home",
+      "sheet": null,
+      "svg_label": "24 \u00b7 Disconnected framework",
+      "theme": "dark",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    }
+  ],
+  "files": {
+    "hooklab_ux_revamp.html": "8df26c67823ad29bae220ff18ae86d685f5ad27ed87d94ba6bc607d6e0cb3a2d",
+    "hooklab_ux_revamp.svg": "59ca31cb43ed09fdd10de3739837f85c3ab522e85e32474831e8285021e578af"
+  },
+  "provenance": "Original user-facing generated HookLab design files; not third-party icons; sample vectors only; licensing of future production artwork requires separate review.",
+  "revision": "1.0",
+  "schema": "hooklab.design.reference.v1"
+}
