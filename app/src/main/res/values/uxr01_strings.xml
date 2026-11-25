@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="r01_timeline">Timeline</string>
+    <string name="r01_health">Health</string>
+    <string name="r01_event_inspector">Event inspector</string>
+    <string name="r01_import_qualifier">Imported · unverified</string>
+    <string name="r01_filters">Filters</string>
+    <string name="r01_filter_count">Filters (%1$d)</string>
+    <string name="r01_filter_group">Hook group</string>
+    <string name="r01_filter_source">Imported source</string>
+    <string name="r01_filter_severity">Severity</string>
+    <string name="r01_after">From UTC timestamp (optional)</string>
+    <string name="r01_before">Through UTC timestamp (optional)</string>
+    <string name="r01_time_help">Use ISO-8601, for example 2026-11-23T21:42:08Z. Unknown source clocks are excluded when a time bound is active.</string>
+    <string name="r01_bad_time">Enter valid ISO-8601 timestamps in chronological order.</string>
+    <string name="r01_apply">Apply filters</string>
+    <string name="r01_clear">Clear filters</string>
+    <string name="r01_copy">Copy</string>
+    <string name="r01_export">Export</string>
+    <string name="r01_page">%1$d / %2$d</string>
+    <string name="r01_health_counts">%1$d imported · %2$d errors</string>
+    <string name="r01_redaction_preview">Redacted evidence preview</string>
+    <string name="r01_selection_preview">Selected: %1$d redacted events. Total retention evictions: %2$d. Includes source hashes and line identities, never raw log text. Sample of the first selected event:</string>
+    <string name="r01_capture_export_preview">Session snapshot: %1$d imported events; %2$d possible retention losses. Includes redacted event and marker metadata with hashes. Does not prove runtime execution.</string>
+    <string name="r01_picker_pending">A document request is already pending.</string>
+    <string name="r01_stale_request">Document request expired. Select the source or export again.</string>
+    <string name="r01_stale_event">The selected event is no longer retained. Return to the timeline.</string>
+    <string name="r01_marker">%1$s · %2$d seconds</string>
+    <string name="r01_process_loss">Previous in-memory evidence and filters are unavailable after process restart.</string>
+    <string name="r01_import_not_attributed">The capture expired while reading the file. Imported evidence remains in Timeline, not in the capture report.</string>
+    <string name="r01_export_health">Export redacted health ZIP</string>
+</resources>

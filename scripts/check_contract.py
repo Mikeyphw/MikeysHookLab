@@ -158,7 +158,7 @@ check(all(t in compat for t in ('FRAMEWORK_UNAVAILABLE', 'SCOPE_UNKNOWN',
       'OUT_OF_SCOPE', 'QUARANTINED', 'VERSION_UNVERIFIED',
       'VERSION_UNSUPPORTED', 'ELIGIBLE', 'verifiedVersion == null')),
       'honest three-valued compatibility model')
-check(all(t in ui for t in ('diagnosticsPage()', 'confirmSafetyLock(s, id, nextLock)',
+check(all(t in ui for t in ('diagnosticsPage()', 'confirmSafetyLock(port,spec.id,lock)',
       'R.string.diagnostics_note', 'R.string.diagnostics_reset_confirm',
       's == service()', 'stateStore.writeSafetyLock(s, id, locked,'))
       and all(t in state_store for t in ('writeSafetyLock(UiEnvironment.Port expected, String id, boolean locked, Completion cb)',
@@ -321,7 +321,9 @@ check('MAX_BYTES=2*1024*1024' in dx and 'MAX_EVENTS=4000' in dx
       and 'ASSOCIATED' in dx and 'UNCLASSIFIED' in dx,
       'DX-01 bounded non-authenticated redacted source timeline')
 check('openInputStream(uri)' in saf and 'openOutputStream(uri,"w")' in saf
-      and 'ZipOutputStream' in saf and 'events_sha256' in saf,
+      and 'DiagnosticExport.writeEvents' in saf
+      and 'ZipOutputStream' in read('app/src/main/java/com/mikeyphw/hooklab/diagnostics/DiagnosticExport.java')
+      and 'events_sha256' in read('app/src/main/java/com/mikeyphw/hooklab/diagnostics/DiagnosticExport.java'),
       'DX-01 explicit SAF file import and redacted evidence export')
 check('public com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnostics()' in appdx
       and 'diagnosticsTimelinePage();' in uidebug
@@ -364,7 +366,7 @@ check('MAX_DURATION_MS=10*60*1000L' in capture and 'MAX_MARKERS=64' in capture
       'DX-02 bounded stop, timeout, interruption, cancellation')
 check('MarkerCode' in capture and 'REPRODUCE_ACTION' in capture_ui
       and 'OBSERVED_PROBLEM' in capture_ui and 'source.equals(e.source)' in capture
-      and 'acceptedImportRanges' in capture and 'currentCapture.registerImport(' in capture_ui,
+      and 'acceptedImportRanges' in capture and 'current.registerImport(' in capture_ui,
       'DX-02 fixed action markers and source/ordinal evidence attribution')
 check('runtime_methods=NOT_ACCESSED; injection=DISABLED' in capture
       and 'researchOnly' in capture and 'environment.knowsPackage(pkg)' in capture_ui,
@@ -397,9 +399,9 @@ check('spec.id.equals(event.hookId)' in health_model
       'DX-03 exact-ID source/error attribution and collector-gap disclosure')
 check('v->goTo(CAPTURE)' in health_ui
       and 'openHookHealth(TweakSpec spec)' in health_ui
-      and 'goTo(DIAGNOSTICS); // Read-only route' in health_ui
+      and 'goTo(HEALTH_REPORT)' in health_ui
       and 'showApp(entry)' in health_ui
-      and 'copyDiagnosticText(HookHealthModel.redactedJson(report))' in health_ui,
+      and 'copyDiagnosticText(redacted)' in health_ui,
       'DX-03 real safe setup/capture/evidence navigation and redacted copy')
 check('public boolean executionVerified(){return false;}' in health_model
       and 'runtime_execution_verified' in health_model
@@ -436,7 +438,7 @@ check('getPackageInfo(' in ui07_main and 'GET_SIGNING_CERTIFICATES' in ui07_main
       'UI-07 P03 runtime app identity, signing fingerprint, privacy and native Help')
 check('case HELP: helpPage(); break;' in ui07_main
       and 'out.putInt("page", page)' in ui07_main
-      and 'Math.min(HELP, state.getInt("page"))' in ui07_main
+      and 'Math.min(EVENT_REPORT, state.getInt("page"))' in ui07_main
       and 'out.putInt("helpReturnPage", helpReturnPage)' in ui07_main
       and 'status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE)' in ui07_mcc
       and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui07ScopeModelTest.java').is_file()

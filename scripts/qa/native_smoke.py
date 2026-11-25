@@ -10,8 +10,8 @@ FIXTURE='com.mikeyphw.hooklab.qa.DiagnosticFixtureTest#importedFixtureProjection
 FRAMEWORK_TEST='com.mikeyphw.hooklab.ui.FrameworkFixtureTest#connectedCommandsStaleCallbackAndClock'
 TERMUX_TEST='com.mikeyphw.hooklab.termux.TermuxBridgeFixtureTest#syntheticAuthorizationAndReceipt'
 TESTS=[TEST,TEST,FIXTURE,FRAMEWORK_TEST,TERMUX_TEST]
-FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','capture_restart_same_route','no_real_framework']}
-FIXTURE_EVIDENCE={'schema':'hooklab.diagnostics.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'framework_disconnected':True,'assertions':['three_normalized_events','actual_timeline_projection','filter_one_of_three','raw_marker_not_rendered','store_unchanged','no_framework_service']}
+FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','capture_restart_same_route','health_exact_same_package_routes','health_navigation_no_writes','no_real_framework']}
+FIXTURE_EVIDENCE={'schema':'hooklab.diagnostics.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'framework_disconnected':True,'assertions':['three_normalized_events','actual_timeline_projection','filter_one_of_three','raw_marker_not_rendered','store_unchanged','no_framework_service','filter_cancel_preserves_applied','stable_inspector_identity_recreate','isolated_workspaces','clear_filter','single_import_sheet_cancel','unsafe_uri_refused','redaction_preview_cancel_clipboard_unchanged']}
 
 def require(ok,msg):
     if not ok:raise ValueError(msg)
@@ -207,7 +207,7 @@ def expected_identity():
     require(all(re.fullmatch('[1-9][0-9]*',os.environ.get(k,'')) for k in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT')),'invalid run identity')
     return {'schema':'hooklab.native.smoke.v1','source_sha':source,'source_tree':git('rev-parse','HEAD^{tree}'),'run_id':os.environ['GITHUB_RUN_ID'],'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'],'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
 
-FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT','FRAMEWORK_SETUP','FRAMEWORK_PREFERENCES','FRAMEWORK_SCOPE','FRAMEWORK_GROUP','CAPTURE_START','CAPTURE_ACTIVE_RENDER','CAPTURE_MARKER','CAPTURE_STOP','CAPTURE_RESTART','FRAMEWORK_RECEIPT'))
+FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT','FRAMEWORK_SETUP','FRAMEWORK_PREFERENCES','FRAMEWORK_SCOPE','FRAMEWORK_GROUP','HEALTH_EXACT_ROUTE','CAPTURE_START','CAPTURE_ACTIVE_RENDER','CAPTURE_MARKER','CAPTURE_STOP','CAPTURE_RESTART','FRAMEWORK_RECEIPT'))
 # Restrict exported frames to our three instrumentation classes. Raw stack/message/UI text
 # can contain private or attacker-controlled data; it is never written or printed.
 FRAME_CLASSES={t.split('#')[0]:t.split('#')[0].rsplit('.',1)[-1]+'.java' for t in TESTS}

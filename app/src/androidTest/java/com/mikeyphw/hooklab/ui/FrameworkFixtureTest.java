@@ -39,7 +39,7 @@ import static org.junit.Assert.*;
 public final class FrameworkFixtureTest {
     private static final String NEO="neostore.obtainx.manual", DROID="droidify.obtainx.manual";
     private static final String PKG="com.machiav3lli.fdroid";
-    private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","capture_restart_same_route","no_real_framework"};
+    private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","capture_restart_same_route","health_exact_same_package_routes","health_navigation_no_writes","no_real_framework"};
     private static final class FakePort implements UiEnvironment.Port {
         final SharedPreferences flags,safety;
         final Set<String> scope=ConcurrentHashMap.newKeySet();
@@ -163,8 +163,20 @@ public final class FrameworkFixtureTest {
             assertEquals(2,env.entries().size());assertEquals(1,HookGroupCatalog.groups(env.all()).get(0).packages.size());
             await(s,v->v instanceof TextView&&PKG.contentEquals(((TextView)v).getText()));
             s.onActivity(a->{View root=a.getWindow().getDecorView();assertEquals(2,count(root,v->v instanceof TextView&&a.getString(R.string.ui05_open_hook).contentEquals(((TextView)v).getText())));assertEquals(1,count(root,v->v instanceof TextView&&a.getString(R.string.scope_remove).contentEquals(((TextView)v).getText())));});
+            stage="HEALTH_EXACT_ROUTE";
+            int beforeHealth=replacement.writes.get();
+            onView(withId(203)).perform(click());press(R.string.r01_health);
+            for(TweakEngine.Entry<HookContext> e:env.entries()){
+                onView(withText(e.title)).perform(scrollTo(),click());
+                // Only the selected exact hook owns the report and setup route.
+                s.onActivity(a->{View root=a.getWindow().getDecorView();assertTrue(count(root,v->v instanceof TextView&&a.getString(R.string.dx03_open_setup).contentEquals(((TextView)v).getText()))==1);});
+                press(R.string.dx03_open_setup);
+                s.onActivity(a->{View root=a.getWindow().getDecorView();assertTrue(count(root,v->v instanceof TextView&&e.title.contentEquals(((TextView)v).getText()))>=1);});
+                androidx.test.espresso.Espresso.pressBack();androidx.test.espresso.Espresso.pressBack();
+            }
+            assertEquals(beforeHealth,replacement.writes.get());assertNull(replacement.pending.get());
             stage="CAPTURE_START";
-            onView(withId(203)).perform(click());press(R.string.dx02_capture);press(R.string.dx02_choose_target);
+            press(R.string.dx02_capture);press(R.string.dx02_choose_target);
             TweakEngine.Entry<HookContext> neo=env.entries().stream().filter(e->NEO.equals(e.spec.id)).findFirst().orElseThrow();
             onView(withText(neo.title+" · "+PKG)).perform(click());onView(withText(R.string.dx01_module)).perform(click());
             assertNotNull(app.capture());assertEquals(NEO,app.capture().targetHookId);assertEquals(CaptureSession.State.ACTIVE,app.capture().state());

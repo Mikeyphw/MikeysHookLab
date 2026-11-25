@@ -31,7 +31,20 @@ def check(path):
     refs={i:r for i,op,r,words in d.refs(c)}
     assert any(183<=i<208 and r=='Lda50;' for i,r in refs.items())
     method('Llje0;','a','Lf1s0;',('Lda50;','Lrqr;','I'),True)
-    method('Lt6d0;','a','V',('Lf1s0;','Ljava/lang/String;','Lr0o0;','J','Lrqr;','I','I'),True)
+    # Exact DEX verifies the default mask: bit 4 selects the default modifier,
+    # bit 8 selects inherited tint; explicit packed white must clear bit 8.
+    d,c=method('Lt6d0;','a','V',('Lf1s0;','Ljava/lang/String;','Lr0o0;','J','Lrqr;','I','I'),True)
+    w=d.words(c)
+    assert tuple(w[126:130])==(0x09dd,0x0106,0x0d62,0x65a9)  # pinned modifier/bit-4 route
+    assert tuple(w[142:146])==(0x04dd,0x081e,0x0438,0x0004)  # default-tint bit 8
+    assert tuple(w[102:104])==(0x0b05,0x001a)  # incoming explicit long tint
+    d,c=method('Lzsq;','<clinit>','V',(),True);w=d.words(c)
+    assert tuple(w[44:49])==(0x0018,0xffff,0xffff,0,0)
+    refs={i:r for i,op,r,words in d.refs(c)}
+    assert refs[49]==('Ls1g0;','d','J',('J',)) and refs[53]==('Lzsq;','f','J')
+    d,c=method('Ls1g0;','d','J',('J',),True)
+    assert tuple(d.words(c)[:3])==(0x0013,0x0020,0x01c3)  # ARGB shifted left 32 bits
+    print('P09_EXPLICIT_WHITE_TINT_DEX_PASS 0xFFFFFFFF00000000 default_mask=0x4')
     print('P09_TERMINAL_DRAWABLE_D​EX_PASS; actual host composition pending'.replace('\u200b',''))
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('apkm');check(p.parse_args().apkm)

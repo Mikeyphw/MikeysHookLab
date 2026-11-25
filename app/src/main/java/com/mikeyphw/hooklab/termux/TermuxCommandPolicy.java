@@ -16,7 +16,9 @@ public final class TermuxCommandPolicy {
     public static final String HOST_CERT_SHA256="b24f4bfbb3cf293f938703b9d87027c1102cc36dc4fa206910e08927db40473c";
     public static final long REQUEST_TTL_MS=15000;
     public static final String EXECUTABLE=PREFIX+"sh";
-    // Fixed bootstrap; source is a separate argument, never embedded in this script or a file.
+    // Run the installed Termux login script before launching persistent Zsh.
+    // The login script selects termux-exec and performs its own compatibility probe.
+    // Only fixed code is written to private startup shims; payload stays a separate argument.
     private static final String BOOTSTRAP="""
         umask 077
         export NOART=1
@@ -24,30 +26,55 @@ public final class TermuxCommandPolicy {
           printf '%s\\n' '[HookLab] zsh is required; install it with pkg install zsh' >&2
           exit 127
         fi
-        _hl_dir=$(mktemp -d /data/data/com.termux/files/usr/tmp/hooklab.XXXXXXXX) || exit 1
-        trap 'rm -f -- "$_hl_dir/.zshenv" "$_hl_dir/.zshrc"; rmdir -- "$_hl_dir"' EXIT
+        if [ ! -r /data/data/com.termux/files/usr/bin/login ]; then
+          printf '%s\\n' '[HookLab] Termux login is required; repair termux-tools' >&2
+          exit 127
+        fi
+        _hl_dir=$(/data/data/com.termux/files/usr/bin/mktemp -d "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/hooklab.XXXXXXXX") || exit 1
+        trap 'if [ -d "$_hl_dir" ]; then /data/data/com.termux/files/usr/bin/rm -f -- "$_hl_dir/.zshenv" "$_hl_dir/.zprofile" "$_hl_dir/.zshrc" "$_hl_dir/.zlogin"; /data/data/com.termux/files/usr/bin/rmdir -- "$_hl_dir"; fi' EXIT
         printf '%s\\n' "$3" > "$_hl_dir/.zshenv" || exit 1
-        printf '%s\\n' "$4" > "$_hl_dir/.zshrc" || exit 1
+        printf '%s\\n' "$4" > "$_hl_dir/.zprofile" || exit 1
+        printf '%s\\n' "$5" > "$_hl_dir/.zshrc" || exit 1
+        printf '%s\\n' "$6" > "$_hl_dir/.zlogin" || exit 1
         export HOOKLAB_R06_SOURCE="$1" HOOKLAB_R06_SHELL="$2"
         export HOOKLAB_R06_ORIG_SET="${ZDOTDIR+x}" HOOKLAB_R06_ORIG="${ZDOTDIR-}"
-        export ZDOTDIR="$_hl_dir"
-        exec /data/data/com.termux/files/usr/bin/zsh -i
+        export HOOKLAB_R06_SHIM="$_hl_dir" ZDOTDIR="$_hl_dir"
+        /data/data/com.termux/files/usr/bin/sh /data/data/com.termux/files/usr/bin/login -c 'exec /data/data/com.termux/files/usr/bin/env ZDOTDIR="$HOOKLAB_R06_SHIM" /data/data/com.termux/files/usr/bin/zsh -il'
         """;
     private static final String ENV_INIT="""
-        typeset -g _hl_r06_dir="$ZDOTDIR" _hl_r06_code="$HOOKLAB_R06_SOURCE" _hl_r06_shell="$HOOKLAB_R06_SHELL"
+        # Login's noninteractive termux-exec probe and intermediate shell must
+        # never consume the payload, execute user RCs twice or remove the shim.
+        [[ -o interactive ]] || return 0
+        typeset -g _hl_r06_dir="$HOOKLAB_R06_SHIM" _hl_r06_code="$HOOKLAB_R06_SOURCE" _hl_r06_shell="$HOOKLAB_R06_SHELL"
         if [[ $HOOKLAB_R06_ORIG_SET == x ]]; then export ZDOTDIR="$HOOKLAB_R06_ORIG"; else unset ZDOTDIR; fi
         typeset +x _hl_r06_code _hl_r06_shell
-        unset HOOKLAB_R06_SOURCE HOOKLAB_R06_SHELL HOOKLAB_R06_ORIG_SET HOOKLAB_R06_ORIG
+        unset HOOKLAB_R06_SOURCE HOOKLAB_R06_SHELL HOOKLAB_R06_ORIG_SET HOOKLAB_R06_ORIG HOOKLAB_R06_SHIM
+        export NOART=1
         if [[ -r ${ZDOTDIR-$HOME}/.zshenv ]]; then builtin source "${ZDOTDIR-$HOME}/.zshenv"; fi
         typeset -g _hl_r06_orig_set=${ZDOTDIR+x} _hl_r06_orig=${ZDOTDIR-}
         export ZDOTDIR="$_hl_r06_dir"
         """;
-    private static final String RC_INIT="""
+    private static final String PROFILE_INIT="""
+        [[ -o interactive ]] || return 0
         if [[ $_hl_r06_orig_set == x ]]; then export ZDOTDIR="$_hl_r06_orig"; else unset ZDOTDIR; fi
-        command rm -f -- "$_hl_r06_dir/.zshenv" "$_hl_r06_dir/.zshrc"
-        command rmdir -- "$_hl_r06_dir"
-        unset _hl_r06_dir _hl_r06_orig_set _hl_r06_orig
+        if [[ -r ${ZDOTDIR-$HOME}/.zprofile ]]; then builtin source "${ZDOTDIR-$HOME}/.zprofile"; fi
+        typeset -g _hl_r06_orig_set=${ZDOTDIR+x} _hl_r06_orig=${ZDOTDIR-}
+        export ZDOTDIR="$_hl_r06_dir"
+        """;
+    private static final String RC_INIT="""
+        [[ -o interactive ]] || return 0
+        if [[ $_hl_r06_orig_set == x ]]; then export ZDOTDIR="$_hl_r06_orig"; else unset ZDOTDIR; fi
         if [[ -r ${ZDOTDIR-$HOME}/.zshrc ]]; then builtin source "${ZDOTDIR-$HOME}/.zshrc"; fi
+        typeset -g _hl_r06_orig_set=${ZDOTDIR+x} _hl_r06_orig=${ZDOTDIR-}
+        export ZDOTDIR="$_hl_r06_dir"
+        """;
+    private static final String LOGIN_INIT="""
+        [[ -o interactive ]] || return 0
+        if [[ $_hl_r06_orig_set == x ]]; then export ZDOTDIR="$_hl_r06_orig"; else unset ZDOTDIR; fi
+        /data/data/com.termux/files/usr/bin/rm -f -- "$_hl_r06_dir/.zshenv" "$_hl_r06_dir/.zprofile" "$_hl_r06_dir/.zshrc" "$_hl_r06_dir/.zlogin"
+        /data/data/com.termux/files/usr/bin/rmdir -- "$_hl_r06_dir"
+        unset _hl_r06_dir _hl_r06_orig_set _hl_r06_orig
+        if [[ -r ${ZDOTDIR-$HOME}/.zlogin ]]; then builtin source "${ZDOTDIR-$HOME}/.zlogin"; fi
         function _hooklab_r06_run_once() {
           setopt localoptions noerrexit noerrreturn
           local _hl_r06_status
@@ -91,7 +118,7 @@ public final class TermuxCommandPolicy {
         return name;
     }
     public static String[] arguments(String source,String shell) {
-        return new String[]{"-c",BOOTSTRAP,"hooklab",checkedCommand(source),checkedShell(shell),ENV_INIT,RC_INIT};
+        return new String[]{"-c",BOOTSTRAP,"hooklab",checkedCommand(source),checkedShell(shell),ENV_INIT,PROFILE_INIT,RC_INIT,LOGIN_INIT};
     }
     public static boolean freshWall(long sent,long now){return sent>0&&now>=sent&&now-sent<=REQUEST_TTL_MS;}
     public static boolean freshRequest(String id,long sent,long now) {

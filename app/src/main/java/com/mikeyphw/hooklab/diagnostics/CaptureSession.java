@@ -77,6 +77,9 @@ public final class CaptureSession {
     }
     public synchronized State state(){return state;}
     public synchronized int markersCount(){return markers.size();}
+    public synchronized boolean canImport(long nowElapsed,long ordinal){
+        return expireIfNeeded(nowElapsed,ordinal)==State.ACTIVE&&acceptedImportRanges.size()<MAX_MARKERS;
+    }
     public synchronized void mark(MarkerCode code,long elapsed,long ordinal){
         if(code==null)throw new IllegalArgumentException("DX02_MARKER_CODE_REQUIRED");
         if(expireIfNeeded(elapsed,ordinal)!=State.ACTIVE)throw new IllegalStateException("DX02_NOT_CAPTURING");
@@ -122,18 +125,19 @@ public final class CaptureSession {
     }
     public synchronized Report report(DiagnosticTimeline timeline,long nowElapsed){
         if(timeline==null)throw new IllegalArgumentException("DX02_TIMELINE_REQUIRED");
-        long highest=latestOrdinal(timeline);
+        DiagnosticTimeline.Selection selection=timeline.select(null);
+        long highest=0;for(DiagnosticTimeline.Event e:selection.events)highest=Math.max(highest,e.ordinal);
         expireIfNeeded(nowElapsed,highest);
         if(state==State.ACTIVE||state==State.CANCELLED)
             throw new IllegalStateException("DX02_CAPTURE_NOT_REPORTABLE");
         List<DiagnosticTimeline.Event> selected=new ArrayList<>();
-        for(DiagnosticTimeline.Event e:timeline.filtered(null)){
+        for(DiagnosticTimeline.Event e:selection.events){
             if(e.ordinal<=startOrdinal||e.ordinal>endOrdinal||!source.equals(e.source))continue;
             for(long[] batch:acceptedImportRanges)
                 if(e.ordinal>=batch[0]&&e.ordinal<=batch[1]){selected.add(e);break;}
         }
         selected.sort(Comparator.comparingLong(e->e.ordinal));
-        int loss=Math.max(0,timeline.dropped()-droppedAtStart);
+        int loss=Math.max(0,selection.dropped-droppedAtStart);
         String eventJsonl=DiagnosticTimeline.toJsonl(selected);
         StringBuilder marks=new StringBuilder();
         for(Marker m:markers){

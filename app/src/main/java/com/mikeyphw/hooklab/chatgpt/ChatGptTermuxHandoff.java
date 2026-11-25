@@ -185,9 +185,9 @@ public final class ChatGptTermuxHandoff {
             call(end,c,false);
             call(begin,c,ICON_SLOT);
             Object icon=call(factory,null,ICON_KEY,true,proxy(f3,new Lambda(){Object invokeBody(Object[] a)throws Throwable {
-                // The exact host drawable uses its native painter and inherited content tint.
+                // Use the exact host painter, with an explicit packed Compose sRGB white tint.
                 Object painter=call(iconPainter,null,terminalAsset,a[1],0);
-                call(drawIcon,null,painter,null,null,0L,a[1],0,0xC);return unit;
+                call(drawIcon,null,painter,null,null,0xFFFFFFFF00000000L,a[1],0,0x4);return unit;
             }}),c);
             call(end,c,false);
             // Default modifier/colors/enabled/selected/secondary action/interaction/style;

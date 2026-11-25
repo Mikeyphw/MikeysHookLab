@@ -32,7 +32,7 @@ must('Ui08QualityPolicy.MIN_TOUCH_DP' in flat
 must('stateStore.writeTweak(' in main and 'stateStore.removeScope(' in main
      and 'stateStore.writeSafetyLock(' in main and 'setPositiveButton("Set to 9"' in mcc,
      'existing controlled framework/MCC mutation paths retained')
-must('diagnosticsStore().filtered(' in main and 'getString(R.string.dx01_import_only)' in main
+must('store.select(diagnosticState.filter)' in main and 'getString(R.string.dx01_import_only)' in main
      and 'executionVerified(){return false;}' in read('app/src/main/java/com/mikeyphw/hooklab/ui/HookHealthModel.java'),
      'diagnostic imports remain unauthenticated and bounded')
 for qualifier in ('', '-night'):

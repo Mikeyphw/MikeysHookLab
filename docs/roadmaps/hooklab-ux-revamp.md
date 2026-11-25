@@ -1,7 +1,7 @@
 # HookLab — Final UI/UX Revamp & Native Fidelity Roadmap
 
-**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.5-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
-**Status:** UX-R00 on draft PR #30; F03 Android, Design and CI24 passed, native navigation instrumentation failed. F04 repairs settings lifecycle identity and privacy-safe instrumentation failure evidence. Exact-head hosted qualification pending.
+**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.6-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
+**Status:** UX-R00 merged PR #30 at `b82ba80020920cdc840968a726cf81b707dd09b3`; qualified F08 tree `e1e95913842dac6347a930b5a74baba87d6ee066`. UX-R01 production implementation candidate; fresh source-bound hosted and physical acceptance pending.
 **Proposed repository path:** `docs/roadmaps/hooklab-ux-revamp.md` (retain `hooklab-flat-ux.md` and its historical acceptance matrix).  
 **Operator:** continue the existing `devop-hooklab` cumulative command; do not create an independent executable for this roadmap.  
 
@@ -24,20 +24,20 @@ Both reference files were rehashed from the current workspace; XML inspection co
 ## 2. Progress and complete active pipeline
 
 **Coverage:** complete for the six proposed revamp overlays; known subset of the wider HookLab project.  
-**Source implementation:** 0/6 · 0% `[░░░░░░░░░░░░]`  
-**Independently accepted:** 0/6 · 0% `[░░░░░░░░░░░░]`  
-**Delivered/merged:** 1/6 delivered as draft PR #30, 0/6 merged; **remaining implementation:** 6; **remaining acceptance:** 6. All promise counts below describe planned scope, not code coverage. Existing nine-overlay tranche: 9/9 merged, 0/9 fully accepted on evidence inspected; complete source count inconclusive (known DX gaps). Not a project-wide percentage.
+**Source implementation:** 2/6 authored (33.3%, including R01 candidate; hosted acceptance pending) `[████░░░░░░░░]`
+**Independently hosted-qualified foundation:** 1/6; full device-inclusive acceptance 0/6 `[░░░░░░░░░░░░]`
+**Delivered/merged:** 1/6 delivered and merged (PR #30); **remaining source implementation after R01 candidate:** 4; **remaining device-inclusive acceptance:** 6. All promise counts below describe planned scope, not code coverage. Existing nine-overlay tranche: 9/9 merged, 0/9 fully accepted on evidence inspected; complete source count inconclusive (known DX gaps). Not a project-wide percentage.
 
 | ID | Overlay | Implementation / acceptance | Dependency |
 |---|---|---|---|
-| UX-R00 | Design Contract & Emulator Infrastructure | PARTIAL SOURCE CHECKPOINT / PENDING | None; source and design identities must be confirmed. |
-| UX-R01 | Diagnostics Consolidation | PLANNED / PENDING | UX-R00; shared row and route interface coordinated with UX-R02. |
+| UX-R00 | Design Contract & Emulator Infrastructure | SOURCE COMPLETE, MERGED / HOSTED FOUNDATION PASS; DEVICE PENDING | None; source and design identities must be confirmed. |
+| UX-R01 | Diagnostics Consolidation | SOURCE IMPLEMENTED / PR #31; HOSTED JAVA COMPILE FAILED; F01 REPAIR IN PROGRESS; DEVICE PENDING | UX-R00; shared row and route interface coordinated with UX-R02. |
 | UX-R02 | Navigation & Interaction Redesign | PLANNED / PENDING | UX-R00; coordinate UX-R01 shared row/icon primitives. |
 | UX-R03 | Home & Whole-App Visual Fidelity | PLANNED / PENDING | UX-R01 and UX-R02; UX-R00 reference gates. |
 | UX-R04 | Accessibility, Adaptive Layout & Lifecycle | PLANNED / PENDING | UX-R03; early checks run throughout R00–R03. |
 | UX-R05 | Full Native Visual Acceptance & Regression Enforcement | PLANNED / PENDING | UX-R00–R04 source-complete and exact-source hosted results; reference changes reviewed. |
 
-Current focus and next eligible overlay: **UX-R00**, after rechecking exact main, adoption and existing operator/session identities. R01/R02 may be coordinated in one dependency-aware wave, but must not mutate the same stale source concurrently. R03 depends on both; R04 and R05 follow. Shared governance is independently enforced at actual merge/release boundaries.
+Current focus: **UX-R01**, against verified merged F08 tree. UX-R02 is next after source/hosted reconciliation and merge. R01/R02 may be coordinated in one dependency-aware wave, but must not mutate the same stale source concurrently. R03 depends on both; R04 and R05 follow. Shared governance is independently enforced at actual merge/release boundaries.
 
 ### Original tranche — retain all nine obligations
 
@@ -69,7 +69,7 @@ M6 — MCC Manual Diamond Control; M7 — Neo Store + Droid-ify ObtainX Integrat
 
 ## 4. Overlay specification and per-promise plan
 
-All rows below are **PLANNED / evidence NOT RUN**. Paths indicate intended integration (not claims of new implementation). Each row must eventually get exact source entry points, positive/negative/lifecycle tests, actual evidence and independent implementation/acceptance verdicts. Source-complete only if every promise is implemented through real callers and all accessible checks pass. No overlay source changes are authorized by this document alone.
+The tables below preserve the original planned promises; current implementation and evidence supersede historical status in the dated reconciliation at the end. Paths in original plans are intentions, not proof. Each row must eventually get exact source entry points, positive/negative/lifecycle tests, actual evidence and independent implementation/acceptance verdicts. Source-complete only if every promise is implemented through real callers and all accessible checks pass. No overlay source changes are authorized by this document alone.
 
 ### UX-R00 — Design Contract & Emulator Infrastructure
 
@@ -462,3 +462,40 @@ PR #30 F06 head `4d6120fed056db373a553c4eb622ab9fe29a6f34`, tree `4a22b57bd60653
 ## UX-R00-F08 — native raster consistency and independent fixture evidence
 
 PR #30 F07 head `cf24ef942ada487251580dbac9e57d10fc7d13a6`, tree `1e2154f04a05488e1a18d0ffe690cd32b3c52618`. Android CI 45527791794, Design 45527791792 and CI24 45527791913 succeeded. Native 45527791930/job 138915332996 passed both navigation tests, then failed repeat comparison for Hooks. Downloaded artifact 14982538633 SHA-256 `4fb371e1d137e9fcd8fc99282f12d1d6c637fef68443a34e9a4fc1e0e44737c0` has identical geometry; Hooks changed ratio 0.02640199, SSIM 0.99998757, max RGB delta 5, concentrated at antialiased glyph/icon/control edges. Home and Diagnostics identical. This suggests raster/compositor precision variation, not a proven GPU root cause. F08 uses the currently supported SwiftShader software GPU backend, disables guest Vulkan and snapshots for an isolated cold boot, verifies the booted guest Skia GL setting and SwiftShader GLES evidence, and requires a newly committed hardware-rendered frame for each of three independently stable screenshot samples. Preserve full actual screenshots, raw pixel equality while settling, measured viewport and unchanged SSIM >= .99 / changed pixels <= .01; no normalization, masking, or selecting a matching pair. Both captures run exactly once. Run all functional fixtures after the two captures and before the mandatory repeat comparison, retaining fixture hashes in repeat-failure evidence, so a visual failure cannot prevent already independent functional tests from reporting. Actual hosted GPU behavior and fresh complete native baseline remain pending. R06 production and F07 capture fixes unchanged; no local Gradle.
+
+
+## 2026-11-25 — UX-R01 diagnostics consolidation (operator 2.3.0)
+
+**Exact source anchor:** merged PR #30 `b82ba80020920cdc840968a726cf81b707dd09b3`, tree `e1e95913842dac6347a930b5a74baba87d6ee066`, identical to qualified F08 head `b805bcf96db6b6fcc7bc795e4641fe0b95b98bc6`. Android 45530308382, Design 45530308325, Native 45530308308, CI24 45530308323 all succeeded. Native baseline archive hash and receipt contents independently verified: Home, Hooks and Diagnostics repeat changed pixels 0%, SSIM 1.0; five successful instrumentation invocations. Status `BASELINE_PASS_NOT_VISUAL_APPROVAL`. CI24 summary 208 tests/24 shards and user receipt PASS; no fresh R01 hosted results. All R00 11 promises source implemented, foundation hosted gates verified, 0/24 whole-app visual approvals and real device/release pending. No PR #30 replay.
+
+**Governance:** authoritative operating contract v1.25 SHA-256 `850a858e863bb2715da7f9e09bd26ede3d7f81231f7da05db3b381b6cfb7df76`; operator schema v1.8, delivery schema v1.15 and roadmap schema v1.1; previous qualified Devtool runtime `7543dc19caa9a151bbc38ffeaa36d0a01b8090de`. New branch `feature/hooklab-ux-r01-20261125` only from exact merged main. Native transaction and actual PR identity must be determined at user-host delivery, no invented PR.
+
+| Promise | Actual production implementation | Local and pending acceptance evidence |
+|---|---|---|
+| UXR01-P01 | MainActivity routes DIAGNOSTICS/HEALTH/CAPTURE attach only chosen workspace; retained diagnosticTab | Structural route checks; hosted DiagnosticFixtureTest isolated workspaces and recreate, pending |
+| UXR01-P02 | Single native import sheet with three supported explicit SAF sources; request is typed and bound before picker | Bounded strict UTF-8 and URI guard; model oversize/malformed/refusal tests; hosted cancel and three choices pending |
+| UXR01-P03 | Draft filter sheet with source/severity/group/exact package/hook/time/query, apply/cancel/clear | Model grouped/time intersection and unknown clock tests; real sheet fixture pending |
+| UXR01-P04 | Compact chronological rows; 30 events/page and retained/drop counts from immutable projection | Exact chronology, 4000 cap, duplicate identities and eviction tests; real Android paging pending |
+| UXR01-P05 | Dedicated event inspector exact stable ID; stale selection refused; hash/line, time, source and correlation preserved | Model duplicate and stale identity tests; real inspector/recreate fixture pending |
+| UXR01-P06 | Shared FlatUi.actionRow and PackageManager hostIcon; each exact hook row independent | Same-package model test, explicit fixture route and no-write assertions; hosted pending |
+| UXR01-P07 | Dedicated HookHealthModel report with independent axes, attribution and safe setup/import/lock actions | 11 actual model tests incl unknown, disconnected, scope, lock, version, same-package and no runtime assertion; native fixture pending |
+| UXR01-P08 | Existing guided target/source flow on independent capture tab; process-owned import gate and monotonic deadline | Actual capture timeout/cancel/interruption and cap tests; native start/restart retained, pending |
+| UXR01-P09 | Fixed-code markers and bound immutable capture report, exact source/window attribution; retention loss explicit | Actual two-session and marker cap tests; no silent collector; native marker clock pending |
+| UXR01-P10 | Redaction preview before copy/export, exact immutable timeline/health/capture selection at SAF launch, typed ZIP writer | Exact ZIP payload/hash and denied-write tests, fixture cancellation clipboard unchanged pending |
+| UXR01-P11 | Rotation-retained ViewModel, root scroll and page, stable inspector and report return routes, process-loss notice; no evidence persisted | Structural state and picker identity checks; native recreate pending; safe loss on process death |
+| UXR01-P12 | Old inline multi-workspace controls replaced; framework store and explicitly confirmed safety actions preserved | Existing 38 legacy promise checks; native same-package navigation no-write, isolated workspace fixture pending |
+
+Local verification before packaging: 48 source QA checks and 37 direct JDK diagnostic model test methods passed (private JUnit assertion shim, not hosted JUnit); changed Java source syntax parsed, no local Android compile/Gradle. Exact package validation and native transaction evidence recorded separately. No new permissions, hidden collector, root action or device execution. Import-only evidence is unauthenticated. Real SAF provider, Android lifecycle/visual and physical-device gates remain external. No approval or mutation of a future overlay or release.
+
+## UX-R01-F01 + HL-DIAG-R06-F01 — hosted Java API and persistent Termux login repair
+
+Parent PR #31 head `c78b187c7e6bb715bfcf963858265d6c8c7c3f0e`, tree `202991cd8db399bdc800e22a432181cd0a891cc6`; main remains `b82ba80020920cdc840968a726cf81b707dd09b3`. User transaction `20261125T024154Z-9787df13f3e9`, session `9ff0c7aedce04cf4aa0fe525508998a6` remains historical; never reuse it for a changed head. Design run 45541608275 passed; Android run 45541608367 and Native UI run 45541608500 failed at Java compilation (View/Spinner setMinHeight). No CI24 qualification for this head.
+
+| Promise | Implemented source | Required independent proof |
+|---|---|---|
+| UXR01-F01-P01 | FlatUi and filter Spinner use Android View.setMinimumHeight; preserve 48dp touch geometry | Hosted assemble, lint and real diagnostic fixture |
+| R06-F01-P01 | Fixed Termux login route initializes termux-exec via installed login before persistent interactive login Zsh; no system library path assumptions | Login-aware shell fixture, real external Android Termux command and subsequent command |
+| R06-F01-P02 | Four fixed startup shims, no payload in files, noninteractive probe guard, real zshenv/zprofile/zshrc/zlogin, restored ZDOTDIR, explicit NOART and original exit | Real persistent PTY, startup exactly once, failure and cleanup, custom ZDOTDIR, physical Termux |
+| R06-F01-P03 | Explicit packed white sRGB host Compose terminal tint, modifier-only default mask, unchanged Copy action | Exact pinned DEX signature/mask verification and real host rendering |
+
+Source repair does not certify device runtime or native visual approval. No new permission, implicit command, repository reset, or release.

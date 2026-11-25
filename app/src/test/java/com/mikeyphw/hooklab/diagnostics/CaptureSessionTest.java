@@ -101,4 +101,19 @@ public final class CaptureSessionTest {
         assertEquals(0,d.filtered(null).get(0).utcMillis);
         assertTrue(s.report(d,102).eventsJsonl.contains("\"utc_millis\":0"));
     }
+    @Test public void independentSessionImportWindowsAndBatchCap() throws Exception {
+        DiagnosticTimeline d=new DiagnosticTimeline();
+        CaptureSession first=CaptureSession.forHook(HOOK,"LSPOSED_MODULE",100,1700000000000L,0,0);
+        for(int n=0;n<CaptureSession.MAX_MARKERS;n++){
+            assertTrue(first.canImport(101+n,CaptureSession.latestOrdinal(d)));
+            long before=CaptureSession.latestOrdinal(d);d.importStream(new ByteArrayInputStream("x".getBytes(StandardCharsets.UTF_8)),"LSPOSED_MODULE");
+            assertTrue(first.registerImport("LSPOSED_MODULE",before,CaptureSession.latestOrdinal(d),101+n));
+        }
+        assertFalse(first.canImport(200,CaptureSession.latestOrdinal(d)));
+        first.stop(201,CaptureSession.latestOrdinal(d));
+        CaptureSession second=CaptureSession.forHook(HOOK,"LSPOSED_MODULE",202,1700000000102L,CaptureSession.latestOrdinal(d),d.dropped());
+        assertNotEquals(first.id,second.id);assertEquals(0,second.markersCount());
+        second.stop(203,CaptureSession.latestOrdinal(d));
+        assertEquals(0,second.report(d,204).observed);assertEquals(CaptureSession.MAX_MARKERS,first.report(d,204).observed);
+    }
 }

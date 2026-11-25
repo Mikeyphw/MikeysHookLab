@@ -34,7 +34,7 @@ class FoundationTests(unittest.TestCase):
         source=(ROOT/(P+'main/'+UI+'MainActivity.java')).read_text()
         test=(ROOT/(P+'androidTest/'+UI+'FrameworkFixtureTest.java')).read_text()
         # Test source guard complements, never substitutes for the real Android test.
-        callback=source.split('if(!captureApp().startCapture(next))',1)[1].split('}).show();',1)[0]
+        callback=source.split('if(captureApp().captureImportRunning()||!captureApp().startCapture(next))',1)[1].split('}).show();',1)[0]
         self.assertIn('goTo(CAPTURE, true);',callback)
         self.assertIn('goTo(target, false);',source)
         self.assertIn('if (target == page && !refreshSamePage) return;',source)

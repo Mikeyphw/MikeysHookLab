@@ -48,6 +48,13 @@ public final class DiagnosticTimeline {
     public static final class Filter {
         public String query="",source="",severity="",packageName="",hookId="";
         public long afterUtc=0,beforeUtc=0;
+        public Set<String> groupHooks=Collections.emptySet();
+        public Filter copy(){Filter f=new Filter();f.query=query;f.source=source;f.severity=severity;
+            f.packageName=packageName;f.hookId=hookId;f.afterUtc=afterUtc;f.beforeUtc=beforeUtc;
+            f.groupHooks=Collections.unmodifiableSet(new LinkedHashSet<>(groupHooks));return f;}
+        public int activeCount(){return (query.trim().isEmpty()?0:1)+(source.isEmpty()?0:1)+(severity.isEmpty()?0:1)
+            +(packageName.isEmpty()?0:1)+(hookId.isEmpty()?0:1)+(afterUtc==0?0:1)+(beforeUtc==0?0:1)+(groupHooks.isEmpty()?0:1);}
+
     }
     public static final class ImportReceipt {
         public final String sha256,source;
@@ -72,7 +79,7 @@ public final class DiagnosticTimeline {
         }catch(NoSuchAlgorithmException impossible){throw new IllegalStateException(impossible);}
     }
     /** Atomic bounded import. Never mutate existing events for malformed/oversized input. */
-    public synchronized ImportReceipt importStream(InputStream stream,String source) throws IOException {
+    public ImportReceipt importStream(InputStream stream,String source) throws IOException {
         if(!acceptedSource(source) || stream==null)throw new IllegalArgumentException("Unapproved collector");
         ByteArrayOutputStream buffer=new ByteArrayOutputStream();
         byte[] chunk=new byte[8192];int n;
@@ -82,9 +89,13 @@ public final class DiagnosticTimeline {
             buffer.write(chunk,0,n);
         }
         byte[] raw=buffer.toByteArray();
-        String digest=sha(raw);String decoded=new String(raw,StandardCharsets.UTF_8);
+        String digest=sha(raw);String decoded=StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                .decode(java.nio.ByteBuffer.wrap(raw)).toString();
         String[] lines=decoded.split("\\r?\\n",-1);
         if(lines.length>MAX_LINES)throw new IOException("DX01_TOO_MANY_LINES");
+        synchronized(this){
         int accepted=0, lost=0;
         for(int i=0;i<lines.length;i++){
             if(lines[i].isEmpty())continue;
@@ -93,6 +104,7 @@ public final class DiagnosticTimeline {
             events.add(event);accepted++;
         }
         return new ImportReceipt(digest,source,accepted,lines.length,lost);
+        }
     }
     private static Event normalize(String raw,String source,String digest,int line,long ordinal){
         Matcher tm=ISO.matcher(raw);String timestamp="";long millis=0;
@@ -134,6 +146,7 @@ public final class DiagnosticTimeline {
             if(!f.severity.isEmpty()&&!f.severity.equals(e.severity))continue;
             if(!f.packageName.isEmpty()&&!f.packageName.equals(e.packageName))continue;
             if(!f.hookId.isEmpty()&&!f.hookId.equals(e.hookId))continue;
+            if(!f.groupHooks.isEmpty()&&!f.groupHooks.contains(e.hookId))continue;
             if(f.afterUtc>0 && (e.utcMillis==0||e.utcMillis<f.afterUtc))continue;
             if(f.beforeUtc>0 && (e.utcMillis==0||e.utcMillis>f.beforeUtc))continue;
             String q=f.query==null?"":f.query.trim().toLowerCase(Locale.ROOT);
@@ -144,6 +157,17 @@ public final class DiagnosticTimeline {
         result.sort(Comparator.<Event>comparingLong(e->e.utcMillis==0?Long.MAX_VALUE:e.utcMillis)
                 .thenComparingLong(e->e.ordinal));
         return Collections.unmodifiableList(result);
+    }
+    public synchronized Event find(String id){
+        if(id==null)return null;for(Event e:events)if(e.id().equals(id))return e;return null;
+    }
+    /** Snapshot the exact selection and retention count under the same store lock. */
+    public synchronized Selection select(Filter filter){return new Selection(filtered(filter),dropped,events.size());}
+    public synchronized Selection selectEvent(String id){Event e=find(id);return e==null?null:new Selection(Collections.singletonList(e),dropped,events.size());}
+    public static final class Selection {
+        public final List<Event> events;public final int dropped,total;
+        private Selection(List<Event> events,int dropped,int total){this.events=Collections.unmodifiableList(new ArrayList<>(events));this.dropped=dropped;this.total=total;}
+        public String jsonl(){return toJsonl(events);}
     }
     public synchronized int size(){return events.size();}
     public synchronized int dropped(){return dropped;}
