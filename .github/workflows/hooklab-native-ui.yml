@@ -39,6 +39,8 @@ jobs:
           mkdir -p "${ANDROID_AVD_HOME:-$HOME/.android/avd}"
           test "$(df -Pk "${ANDROID_AVD_HOME:-$HOME/.android/avd}" | awk 'END {print $4}')" -ge 4194304
       - name: Debug and instrumentation APKs (hosted only)
+        env:
+          HOOKLAB_CI_RETRY_PROFILE: native
         run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease
       - uses: actions/setup-python@v6
         with:
@@ -56,6 +58,7 @@ jobs:
           python3 -B scripts/qa/visual_image_checks.py
           python3 -B scripts/qa/visual_report_checks.py --reference "$RUNNER_TEMP/hooklab-comparison-reference/first"
       - name: Real Activity on isolated API36 emulator (candidate baseline)
+        id: native_capture
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 36
@@ -76,7 +79,7 @@ jobs:
           python3 -B scripts/qa/visual.py compare --reference "$RUNNER_TEMP/hooklab-comparison-reference/first" --native "$RUNNER_TEMP/hooklab-native-smoke" --out "$RUNNER_TEMP/hooklab-visual-report"
           python3 -B scripts/qa/visual.py verify --reference "$RUNNER_TEMP/hooklab-comparison-reference/first" --native "$RUNNER_TEMP/hooklab-native-smoke" --out "$RUNNER_TEMP/hooklab-visual-report"
       - uses: actions/upload-artifact@v7.0.2
-        if: always()
+        if: always() && steps.native_capture.outcome != 'skipped'
         with:
           name: hooklab-native-baseline-${{ github.run_attempt }}
           path: ${{ runner.temp }}/hooklab-native-smoke/

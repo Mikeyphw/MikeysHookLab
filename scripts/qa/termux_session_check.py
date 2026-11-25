@@ -38,7 +38,12 @@ def read_until(fd,token,deadline):
 
 def real_case(root,prefix,zsh,custom,shell,source,status):
     home=root/('home-'+shell+('-custom' if custom else ''));home.mkdir();dot=home/'dot' if custom else home;dot.mkdir(exist_ok=True)
-    (dot/'.zshenv').write_text('print -r -- "ENV_NOART=$NOART" >> "$HOME/startup"\n')
+    # Host /etc/zsh/zshrc is outside this isolated user-config fixture. In
+    # particular Ubuntu's global compinit can prompt on runner-owned paths.
+    # Disable GLOBAL_RCS *only* in the synthetic user's .zshenv, before
+    # zsh reads its global interactive rc. Never alter production bootstrap
+    # options, the real user's configuration, compinit checks or permissions.
+    (dot/'.zshenv').write_text('unsetopt GLOBAL_RCS\nprint -r -- "ENV_NOART=$NOART" >> "$HOME/startup"\n')
     (dot/'.zshrc').write_text('print -r -- "RC_NOART=$NOART" >> "$HOME/startup"\n[[ $NOART == 1 ]] || print -r -- ART_MUST_NOT_APPEAR\nfunction fixture_fn() { print -r -- FN_OK; }\nalias fixture_alias="print -r -- ALIAS_OK"\nPROMPT="HL_READY> "\n')
     env={'HOME':str(home),'PATH':str(prefix/'bin')+':/usr/bin:/bin','TERM':'dumb','LANG':'C.UTF-8'}
     if custom:env['ZDOTDIR']=str(dot)

@@ -41,13 +41,14 @@ jobs:
       - name: Verify actual persistent Zsh session in isolated PTY
         run: python3 -B scripts/qa/termux_session_check.py --require-zsh
       - name: Repeat all 24 exact browser reference states
+        id: browser_reference
         run: |
           python3 -B scripts/qa/visual_image_checks.py
           python3 -B scripts/qa/reference.py repeat --out "$RUNNER_TEMP/hooklab-reference"
           python3 -B scripts/qa/visual_report_checks.py --reference "$RUNNER_TEMP/hooklab-reference/first"
           printf '%s\n' "$SOURCE_SHA" > "$RUNNER_TEMP/hooklab-reference/source-commit.txt"
       - uses: actions/upload-artifact@v7.0.2
-        if: always()
+        if: always() && steps.browser_reference.outcome != 'skipped'
         with:
           name: hooklab-browser-reference-${{ github.run_attempt }}
           path: ${{ runner.temp }}/hooklab-reference/
