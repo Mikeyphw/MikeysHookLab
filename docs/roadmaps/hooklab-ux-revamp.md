@@ -1,7 +1,7 @@
 # HookLab — Final UI/UX Revamp & Native Fidelity Roadmap
 
-**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.9-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
-**Status:** UX-R00 merged PR #30 at `b82ba80020920cdc840968a726cf81b707dd09b3`; qualified F08 tree `e1e95913842dac6347a930b5a74baba87d6ee066`. UX-R01/F01 merged PR #31 at `b37a4a27447cbdcfaabda08da90942d1de83f5e3`; source-bound hosted qualification complete; physical acceptance pending. UX-R02 merged PR #32 at `a76361eacad31ec072c3ef13563ea26be5b380a2`; qualified tree `26fa5c749deb9b0a1d7168d946030a7da6688b62`; 4 hosted workflows and CI24 224 tests. UX-R03 PR #33 is open at `60ed46784cf7bcee6430fe70e28126e9ab06e1c3` with failed hosted Android configuration. Owner authorized consolidated UX-R03-F01 + UX-R04 as a forward-only successor on PR #33; no acceptance is inferred.
+**Roadmap ID:** `HOOKLAB-UX-REVAMP` · **Revision:** 1.10-candidate · **Prepared:** 2026-11-23 (America/Sao_Paulo)
+**Status:** UX-R00 merged PR #30 at `b82ba80020920cdc840968a726cf81b707dd09b3`; qualified F08 tree `e1e95913842dac6347a930b5a74baba87d6ee066`. UX-R01/F01 merged PR #31 at `b37a4a27447cbdcfaabda08da90942d1de83f5e3`; source-bound hosted qualification complete; physical acceptance pending. UX-R02 merged PR #32 at `a76361eacad31ec072c3ef13563ea26be5b380a2`; qualified tree `26fa5c749deb9b0a1d7168d946030a7da6688b62`; 4 hosted workflows and CI24 224 tests. UX-R03-F01 + UX-R04 delivered on PR #33 at `29644ecdf752f7fae405696f1477d3e8cf84b640`; Android and CI24 workflows succeeded, Design/native/extended failed. UX-R04-F01 is the current forward repair candidate; no acceptance inferred.
 **Proposed repository path:** `docs/roadmaps/hooklab-ux-revamp.md` (retain `hooklab-flat-ux.md` and its historical acceptance matrix).  
 **Operator:** continue the existing `devop-hooklab` cumulative command; do not create an independent executable for this roadmap.  
 
@@ -24,7 +24,7 @@ Both reference files were rehashed from the current workspace; XML inspection co
 ## 2. Progress and complete active pipeline
 
 **Coverage:** complete for the six proposed revamp overlays; known subset of the wider HookLab project.  
-**Source implementation:** 3/6 merged; UX-R03 needs F01 repair; R04 candidate authored, local qualification in progress `[████░░░░░░░░]`
+**Source implementation:** 3/6 merged; R03/R04 delivered on PR #33, hosted repair candidate in local qualification `[████░░░░░░░░]`
 **Independently hosted-qualified:** 3/6; full device-inclusive acceptance 0/6 `[░░░░░░░░░░░░]`
 **Delivered/merged:** 3/6 delivered and merged (PR #30, #31, #32); **remaining source implementation:** 3 (R03 candidate included); **remaining device-inclusive acceptance:** 6. All promise counts below describe planned scope, not code coverage. Existing nine-overlay tranche: 9/9 merged, 0/9 fully accepted on evidence inspected; complete source count inconclusive (known DX gaps). Not a project-wide percentage.
 
@@ -33,11 +33,11 @@ Both reference files were rehashed from the current workspace; XML inspection co
 | UX-R00 | Design Contract & Emulator Infrastructure | SOURCE COMPLETE, MERGED / HOSTED FOUNDATION PASS; DEVICE PENDING | None; source and design identities must be confirmed. |
 | UX-R01 | Diagnostics Consolidation | SOURCE COMPLETE, MERGED PR #31 / HOSTED QUALIFIED; DEVICE PENDING | UX-R00; shared row and route interface coordinated with UX-R02. |
 | UX-R02 | Navigation & Interaction Redesign | SOURCE COMPLETE, MERGED PR #32 / HOSTED QUALIFIED; DEVICE PENDING | UX-R00; coordinate UX-R01 shared row/icon primitives. |
-| UX-R03 | Home & Whole-App Visual Fidelity | F01 CANDIDATE / HOSTED FAILED AT PRIOR HEAD; DEVICE PENDING | UX-R01 and UX-R02; UX-R00 reference gates. |
-| UX-R04 | Accessibility, Adaptive Layout & Lifecycle | CANDIDATE AUTHORED / PENDING | UX-R03; early checks run throughout R00–R03. |
+| UX-R03 | Home & Whole-App Visual Fidelity | DELIVERED; ANDROID BUILD PASS / NATIVE AND DESIGN FAILED; DEVICE PENDING | UX-R01 and UX-R02; UX-R00 reference gates. |
+| UX-R04 | Accessibility, Adaptive Layout & Lifecycle | DELIVERED; HOSTED GATES FAILED / F01 CANDIDATE | UX-R03; early checks run throughout R00–R03. |
 | UX-R05 | Full Native Visual Acceptance & Regression Enforcement | PLANNED / PENDING | UX-R00–R04 source-complete and exact-source hosted results; reference changes reviewed. |
 
-Current focus: **UX-R03-F01 + UX-R04**, PR #33 head `60ed46784cf7bcee6430fe70e28126e9ab06e1c3`, tree `b6a33ba8ecf27823a4a1b0d17784f5890519b632`, main unchanged at merged R02. Android CI run 45684179590 and Native UI run 45684179548 failed on disabled generated resource values; Design run 45684179543 passed; no exact R03 CI24 was observed. R03-F01 repairs that cause and the CI24 trigger. R04 is the owner-authorized consolidated candidate, not a waiver of R03's prerequisites: all applicable R03 and R04 gates must independently pass at the exact successor head. R05 remains blocked until both. No new milestone is added to the six-overlay denominator. See `docs/qa/hooklab-uxr04-acceptance.md` for the candidate evidence and outstanding runtime gates.
+Current focus: **UX-R04-F01**, PR #33 head `29644ecdf752f7fae405696f1477d3e8cf84b640`, tree `ecff597f8518024511e470a5694d93bd18f3d82f`, main unchanged at merged R02. Android CI 45704443361 and CI24 45704443249 report success; independent CI24 artifact verification pending. Design 45704443306 fails on missing Pillow at source tests. Native 45704443309 and ten extended shards 45704443281 fail Android test compilation at colorError. All five exact successor-head gates must pass. R05 remains dependent. No new milestone is added to the six-overlay denominator. See the F01 reconciliation below.
 
 ### Original tranche — retain all nine obligations
 
@@ -503,3 +503,16 @@ Source repair does not certify device runtime or native visual approval. No new 
 ### UX-R02 candidate evidence (2026-11-25)
 
 Source: exact merged PR31 tree. Native catalog routing, scoped icon provider, stable route frames, visual candidate capture for VIS-002–005 and CI24 bounded Maven-429 retry/failure summaries are authored. See `docs/qa/hooklab-uxr02-acceptance.md` for evidence boundaries; no device, release, visual or hosted acceptance is asserted for R02. Historical accepted evidence remains bound to its own source.
+
+
+## UX-R04-F01 — Hosted Dependency & Instrumentation Compatibility Repair
+
+Base PR #33 `29644ecdf752f7fae405696f1477d3e8cf84b640`, tree `ecff597f8518024511e470a5694d93bd18f3d82f`. Android CI 45704443361 and CI24 45704443249 reported success; exact CI24 artifact qualification remains pending. Design 45704443306 failed before reference generation because two matrix tests imported Pillow before dependencies were installed. Native UI 45704443309 and all ten extended shards of 45704443281 failed compilation at NativeBaselineTest line 102 (Material R.attr.colorError unavailable). No native captures or matrix acceptance established.
+
+| Promise | Production repair | Required evidence |
+|---|---|---|
+| UXR04-F01-P01 | Install the pinned Python QA packages before source tests in the actual Design workflow; no skipped tests | Fresh isolated hosted setup, full source suite and reference generation |
+| UXR04-F01-P02 | Resolve the AppCompat colorError attribute from the real theme, assert each palette attribute resolves; retain exact palette comparison | Android instrumentation compilation, actual native palette and extended checks |
+| UXR04-F01-P03 | Ordinary Android CI assembles instrumentation APK as well as debug app, JVM and lint; regression tests check actual workflow ordering and palette path | Fresh Android CI and independent native/extended/CI24 results |
+
+No threshold, test roster, permission or runtime fixture relaxed. Forward-only native transaction on existing PR #33, retaining the committed R03 and R04 records. R00–R02 remain merged and hosted-qualified; R03 and R04 still require exact repaired-head hosted acceptance; R05 remains planned. Physical-device/visual/release gates unchanged.

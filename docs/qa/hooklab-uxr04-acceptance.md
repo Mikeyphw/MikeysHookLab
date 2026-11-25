@@ -17,3 +17,8 @@ Source preimage: PR #33 `60ed46784cf7bcee6430fe70e28126e9ab06e1c3`, tree `b6a33b
 | UXR04-P10 | Preserve explicit framework/root/Termux authorization; import/capture and redaction safeguards | Existing source guards; actual import/manual cancel and framework/diagnostic/Termux negative fixtures pending |
 
 The extended workflow has ten named shards, each with eleven actual Activity routes; a separate aggregate fails if any shard, exact run attempt, installed APK digest, screenshot, projected hierarchy, test roster, or performance receipt is missing or inconsistent. The raw UIAutomator hierarchy is not exported. The reference case repeats the existing framework, diagnostics and Termux synthetic fixtures; none proves real LSPosed or root functionality. Locally executed tests include synthetic evidence fixtures and pure JDK production model tests, not Android runtime. No local Gradle, no visual golden admission, no physical-device or release acceptance. The metrics are observations rather than enforced performance budgets; approval and budget selection remain a later reviewed gate.
+
+
+### F01 hosted correction
+
+The exact parent failed Design (Pillow import order), native instrumentation compile (AppCompat error attribute incorrectly referenced via Material), and all ten extended shards at that compile gate. The F01 repair preserves all matrix cases, comparisons and independent artifact verification. Regression tests cover actual workflow dependency ordering, mandatory instrumentation assembly in ordinary Android CI, and real resolved palette attribute mapping. New exact-source hosted evidence is required for all five workflows. No native acceptance inferred from prior Android or CI24 success.

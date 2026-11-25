@@ -99,9 +99,12 @@ public final class NativeBaselineTest {
         return result;
     }
     private static JSONObject palette(android.content.Context c)throws Exception{
-        int[] attrs={com.google.android.material.R.attr.colorSurface,com.google.android.material.R.attr.colorSurfaceContainer,com.google.android.material.R.attr.colorSurfaceVariant,com.google.android.material.R.attr.colorOnSurface,com.google.android.material.R.attr.colorOnSurfaceVariant,androidx.appcompat.R.attr.colorPrimary,com.google.android.material.R.attr.colorOnPrimary,com.google.android.material.R.attr.colorOutlineVariant,com.google.android.material.R.attr.colorError};
+        int[] attrs={com.google.android.material.R.attr.colorSurface,com.google.android.material.R.attr.colorSurfaceContainer,com.google.android.material.R.attr.colorSurfaceVariant,com.google.android.material.R.attr.colorOnSurface,com.google.android.material.R.attr.colorOnSurfaceVariant,androidx.appcompat.R.attr.colorPrimary,com.google.android.material.R.attr.colorOnPrimary,com.google.android.material.R.attr.colorOutlineVariant,androidx.appcompat.R.attr.colorError};
         String[] names={"bg","surface","surface2","ink","muted","accent","on","line","error"};JSONObject result=new JSONObject();
-        for(int i=0;i<attrs.length;i++)result.put(names[i],String.format(java.util.Locale.ROOT,"#%06x",com.google.android.material.color.MaterialColors.getColor(c,attrs[i],0)&0xffffff));
+        for(int i=0;i<attrs.length;i++){
+            assertTrue("Unresolved palette attribute: "+names[i],c.getTheme().resolveAttribute(attrs[i],new android.util.TypedValue(),true));
+            result.put(names[i],String.format(java.util.Locale.ROOT,"#%06x",com.google.android.material.color.MaterialColors.getColor(c,attrs[i],0)&0xffffff));
+        }
         result.put("warn",String.format(java.util.Locale.ROOT,"#%06x",c.getColor(R.color.hooklab_warning)&0xffffff));return result;
     }
     private static void project(View v, JSONArray rows, float density) throws Exception {
