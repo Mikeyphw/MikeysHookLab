@@ -42,6 +42,15 @@ public final class FlatUi {
         if (title == null) throw new IllegalArgumentException("Missing section title");
         title.setAccessibilityHeading(true);
     }
+    /** Native compact navigation row: one action, no preference mutation. */
+    public static void actionRow(View row,View.OnClickListener click){
+        android.util.TypedValue value=new android.util.TypedValue();
+        if(row.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground,value,true))
+            row.setBackgroundResource(value.resourceId);
+        row.setMinHeight(dp(row,Ui08QualityPolicy.MIN_TOUCH_DP));
+        androidx.core.view.ViewCompat.setScreenReaderFocusable(row,true);
+        row.setFocusable(true);row.setClickable(true);row.setOnClickListener(click);
+    }
     public static void button(MaterialButton action) {
         action.setElevation(0f);
         action.setStrokeWidth(0);

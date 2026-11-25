@@ -75,7 +75,8 @@ public final class HookHealthModel {
         int matched=0,errors=0,warnings=0,unrelated=0;
         Set<String> sources=new LinkedHashSet<>();
         List<DiagnosticTimeline.Event> recent=new ArrayList<>();
-        for(DiagnosticTimeline.Event event:timeline.filtered(null)){
+        DiagnosticTimeline.Selection selection=timeline.select(null);
+        for(DiagnosticTimeline.Event event:selection.events){
             sources.add(event.source);
             // Never credit a package-only or generic framework line to any hook.
             if(!spec.id.equals(event.hookId)){
@@ -89,8 +90,8 @@ public final class HookHealthModel {
         }
         recent.sort(Comparator.comparingLong((DiagnosticTimeline.Event e)->e.ordinal).reversed());
         if(recent.size()>5)recent=new ArrayList<>(recent.subList(0,5));
-        int lost=timeline.dropped();
-        String gap=timeline.size()==0?"NO_IMPORTED_SOURCE":
+        int lost=selection.dropped;
+        String gap=selection.events.isEmpty()?"NO_IMPORTED_SOURCE":
             matched==0?"NO_EXACT_HOOK_ASSOCIATION":
             lost>0?"EVIDENCE_RETAINED_WITH_EVICTIONS":"IMPORTED_ASSOCIATION_ONLY";
         Advice advice;
@@ -103,7 +104,7 @@ public final class HookHealthModel {
         else if(errors>0)advice=Advice.INSPECT_REPORTED_ERRORS;
         else advice=Advice.REVIEW_IMPORTED_EVIDENCE;
         return new Report(spec,framework,scope,optIn,quarantine,version,
-            eligibility,advice,matched,errors,warnings,unrelated,timeline.size(),
+            eligibility,advice,matched,errors,warnings,unrelated,selection.events.size(),
             lost,gap,String.join(",",sources),recent);
     }
     /** The only export/copy payload: already sanitized event metadata, no raw logs. */

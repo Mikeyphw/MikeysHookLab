@@ -60,7 +60,7 @@ public final class MainActivity extends AppCompatActivity {
     private ScrollView scroll;
     private SharedPreferences appearance;
     private static final int HOME = 0, APPS = 1, DIAGNOSTICS = 2;
-    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7, CAPTURE = 8, HELP = 9;
+    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7, CAPTURE = 8, HELP = 9, HEALTH = 10, HEALTH_REPORT = 11, EVENT_REPORT = 12;
     private static final int MENU_SETTINGS = 100, MENU_SCOPE = 101, MENU_ABOUT = 102;
     private static final int NAV_HOME = 201, NAV_APPS = 202, NAV_DIAGNOSTICS = 203;
     private static final int THEME_AMOLED = 100;
@@ -69,6 +69,16 @@ public final class MainActivity extends AppCompatActivity {
     private String selectedHookId;
     private int helpReturnPage=SETTINGS;
     private String healthFocusHookId;
+    private int diagnosticTab=DIAGNOSTICS, healthReturnPage=HEALTH, eventReturnPage=DIAGNOSTICS;
+    private DiagnosticWorkspaceState diagnosticState;
+    private int diagnosticIndex(int route){return route==HEALTH?1:route==CAPTURE?2:0;}
+    private boolean diagnosticRoot(int route){return route==DIAGNOSTICS||route==HEALTH||route==CAPTURE;}
+    private boolean diagnosticRoute(int route){return diagnosticRoot(route)||route==HEALTH_REPORT||route==EVENT_REPORT;}
+    private final Runnable diagnosticObserver=()->{
+        if(!isFinishing()&&!isDestroyed()&&diagnosticRoute(page)){
+            int previous=scroll.getScrollY();render();scroll.post(()->scroll.scrollTo(0,previous));
+        }
+    };
     private String selectedGroupId;
     private int detailReturnPage = APPS;
     private static final String UI04_VIEW_KEY = "catalog.view";
@@ -255,31 +265,37 @@ public final class MainActivity extends AppCompatActivity {
 
     // DX-01: SAF import/export only. Imported log lines are immediately normalized
     // into a bounded redacted in-memory store; no implicit log access or root.
-    private final java.util.concurrent.ExecutorService diagnosticWorker =
-            java.util.concurrent.Executors.newSingleThreadExecutor();
-    private com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Filter diagnosticFilter =
-            new com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Filter();
     private LinearLayout diagnosticRows;
-    private int diagnosticPageIndex;
-    private String diagnosticImportSource = "LSPOSED_MODULE";
     private static final int DX01_PAGE_SIZE = 30;
     private final androidx.activity.result.ActivityResultLauncher<String[]> diagnosticImportLauncher =
             registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
-                    uri -> { if(uri != null) importDiagnosticDocument(uri); });
+                    this::importDiagnosticDocument);
     private final androidx.activity.result.ActivityResultLauncher<String> diagnosticExportLauncher =
             registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
-                    uri -> { if(uri != null) exportDiagnosticDocument(uri); });
+                    this::exportDiagnosticDocument);
 
     // DX-02: explicit bounded reproduction. Only SAF imported files can add events.
     private static final int DX02_MAX_CHOICES=32;
     private final android.os.Handler captureDeadlineHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable captureDeadlineRefresh = () -> {
-        if(page==CAPTURE && !isFinishing() && !isDestroyed())render();
+        if(isFinishing()||isDestroyed())return;
+        CaptureSession current=captureApp().capture();
+        if(current!=null && current.expireIfNeeded(captureClock(),CaptureSession.latestOrdinal(diagnosticsStore()))!=CaptureSession.State.ACTIVE)captureApp().closeCapture();
+        if(page==CAPTURE)render();
+        else scheduleCaptureDeadline();
     };
+    private void scheduleCaptureDeadline(){
+        captureDeadlineHandler.removeCallbacks(captureDeadlineRefresh);
+        CaptureSession active=captureApp().capture();
+        if(active==null)return;
+        long now=captureClock();
+        if(active.expireIfNeeded(now,CaptureSession.latestOrdinal(diagnosticsStore()))!=CaptureSession.State.ACTIVE){captureApp().closeCapture();return;}
+        captureDeadlineHandler.postDelayed(captureDeadlineRefresh,Math.max(1,CaptureSession.MAX_DURATION_MS-active.elapsed(now)));
+    }
     private final androidx.activity.result.ActivityResultLauncher<String> captureExportLauncher =
             registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
-                    uri -> { if(uri!=null) exportCaptureDocument(uri); });
+                    this::exportCaptureDocument);
     private HookLabApp captureApp(){return (HookLabApp)getApplication();}
     private long captureClock(){return environment.elapsedRealtime();}
     private void selectCaptureSource(TweakSpec hook,String researchPackage){
@@ -298,7 +314,7 @@ public final class MainActivity extends AppCompatActivity {
                         ? com.mikeyphw.hooklab.diagnostics.CaptureSession.forHook(hook,ids[which],elapsed,wall,mark,timeline.dropped())
                         : com.mikeyphw.hooklab.diagnostics.CaptureSession.forResearch(researchPackage,ids[which],elapsed,wall,mark,timeline.dropped());
                 }catch(IllegalArgumentException rejected){toast(R.string.dx02_target_invalid);return;}
-                if(!captureApp().startCapture(next)){toast(R.string.dx02_active_exists);return;}
+                if(captureApp().captureImportRunning()||!captureApp().startCapture(next)){toast(R.string.dx02_active_exists);return;}
                 // Starting or replacing a capture changes the current page model.
                 // A same-page navigation normally does nothing; explicitly render this transition.
                 goTo(CAPTURE, true);
@@ -343,22 +359,32 @@ public final class MainActivity extends AppCompatActivity {
             render();
         }catch(IllegalArgumentException | IllegalStateException rejected){toast(R.string.dx02_marker_refused);}
     }
+    private void previewCaptureExport(CaptureSession.Report report){
+        if(diagnosticState.pickerPending()){toast(R.string.r01_picker_pending);return;}
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.r01_redaction_preview)
+            .setMessage(getString(R.string.r01_capture_export_preview,report.observed,report.missingDueToRetention))
+            .setNegativeButton(android.R.string.cancel,null)
+            .setPositiveButton(R.string.dx02_export,(d,w)->{
+                if(diagnosticState.pickerPending())return;
+                diagnosticState.pendingCaptureExport=report;
+                try{captureExportLauncher.launch("hooklab-capture-redacted.zip");}
+                catch(RuntimeException failed){diagnosticState.pendingCaptureExport=null;toast(R.string.dx02_export_failed);}
+            }).show();
+    }
     private void exportCaptureDocument(android.net.Uri uri){
-        com.mikeyphw.hooklab.diagnostics.CaptureSession capture=captureApp().capture();
-        if(capture==null){toast(R.string.dx02_export_failed);return;}
-        final com.mikeyphw.hooklab.diagnostics.CaptureSession.Report report;
-        try {report=capture.report(diagnosticsStore(),captureClock());}
-        catch(IllegalStateException | IllegalArgumentException rejected){toast(R.string.dx02_export_failed);return;}
-        diagnosticWorker.execute(() -> {
+        final CaptureSession.Report report=diagnosticState.pendingCaptureExport;
+        diagnosticState.pendingCaptureExport=null;
+        if(uri==null)return;
+        if(report==null){toast(R.string.r01_stale_request);return;}
+        captureApp().diagnosticTask(() -> {
             try {com.mikeyphw.hooklab.diagnostics.CaptureSaf.export(getContentResolver(),uri,report);
-                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx02_exported);});
-            }catch(java.io.IOException | IllegalArgumentException rejected){
-                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx02_export_failed);});
-            }
+                diagnosticNotice(R.string.dx02_exported);}
+            catch(java.io.IOException | RuntimeException rejected){diagnosticNotice(R.string.dx02_export_failed);}
         });
     }
     private void capturePage(){
-        heading(R.string.dx02_title);
+        diagnosticHeader(CAPTURE);
         body.addView(text(getString(R.string.dx02_disclaimer),14));
         com.mikeyphw.hooklab.diagnostics.CaptureSession capture=captureApp().capture();
         if(capture==null){
@@ -377,14 +403,11 @@ public final class MainActivity extends AppCompatActivity {
                         capture.elapsed(now)/1000));
         header.addView(text(capture.probeSummary(),13));
         header.addView(text(getString(R.string.dx02_metadata_only),14));
-        captureDeadlineHandler.removeCallbacks(captureDeadlineRefresh);
+        scheduleCaptureDeadline();
         if(state==com.mikeyphw.hooklab.diagnostics.CaptureSession.State.ACTIVE){
-            long delay=Math.max(1,com.mikeyphw.hooklab.diagnostics.CaptureSession.MAX_DURATION_MS-capture.elapsed(now));
-            captureDeadlineHandler.postDelayed(captureDeadlineRefresh,delay);
             button(header,R.string.dx02_import,v -> {
                 if(captureApp().captureImportRunning()){toast(R.string.dx02_import_pending);return;}
-                diagnosticImportSource=capture.source;
-                diagnosticImportLauncher.launch(new String[]{"text/plain","application/octet-stream"});
+                launchDiagnosticImport(capture.source,capture);
             });
             button(header,R.string.dx02_mark_repro,v -> captureMarker(
                 com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.REPRODUCE_ACTION));
@@ -411,9 +434,11 @@ public final class MainActivity extends AppCompatActivity {
             com.mikeyphw.hooklab.diagnostics.CaptureSession.Report report=capture.report(diagnosticsStore(),now);
             card(getString(R.string.dx02_summary),getString(R.string.dx02_summary_count,
                     report.observed,capture.markersCount(),report.missingDueToRetention));
-            button(header,R.string.dx02_export,v -> captureExportLauncher.launch("hooklab-capture-redacted.zip"));
+            for(CaptureSession.Marker marker:capture.markers())
+                body.addView(text(getString(R.string.r01_marker, marker.code.name(),marker.elapsedMillis/1000),14));
+            button(header,R.string.dx02_export,v -> previewCaptureExport(report));
         }else card(getString(R.string.dx02_cancel),getString(R.string.dx02_cancelled));
-        button(card(getString(R.string.dx02_next),getString(R.string.dx02_post_capture)),
+        if(state!=CaptureSession.State.ACTIVE)button(card(getString(R.string.dx02_next),getString(R.string.dx02_post_capture)),
                 R.string.dx02_new,v -> {
                     if(captureApp().captureImportRunning()){toast(R.string.dx02_import_pending);return;}
                     if(capture.state()==com.mikeyphw.hooklab.diagnostics.CaptureSession.State.ACTIVE){
@@ -426,50 +451,83 @@ public final class MainActivity extends AppCompatActivity {
     private com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnosticsStore() {
         return ((HookLabApp)getApplication()).diagnostics();
     }
-    private void importDiagnosticDocument(android.net.Uri uri) {
-        final String source = diagnosticImportSource;
-        final boolean requestedCapture = page==CAPTURE;
-        final boolean captured = requestedCapture && captureApp().beginCaptureImport();
-        if(requestedCapture && !captured){toast(R.string.dx02_import_pending);return;}
-        final com.mikeyphw.hooklab.diagnostics.CaptureSession currentCapture =
-                captured ? captureApp().capture() : null;
-        final long capturePriorOrdinal = captured ?
-                com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(diagnosticsStore()) : 0;
-        diagnosticWorker.execute(() -> {
-            try {
-                com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.ImportReceipt r =
-                    com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.importDocument(
-                        getContentResolver(),uri,diagnosticsStore(),source);
-                if(captured && currentCapture!=null){
-                    boolean counted=currentCapture.registerImport(source,capturePriorOrdinal,
-                            com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(diagnosticsStore()),captureClock());
-                    if(!counted)captureApp().closeCapture();
+    private void diagnosticNotice(int message){
+        // Application-context notice survives a configuration change; no raw data.
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(()->
+            Toast.makeText(getApplicationContext(),message,Toast.LENGTH_SHORT).show());
+    }
+    private void launchDiagnosticImport(String source,CaptureSession capture){
+        if(diagnosticState.pickerPending()){toast(R.string.r01_picker_pending);return;}
+        if(capture!=null && (capture!=captureApp().capture()||!capture.canImport(captureClock(),CaptureSession.latestOrdinal(diagnosticsStore()))
+                ||!captureApp().beginCaptureImport())){toast(R.string.dx02_import_pending);return;}
+        diagnosticState.pendingImport=new DiagnosticWorkspaceState.ImportRequest(source,capture);
+        try{diagnosticImportLauncher.launch(new String[]{"text/plain","application/octet-stream"});}
+        catch(RuntimeException failed){diagnosticState.pendingImport=null;if(capture!=null)captureApp().endCaptureImport();toast(R.string.dx01_import_failed);}
+    }
+    private void importDiagnosticDocument(android.net.Uri uri){
+        final DiagnosticWorkspaceState.ImportRequest request=diagnosticState.pendingImport;
+        diagnosticState.pendingImport=null;
+        if(request==null){if(uri!=null)toast(R.string.r01_stale_request);return;}
+        final CaptureSession current=request.capture;
+        if(uri==null){if(current!=null)captureApp().endCaptureImport();return;}
+        final HookLabApp app=captureApp();
+        final DiagnosticTimeline store=diagnosticsStore();
+        final android.content.ContentResolver resolver=getContentResolver();
+        app.diagnosticTask(()->{
+            try{
+                DiagnosticTimeline.ImportReceipt receipt;
+                // The application-owned worker serializes all production imports.
+                // Do not hold the timeline lock while acquiring a capture-session lock.
+                {
+                    if(current!=null && (current!=app.capture()||!current.canImport(captureClock(),CaptureSession.latestOrdinal(store)))){
+                        if(current==app.capture()&&current.state()!=CaptureSession.State.ACTIVE)app.closeCapture();throw new IllegalStateException("Stale or full capture");
+                    }
+                    long before=CaptureSession.latestOrdinal(store);
+                    receipt=com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.importDocument(resolver,uri,store,request.source);
+                    if(current!=null && !current.registerImport(request.source,before,
+                            CaptureSession.latestOrdinal(store),captureClock())){
+                        app.closeCapture();diagnosticNotice(R.string.r01_import_not_attributed);
+                    }
                 }
-                runOnUiThread(() -> {
-                    if(isFinishing() || isDestroyed())return;
-                    diagnosticPageIndex=0;
-                    toast(getString(R.string.dx01_import_success, r.accepted));
-                    if(page==DIAGNOSTICS)renderDiagnosticRows();
-                    if(page==CAPTURE)render();
+                final int count=receipt.accepted;
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{
+                    diagnosticState.pageIndex=0;
+                    Toast.makeText(app,getString(R.string.dx01_import_success,count),Toast.LENGTH_SHORT).show();
                 });
-            }catch(java.io.IOException | IllegalArgumentException | IllegalStateException error){
-                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx01_import_failed);});
-            }finally {if(captured)captureApp().endCaptureImport();}
+            }catch(java.io.IOException|RuntimeException refused){diagnosticNotice(R.string.dx01_import_failed);}
+            finally{if(current!=null)app.endCaptureImport();app.diagnosticChanged();}
         });
     }
-    private void exportDiagnosticDocument(android.net.Uri uri) {
-        com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline store=diagnosticsStore();
-        final List<com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event> selected =
-                store.filtered(diagnosticFilter);
-        final int dropped=store.dropped();
-        diagnosticWorker.execute(() -> {
-            try {
-                com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.exportRedactedZip(
-                        getContentResolver(),uri,selected,dropped);
-                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx01_export_success);});
-            }catch(java.io.IOException | IllegalArgumentException error){
-                runOnUiThread(() -> {if(!isFinishing()&&!isDestroyed())toast(R.string.dx01_export_failed);});
+    private void previewDiagnosticSelection(DiagnosticTimeline.Selection selection,boolean export){
+        if(selection==null||selection.events.isEmpty()){toast(R.string.dx01_no_imports);return;}
+        if(diagnosticState.pickerPending()){toast(R.string.r01_picker_pending);return;}
+        String preview=getString(R.string.r01_selection_preview,selection.events.size(),selection.dropped);
+        DiagnosticTimeline.Event first=selection.events.get(0);
+        preview+="\n\n"+first.code+" · "+first.source+"\n"+first.message;
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.r01_redaction_preview).setMessage(preview)
+            .setNegativeButton(android.R.string.cancel,null)
+            .setPositiveButton(export?R.string.dx01_export_redacted:R.string.r01_copy,(d,w)->{
+                if(!export){copyDiagnosticText(selection.jsonl());return;}
+                if(diagnosticState.pickerPending())return;
+                diagnosticState.pendingExport=selection;
+                try{diagnosticExportLauncher.launch("hooklab-redacted-diagnostics.zip");}
+                catch(RuntimeException refused){diagnosticState.pendingExport=null;toast(R.string.dx01_export_failed);}
+            }).show();
+    }
+    private void exportDiagnosticDocument(android.net.Uri uri){
+        final DiagnosticTimeline.Selection selected=diagnosticState.pendingExport;
+        final HookHealthModel.Report health=diagnosticState.pendingHealthExport;
+        diagnosticState.pendingExport=null;diagnosticState.pendingHealthExport=null;
+        if(uri==null)return;
+        if((selected==null)==(health==null)){toast(R.string.r01_stale_request);return;}
+        captureApp().diagnosticTask(()->{
+            try{
+                if(selected!=null)com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.exportRedactedZip(getContentResolver(),uri,selected.events,selected.dropped);
+                else com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.exportHealthZip(getContentResolver(),uri,health);
+                diagnosticNotice(R.string.dx01_export_success);
             }
+            catch(java.io.IOException|RuntimeException failed){diagnosticNotice(R.string.dx01_export_failed);}
         });
     }
     private void copyDiagnosticText(String redacted) {
@@ -482,121 +540,131 @@ public final class MainActivity extends AppCompatActivity {
             toast(R.string.dx01_copy_success);
         }catch(RuntimeException failure){toast(R.string.dx01_copy_failed);}
     }
-    private void showDiagnosticDetail(com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event e) {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(e.code)
-            .setMessage(getString(R.string.dx01_inspector, e.source, e.collector,
-                    e.fileSha256, e.lineNumber, e.timestamp.isEmpty()?"unknown":e.timestamp,
-                    e.correlation, e.message))
-            .setNeutralButton(R.string.dx01_copy_event,
-                    (dialog,which) -> copyDiagnosticText(
-                        com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.toJson(e)))
-            .setPositiveButton(android.R.string.ok,null).show();
+    private void showDiagnosticDetail(String id){
+        if(diagnosticsStore().find(id)==null){toast(R.string.r01_stale_event);return;}
+        diagnosticState.eventId=id;eventReturnPage=page==HEALTH_REPORT?HEALTH_REPORT:DIAGNOSTICS;
+        goTo(EVENT_REPORT);
     }
-    private void renderDiagnosticRows() {
-        if(diagnosticRows==null || page!=DIAGNOSTICS)return;
-        diagnosticRows.removeAllViews();
-        com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline store=diagnosticsStore();
-        List<com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event> visible =
-                store.filtered(diagnosticFilter);
-        diagnosticRows.addView(text(getString(R.string.dx01_event_counts,
-                visible.size(),store.size(),store.dropped()),14));
-        if(visible.isEmpty()) {
-            diagnosticRows.addView(text(getString(R.string.dx01_no_imports),16));
-            return;
-        }
+    private void eventReport(){
+        DiagnosticTimeline.Event e=diagnosticsStore().find(diagnosticState.eventId);
+        heading(R.string.r01_event_inspector);
+        if(e==null){body.addView(text(getString(R.string.r01_stale_event),16));return;}
+        LinearLayout report=card(e.code,e.severity+" · "+e.source+" · "+getString(R.string.r01_import_qualifier));
+        report.addView(text(getString(R.string.dx01_inspector,e.source,e.collector,e.fileSha256,e.lineNumber,
+                e.timestamp.isEmpty()?getString(R.string.dx01_clock_unknown):e.timestamp,e.correlation,e.message),14));
+        report.addView(text(e.id(),13));
+        button(report,R.string.dx01_copy_event,v->previewDiagnosticSelection(diagnosticsStore().selectEvent(e.id()),false));
+        button(report,R.string.dx01_export_redacted,v->previewDiagnosticSelection(diagnosticsStore().selectEvent(e.id()),true));
+    }
+    private LinearLayout compactDiagnosticRow(LinearLayout parent,CharSequence title,CharSequence detail,String pkg,View.OnClickListener action){
+        LinearLayout row=horizontal();row.setPadding(dp(12),dp(10),dp(12),dp(10));
+        if(pkg!=null&&!pkg.isEmpty())row.addView(hostIcon(pkg));
+        LinearLayout labels=new LinearLayout(this);labels.setOrientation(LinearLayout.VERTICAL);
+        TextView name=text(title,16);labels.addView(name);labels.addView(text(detail,13));
+        row.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
+        FlatUi.actionRow(row,action);parent.addView(row,new LinearLayout.LayoutParams(-1,-2));
+        return row;
+    }
+    private void renderDiagnosticRows(){
+        if(diagnosticRows==null||page!=DIAGNOSTICS)return;
+        diagnosticRows.removeAllViews();DiagnosticTimeline store=diagnosticsStore();
+        DiagnosticTimeline.Selection projection=store.select(diagnosticState.filter);
+        List<DiagnosticTimeline.Event> visible=projection.events;
+        diagnosticRows.addView(text(getString(R.string.dx01_event_counts,visible.size(),projection.total,projection.dropped),14));
+        if(visible.isEmpty()){diagnosticState.pageIndex=0;diagnosticRows.addView(text(getString(R.string.dx01_no_imports),16));return;}
         int pages=(visible.size()+DX01_PAGE_SIZE-1)/DX01_PAGE_SIZE;
-        diagnosticPageIndex=Math.min(diagnosticPageIndex,pages-1);
-        int begin=diagnosticPageIndex*DX01_PAGE_SIZE;
-        int end=Math.min(visible.size(),begin+DX01_PAGE_SIZE);
+        diagnosticState.pageIndex=Math.max(0,Math.min(diagnosticState.pageIndex,pages-1));
+        int begin=diagnosticState.pageIndex*DX01_PAGE_SIZE,end=Math.min(visible.size(),begin+DX01_PAGE_SIZE);
         for(int i=begin;i<end;i++){
-            com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event e=visible.get(i);
-            LinearLayout row=cardTo(diagnosticRows,e.code,e.severity+" · "+e.source+" · "+
-                (e.timestamp.isEmpty()?getString(R.string.dx01_clock_unknown):e.timestamp));
-            row.addView(text(e.message,14));
-            button(row,R.string.dx01_inspect,v -> showDiagnosticDetail(e));
+            DiagnosticTimeline.Event e=visible.get(i);
+            compactDiagnosticRow(diagnosticRows,e.code,(e.timestamp.isEmpty()?getString(R.string.dx01_clock_unknown):e.timestamp)
+                +" · "+e.severity+" · "+e.source+" · "+getString(R.string.r01_import_qualifier),null,v->showDiagnosticDetail(e.id()));
         }
-        LinearLayout pagination=new LinearLayout(this);
-        pagination.setOrientation(LinearLayout.HORIZONTAL);
-        com.google.android.material.button.MaterialButton previous=new com.google.android.material.button.MaterialButton(this);
-        previous.setText(R.string.dx01_previous);FlatUi.button(previous);
-        previous.setEnabled(diagnosticPageIndex>0);
-        previous.setOnClickListener(v -> {diagnosticPageIndex--;renderDiagnosticRows();});
+        LinearLayout pagination=horizontal();
+        MaterialButton previous=new MaterialButton(this);previous.setText(R.string.dx01_previous);FlatUi.button(previous);
+        previous.setEnabled(diagnosticState.pageIndex>0);previous.setOnClickListener(v->{diagnosticState.pageIndex--;renderDiagnosticRows();scroll.smoothScrollTo(0,0);});
         pagination.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
-        com.google.android.material.button.MaterialButton next=new com.google.android.material.button.MaterialButton(this);
-        next.setText(R.string.dx01_next);FlatUi.button(next);
-        next.setEnabled(diagnosticPageIndex<pages-1);
-        next.setOnClickListener(v -> {diagnosticPageIndex++;renderDiagnosticRows();});
-        pagination.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
-        diagnosticRows.addView(pagination);
+        pagination.addView(text(getString(R.string.r01_page,diagnosticState.pageIndex+1,pages),13));
+        MaterialButton next=new MaterialButton(this);next.setText(R.string.dx01_next);FlatUi.button(next);
+        next.setEnabled(diagnosticState.pageIndex<pages-1);next.setOnClickListener(v->{diagnosticState.pageIndex++;renderDiagnosticRows();scroll.smoothScrollTo(0,0);});
+        pagination.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));diagnosticRows.addView(pagination);
     }
-    private android.widget.EditText diagnosticTextFilter(LinearLayout parent,int hint,
-            String initial,java.util.function.Consumer<String> update) {
-        android.widget.EditText search=new android.widget.EditText(this);
-        search.setSingleLine(true);search.setText(initial);search.setHint(hint);
-        search.setMinHeight(dp(48));search.setTextSize(14);
-        search.addTextChangedListener(new android.text.TextWatcher(){
-            @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
-            @Override public void onTextChanged(CharSequence s,int start,int before,int count){
-                update.accept(s.toString());diagnosticPageIndex=0;renderDiagnosticRows();
-            }
-            @Override public void afterTextChanged(android.text.Editable e){}
-        });
-        parent.addView(search,new LinearLayout.LayoutParams(-1,-2));return search;
+    private void diagnosticHeader(int current){
+        heading(R.string.diagnostics);
+        ChipGroup tabs=new ChipGroup(this);tabs.setSingleSelection(true);tabs.setSelectionRequired(true);
+        final int[] routes={DIAGNOSTICS,HEALTH,CAPTURE};final int[] labels={R.string.r01_timeline,R.string.r01_health,R.string.dx02_capture};
+        for(int i=0;i<routes.length;i++){
+            int route=routes[i];Chip chip=new Chip(this);chip.setId(View.generateViewId());chip.setText(labels[i]);
+            chip.setCheckable(true);FlatUi.chip(chip);tabs.addView(chip);chip.setChecked(current==route);
+            chip.setOnClickListener(v->goTo(route));
+        }
+        body.addView(tabs,new LinearLayout.LayoutParams(-1,-2));
     }
-    private void diagnosticsTimelinePage() {
-        LinearLayout panel=card(getString(R.string.dx01_title),getString(R.string.dx01_import_only));
-        button(panel,R.string.dx02_capture,v -> goTo(CAPTURE));
-        button(panel,R.string.dx01_import, v -> {
-            final String[] types={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
-            final String[] labels={getString(R.string.dx01_module),getString(R.string.dx01_framework),
-                getString(R.string.dx01_logcat_import)};
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.dx01_choose_source)
-                .setItems(labels,(dialog,which) -> {
-                    diagnosticImportSource=types[which];
-                    diagnosticImportLauncher.launch(new String[]{"text/plain","application/octet-stream"});
-                }).show();
+    private android.widget.EditText filterInput(LinearLayout parent,int label,String initial){
+        TextView heading=text(getString(label),14);parent.addView(heading);
+        android.widget.EditText edit=new android.widget.EditText(this);edit.setId(View.generateViewId());heading.setLabelFor(edit.getId());
+        edit.setHint(label);edit.setText(initial);edit.setTextSize(14);edit.setSingleLine(true);edit.setMinHeight(dp(48));
+        edit.setSaveEnabled(false);edit.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(256)});
+        parent.addView(edit,new LinearLayout.LayoutParams(-1,-2));return edit;
+    }
+    private android.widget.Spinner filterChoice(LinearLayout parent,int title,String[] labels,int selected){
+        TextView label=text(getString(title),14);parent.addView(label);android.widget.Spinner spinner=new android.widget.Spinner(this);
+        spinner.setId(View.generateViewId());label.setLabelFor(spinner.getId());spinner.setMinHeight(dp(48));
+        android.widget.ArrayAdapter<String> adapter=new android.widget.ArrayAdapter<>(this,android.R.layout.simple_spinner_item,labels);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);spinner.setAdapter(adapter);
+        spinner.setSelection(Math.max(0,selected));parent.addView(spinner,new LinearLayout.LayoutParams(-1,-2));return spinner;
+    }
+    private int choiceIndex(String[] ids,String key){for(int i=0;i<ids.length;i++)if(ids[i].equals(key))return i;return 0;}
+    private String iso(long time){return time==0?"":java.time.Instant.ofEpochMilli(time).toString();}
+    private long filterTime(android.widget.EditText edit){String value=edit.getText().toString().trim();if(value.isEmpty())return 0;
+        long utc=java.time.Instant.parse(value).toEpochMilli();if(utc<=0)throw new IllegalArgumentException("clock");return utc;}
+    private void showDiagnosticFilters(){
+        final DiagnosticTimeline.Filter initial=diagnosticState.filter.copy();
+        com.google.android.material.bottomsheet.BottomSheetDialog sheet=new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        ScrollView sc=new ScrollView(this);LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(16),dp(18),dp(24));sc.addView(panel);sheet.setContentView(sc);
+        TextView title=text(getString(R.string.r01_filters),20);FlatUi.sectionHeading(title);panel.addView(title);
+        android.widget.EditText query=filterInput(panel,R.string.dx01_filter_search,initial.query);
+        android.widget.EditText pkg=filterInput(panel,R.string.dx01_filter_package,initial.packageName);
+        android.widget.EditText hook=filterInput(panel,R.string.dx01_filter_hook,initial.hookId);
+        List<HookGroupCatalog.Group> groups=HookGroupCatalog.groups(environment.all());String[] groupIds=new String[groups.size()+1], groupLabels=new String[groupIds.length];
+        groupIds[0]="";groupLabels[0]=getString(R.string.dx01_all);for(int i=0;i<groups.size();i++){groupIds[i+1]=groups.get(i).id;groupLabels[i+1]=groupName(groups.get(i));}
+        android.widget.Spinner group=filterChoice(panel,R.string.r01_filter_group,groupLabels,choiceIndex(groupIds,diagnosticState.groupId));
+        String[] sourceIds={"","LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
+        android.widget.Spinner source=filterChoice(panel,R.string.r01_filter_source,new String[]{getString(R.string.dx01_all),getString(R.string.dx01_module),getString(R.string.dx01_framework),getString(R.string.dx01_logcat_import)},choiceIndex(sourceIds,initial.source));
+        String[] severityIds={"","INFO","WARN","ERROR"};android.widget.Spinner severity=filterChoice(panel,R.string.r01_filter_severity,new String[]{getString(R.string.dx01_all),"INFO","WARN","ERROR"},choiceIndex(severityIds,initial.severity));
+        android.widget.EditText after=filterInput(panel,R.string.r01_after,iso(initial.afterUtc)),before=filterInput(panel,R.string.r01_before,iso(initial.beforeUtc));
+        panel.addView(text(getString(R.string.r01_time_help),13));
+        button(panel,R.string.r01_apply,v->{
+            DiagnosticTimeline.Filter next=new DiagnosticTimeline.Filter();next.query=query.getText().toString();next.packageName=pkg.getText().toString().trim();next.hookId=hook.getText().toString().trim();
+            int sourceIndex=source.getSelectedItemPosition(), severityIndex=severity.getSelectedItemPosition(),g=group.getSelectedItemPosition();
+            if(sourceIndex<0||sourceIndex>=sourceIds.length||severityIndex<0||severityIndex>=severityIds.length||g<0||g>=groupIds.length)return;
+            next.source=sourceIds[sourceIndex];next.severity=severityIds[severityIndex];
+            if(g>0){Set<String> members=new HashSet<>();for(TweakSpec spec:groups.get(g-1).members)members.add(spec.id);next.groupHooks=java.util.Collections.unmodifiableSet(members);}
+            try{next.afterUtc=filterTime(after);next.beforeUtc=filterTime(before);if(next.afterUtc>0&&next.beforeUtc>0&&next.afterUtc>next.beforeUtc)throw new IllegalArgumentException("range");}
+            catch(RuntimeException invalid){after.setError(getString(R.string.r01_bad_time));return;}
+            diagnosticState.groupId=groupIds[g];diagnosticState.filter=next;diagnosticState.pageIndex=0;sheet.dismiss();render();scroll.scrollTo(0,0);
         });
-        button(panel,R.string.dx01_export_redacted,v ->
-                diagnosticExportLauncher.launch("hooklab-redacted-diagnostics.zip"));
-        button(panel,R.string.dx01_copy_filtered,v -> copyDiagnosticText(
-                com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.toJsonl(
-                        diagnosticsStore().filtered(diagnosticFilter))));
-        diagnosticTextFilter(panel,R.string.dx01_filter_search,diagnosticFilter.query,
-                s -> diagnosticFilter.query=s);
-        diagnosticTextFilter(panel,R.string.dx01_filter_package,diagnosticFilter.packageName,
-                s -> diagnosticFilter.packageName=s.trim());
-        diagnosticTextFilter(panel,R.string.dx01_filter_hook,diagnosticFilter.hookId,
-                s -> diagnosticFilter.hookId=s.trim());
-        com.google.android.material.chip.ChipGroup sources=new com.google.android.material.chip.ChipGroup(this);
-        sources.setSingleSelection(true);
-        final String[] ids={"","LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
-        final int[] names={R.string.dx01_all,R.string.dx01_module,R.string.dx01_framework,R.string.dx01_logcat_import};
-        for(int i=0;i<ids.length;i++){
-            final String value=ids[i];
-            com.google.android.material.chip.Chip chip=new com.google.android.material.chip.Chip(this);
-            FlatUi.chip(chip);chip.setCheckable(true);chip.setText(names[i]);
-            chip.setChecked(value.equals(diagnosticFilter.source));
-            chip.setOnClickListener(v -> {diagnosticFilter.source=value;diagnosticPageIndex=0;renderDiagnosticRows();});
-            sources.addView(chip);
-        }
-        panel.addView(sources);
-        com.google.android.material.chip.ChipGroup severity=new com.google.android.material.chip.ChipGroup(this);
-        severity.setSingleSelection(true);
-        final String[] levels={"","INFO","WARN","ERROR"};
-        for(String value:levels){
-            com.google.android.material.chip.Chip chip=new com.google.android.material.chip.Chip(this);
-            FlatUi.chip(chip);chip.setCheckable(true);
-            chip.setText(value.isEmpty()?getString(R.string.dx01_all):value);
-            chip.setChecked(value.equals(diagnosticFilter.severity));
-            chip.setOnClickListener(v -> {diagnosticFilter.severity=value;diagnosticPageIndex=0;renderDiagnosticRows();});
-            severity.addView(chip);
-        }
-        panel.addView(severity);
-        diagnosticRows=new LinearLayout(this);diagnosticRows.setOrientation(LinearLayout.VERTICAL);
-        body.addView(diagnosticRows,new LinearLayout.LayoutParams(-1,-2));
-        renderDiagnosticRows();
+        button(panel,R.string.r01_clear,v->{diagnosticState.filter=new DiagnosticTimeline.Filter();diagnosticState.groupId="";diagnosticState.pageIndex=0;sheet.dismiss();render();scroll.scrollTo(0,0);});
+        button(panel,android.R.string.cancel,v->sheet.dismiss());sheet.show();
+        sheet.getBehavior().setSkipCollapsed(true);sheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+    }
+    private void showImportSheet(){
+        if(diagnosticState.pickerPending()){toast(R.string.r01_picker_pending);return;}
+        com.google.android.material.bottomsheet.BottomSheetDialog sheet=new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        ScrollView sc=new ScrollView(this);LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(16),dp(18),dp(24));sc.addView(panel);sheet.setContentView(sc);
+        TextView title=text(getString(R.string.dx01_choose_source),20);FlatUi.sectionHeading(title);panel.addView(title);
+        final String[] types={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};final int[] labels={R.string.dx01_module,R.string.dx01_framework,R.string.dx01_logcat_import};
+        for(int i=0;i<types.length;i++){String type=types[i];button(panel,labels[i],v->{sheet.dismiss();launchDiagnosticImport(type,null);});}
+        button(panel,android.R.string.cancel,v->sheet.dismiss());sheet.show();
+        sheet.getBehavior().setSkipCollapsed(true);sheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+    }
+    private void diagnosticsTimelinePage(){
+        body.addView(text(getString(R.string.dx01_import_only),14));
+        LinearLayout actions=horizontal();MaterialButton imp=new MaterialButton(this);imp.setText(R.string.dx01_import);FlatUi.button(imp);imp.setOnClickListener(v->showImportSheet());actions.addView(imp,new LinearLayout.LayoutParams(0,-2,1));
+        MaterialButton filter=new MaterialButton(this);filter.setText(getString(R.string.r01_filter_count,diagnosticState.filter.activeCount()));FlatUi.button(filter);filter.setOnClickListener(v->showDiagnosticFilters());actions.addView(filter,new LinearLayout.LayoutParams(0,-2,1));body.addView(actions);
+        LinearLayout exports=horizontal();MaterialButton copy=new MaterialButton(this);copy.setText(R.string.r01_copy);FlatUi.button(copy);copy.setOnClickListener(v->previewDiagnosticSelection(diagnosticsStore().select(diagnosticState.filter),false));exports.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+        MaterialButton save=new MaterialButton(this);save.setText(R.string.r01_export);FlatUi.button(save);save.setOnClickListener(v->previewDiagnosticSelection(diagnosticsStore().select(diagnosticState.filter),true));exports.addView(save,new LinearLayout.LayoutParams(0,-2,1));body.addView(exports);
+        diagnosticRows=new LinearLayout(this);diagnosticRows.setOrientation(LinearLayout.VERTICAL);body.addView(diagnosticRows,new LinearLayout.LayoutParams(-1,-2));renderDiagnosticRows();
     }
 
     private MaterialToolbar toolbar;
@@ -624,21 +692,28 @@ public final class MainActivity extends AppCompatActivity {
             catch (RuntimeException ignored) { /* Fallback to packaged Material 3 palette. */ }
         }
         environment = UiEnvironmentFactory.create((HookLabApp) getApplication());
+        diagnosticState=new androidx.lifecycle.ViewModelProvider(this).get(DiagnosticWorkspaceState.class);
         stateStore = new FrameworkStateStore(environment);
-        page = state == null ? HOME : Math.max(HOME, Math.min(HELP, state.getInt("page")));
+        page = state == null ? HOME : Math.max(HOME, Math.min(EVENT_REPORT, state.getInt("page")));
         selectedHookId = state == null ? null : state.getString("selectedHookId");
         helpReturnPage = state == null ? SETTINGS : state.getInt("helpReturnPage", SETTINGS);
         if(helpReturnPage != SETTINGS && helpReturnPage != SCOPE && helpReturnPage != ABOUT) helpReturnPage=SETTINGS;
-        healthFocusHookId = state == null ? null : state.getString("healthFocusHookId");
-        if(healthFocusHookId!=null){
-            if(HookDetailRoute.hook(environment.all(),healthFocusHookId)!=null)
-                diagnosticFilter.hookId=healthFocusHookId;
-            else healthFocusHookId=null;
+        healthFocusHookId=state==null?null:state.getString("healthFocusHookId");
+        diagnosticTab=state==null?DIAGNOSTICS:state.getInt("diagnosticTab",DIAGNOSTICS);
+        if(!diagnosticRoot(diagnosticTab))diagnosticTab=DIAGNOSTICS;
+        healthReturnPage=state==null?HEALTH:state.getInt("healthReturnPage",HEALTH);
+        if(healthReturnPage!=HEALTH&&healthReturnPage!=APP_DETAIL)healthReturnPage=HEALTH;
+        eventReturnPage=state==null?DIAGNOSTICS:state.getInt("eventReturnPage",DIAGNOSTICS);
+        if(eventReturnPage!=DIAGNOSTICS&&eventReturnPage!=HEALTH_REPORT)eventReturnPage=DIAGNOSTICS;
+        if(state!=null&&!diagnosticState.generation.equals(state.getString("diagnosticGeneration"))&&diagnosticRoute(page)){
+            Toast.makeText(this,R.string.r01_process_loss,Toast.LENGTH_LONG).show();
         }
+        if(page==EVENT_REPORT && diagnosticsStore().find(diagnosticState.eventId)==null)page=DIAGNOSTICS;
+        if(page==HEALTH_REPORT&&entryForId(healthFocusHookId)==null)page=HEALTH;
         selectedGroupId = state == null ? null : state.getString("selectedGroupId");
         detailReturnPage = state == null ? APPS : state.getInt("detailReturnPage", APPS);
         if (detailReturnPage != APPS && detailReturnPage != HOME
-                && detailReturnPage != GROUP_DETAIL) detailReturnPage = APPS;
+                && detailReturnPage != GROUP_DETAIL && detailReturnPage != HEALTH_REPORT) detailReturnPage = APPS;
         // UI-08: a pre-UI-04 package-only selection is safe ONLY if unique.
         // Never pick the first hook when multiple registered hooks share one app.
         if (selectedHookId == null && state != null) {
@@ -732,7 +807,7 @@ public final class MainActivity extends AppCompatActivity {
                     : item.getItemId() == NAV_APPS ? APPS
                     : item.getItemId() == NAV_DIAGNOSTICS ? DIAGNOSTICS : -1;
             if (target < 0) return false;
-            if(target==DIAGNOSTICS)healthFocusHookId=null;
+            if(target==DIAGNOSTICS)target=diagnosticTab;
             goTo(target);
             return true;
         });
@@ -747,23 +822,34 @@ public final class MainActivity extends AppCompatActivity {
             }
         });
         render();
+        restoreDiagnosticScroll(page);
+    }
+    private void restoreDiagnosticScroll(int target){
+        if(!diagnosticRoot(target))return;
+        final int position=diagnosticState.scroll[diagnosticIndex(target)];
+        scroll.post(()->{if(page==target)scroll.scrollTo(0,position);});
     }
     private void navigateBack() {
         if(page==HELP){goTo(helpReturnPage);return;}
+        if(page==EVENT_REPORT){diagnosticState.eventId=null;goTo(eventReturnPage);return;}
+        if(page==HEALTH_REPORT){goTo(healthReturnPage);return;}
         if (page == APP_DETAIL) {
             int destination = detailReturnPage == GROUP_DETAIL && selectedGroup() == null
                     ? APPS : detailReturnPage;
             goTo(destination);
-        } else goTo(page == CAPTURE ? DIAGNOSTICS : page == GROUP_DETAIL ? APPS : HOME);
+        } else goTo(page == GROUP_DETAIL ? APPS : HOME);
     }
     private void goTo(int target) {
         goTo(target, false);
     }
     private void goTo(int target, boolean refreshSamePage) {
         if (target == page && !refreshSamePage) return;
+        if(diagnosticRoot(page)&&page!=target)diagnosticState.scroll[diagnosticIndex(page)]=scroll.getScrollY();
         page = target;
+        if(diagnosticRoot(target))diagnosticTab=target;
         render();
         scroll.scrollTo(0, 0);
+
         // UI-08: keyboard/TalkBack navigation begins at the new page heading.
         // Only user-directed navigation changes focus; asynchronous framework
         // snapshot updates keep their existing search-focus/scroll preservation.
@@ -774,6 +860,7 @@ public final class MainActivity extends AppCompatActivity {
                 first.setFocusableInTouchMode(true);
                 first.requestFocus();
             }
+            if(diagnosticRoot(target)&&!refreshSamePage)restoreDiagnosticScroll(target);
         });
     }
     @Override protected void onStart() {
@@ -781,6 +868,9 @@ public final class MainActivity extends AppCompatActivity {
         pendingPreferences.clear();
         pendingScope.clear();
         ((HookLabApp) getApplication()).addObserver(frameworkObserver);
+        captureApp().addDiagnosticObserver(diagnosticObserver);
+        scheduleCaptureDeadline();
+        if(diagnosticRoute(page)){render();restoreDiagnosticScroll(page);}
         stateStore.start(next -> {
             if (isFinishing() || isDestroyed() || snapshot.equals(next)) return;
             int previousScroll = scroll.getScrollY();
@@ -793,14 +883,18 @@ public final class MainActivity extends AppCompatActivity {
         });
     }
     @Override protected void onStop() {
+        if(diagnosticRoot(page))diagnosticState.scroll[diagnosticIndex(page)]=scroll.getScrollY();
         captureDeadlineHandler.removeCallbacks(captureDeadlineRefresh);
         ((HookLabApp) getApplication()).removeObserver(frameworkObserver);
+        captureApp().removeDiagnosticObserver(diagnosticObserver);
         stateStore.stop();
         super.onStop();
     }
     @Override protected void onDestroy() {
-        // Let an already selected SAF import finish and clear the app-level import gate.
-        diagnosticWorker.shutdown();
+        // Only final destruction cancels a still-unreturned picker; a rotation retains its request.
+        if(!isChangingConfigurations()&&diagnosticState.pendingImport!=null){
+            if(diagnosticState.pendingImport.capture!=null)captureApp().endCaptureImport();diagnosticState.pendingImport=null;
+        }
         stateStore.close();
         super.onDestroy();
     }
@@ -808,6 +902,9 @@ public final class MainActivity extends AppCompatActivity {
         out.putInt("page", page); out.putString("selectedHookId", selectedHookId);
         out.putInt("helpReturnPage", helpReturnPage);
         out.putString("healthFocusHookId", healthFocusHookId);
+        out.putInt("diagnosticTab",diagnosticTab);out.putInt("healthReturnPage",healthReturnPage);out.putInt("eventReturnPage",eventReturnPage);
+        out.putString("diagnosticGeneration",diagnosticState.generation);
+        if(diagnosticRoot(page))diagnosticState.scroll[diagnosticIndex(page)]=scroll.getScrollY();
         out.putString("selectedGroupId", selectedGroupId);
         out.putInt("detailReturnPage", detailReturnPage);
         super.onSaveInstanceState(out);
@@ -908,7 +1005,8 @@ public final class MainActivity extends AppCompatActivity {
     }
     private void showApp(TweakEngine.Entry<HookContext> entry) {
         if (entry == null || entryForId(entry.spec.id) == null) return;
-        detailReturnPage = page == GROUP_DETAIL ? GROUP_DETAIL : page == HOME ? HOME : APPS;
+        if(page==HEALTH_REPORT&&healthReturnPage==APP_DETAIL&&entry.spec.id.equals(selectedHookId)){goTo(APP_DETAIL);return;}
+        detailReturnPage = page == GROUP_DETAIL ? GROUP_DETAIL : page == HOME ? HOME : page==HEALTH_REPORT?HEALTH_REPORT:APPS;
         selectedHookId = entry.spec.id;
         goTo(APP_DETAIL);
     }
@@ -1198,98 +1296,56 @@ public final class MainActivity extends AppCompatActivity {
             default: return getString(R.string.dx03_gap_imported);
         }
     }
-    private void openHookHealth(TweakSpec spec) {
-        if(spec == null || entryForId(spec.id) == null) return;
+    private void openHookHealth(TweakSpec spec){
+        if(spec==null||entryForId(spec.id)==null)return;
         healthFocusHookId=spec.id;
-        diagnosticFilter.hookId=spec.id;
-        diagnosticPageIndex=0;
-        goTo(DIAGNOSTICS); // Read-only route; never toggles/changes scope.
+        if(page==APP_DETAIL&&detailReturnPage==HEALTH_REPORT){goTo(HEALTH_REPORT);return;}
+        healthReturnPage=page==APP_DETAIL?APP_DETAIL:HEALTH;goTo(HEALTH_REPORT);
     }
-    private void hookHealthPanel() {
-        LinearLayout summary=card(getString(R.string.dx03_title),getString(R.string.dx03_truth));
-        if(healthFocusHookId!=null){
-            button(summary,R.string.dx03_show_all,v -> {
-                healthFocusHookId=null;
-                diagnosticFilter.hookId="";
-                diagnosticPageIndex=0;
-                render();
-            });
-        }
-        int globalUnknown=0;
-        for(com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event event:diagnosticsStore().filtered(null))
-            if("ERROR".equals(event.severity) && (event.hookId==null || event.hookId.isEmpty()))globalUnknown++;
-        summary.addView(text(getString(R.string.dx03_global_unattributed,globalUnknown,
-                diagnosticsStore().size(),diagnosticsStore().dropped()),14));
-        // No hook result is labeled ACTIVE: only the framework can confirm configuration.
+    private void hookHealthPanel(){
+        body.addView(text(getString(R.string.dx03_truth),14));
+        int globalUnknown=0;for(DiagnosticTimeline.Event event:diagnosticsStore().filtered(null))if("ERROR".equals(event.severity)&&event.hookId.isEmpty())globalUnknown++;
+        body.addView(text(getString(R.string.dx03_global_unattributed,globalUnknown,diagnosticsStore().size(),diagnosticsStore().dropped()),13));
         for(TweakEngine.Entry<HookContext> entry:environment.entries()){
-            TweakSpec spec=entry.spec;
-            if(healthFocusHookId!=null&&!healthFocusHookId.equals(spec.id))continue;
-            HookHealthModel.Report report=HookHealthModel.project(spec,snapshot,diagnosticsStore());
-            LinearLayout row=card(entry.title,getString(R.string.dx03_dimensions,
-                    healthAxis(report.framework),healthAxis(report.scope),
-                    healthAxis(report.optIn),healthAxis(report.quarantine),
-                    healthAxis(report.version),statusText(report.eligibility)));
-            row.addView(text(getString(R.string.dx03_source_summary,
-                    report.matchingImports,report.reportedErrors,report.reportedWarnings,
-                    report.sourceSummary.isEmpty()?getString(R.string.dx03_none):report.sourceSummary,
-                    healthGap(report.collectorGap),report.retainedDropped),14));
-            row.addView(text(getString(R.string.dx03_advice,healthAdvice(report.advice)),14));
-            for(com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline.Event event:report.recent)
-                row.addView(text(getString(R.string.dx03_event_source,event.code,event.source,
-                        event.fileSha256,event.lineNumber),13));
-            button(row,R.string.dx03_open_setup,v->showApp(entry));
-            button(row,R.string.dx03_inspect,v->{
-                diagnosticFilter.hookId=spec.id;
-                diagnosticPageIndex=0;
-                // Already on Diagnostics: redraw read-only filtered evidence.
-                render();
-            });
-            button(row,R.string.dx03_capture,v->goTo(CAPTURE));
-            button(row,R.string.dx03_copy,v->copyDiagnosticText(HookHealthModel.redactedJson(report)));
-        }
-        if(healthFocusHookId!=null && entryForId(healthFocusHookId)==null){
-            // Restored selections can become invalid across app updates.
-            healthFocusHookId=null;
-            summary.addView(text(getString(R.string.dx03_invalid_selection),14));
+            HookHealthModel.Report report=HookHealthModel.project(entry.spec,snapshot,diagnosticsStore());
+            compactDiagnosticRow(body,entry.title,statusText(report.eligibility)+" · "+getString(R.string.r01_health_counts,report.matchingImports,report.reportedErrors),entry.spec.packageName,v->openHookHealth(entry.spec));
         }
     }
-
-    private void diagnosticsPage() {
-        heading(R.string.diagnostics);
-        hookHealthPanel();
-        diagnosticsTimelinePage();
-        UiEnvironment.Port s = service();
-        card(getString(R.string.status), connection(s));
-        if (!ready(s)) {
-            card(getString(R.string.diagnostics), snapshot.connection == FrameworkSnapshot.Connection.LOADING
-                    ? getString(R.string.ui_loading_framework) : getString(R.string.diagnostics_disconnected));
-            return;
-        }
-        List<TweakEngine.Entry<HookContext>> entries = environment.entries();
-        if (entries.isEmpty()) {
-            card(getString(R.string.diagnostics_empty), getString(R.string.diagnostics_inert));
-            return;
-        }
-        for (TweakEngine.Entry<HookContext> entry : entries) {
-            String id = entry.spec.id;
-            FrameworkSnapshot.Flag flag = snapshot.flag(id);
-            if (flag == null || flag.enabled == null || flag.locked == null) {
-                card(entry.title, getString(R.string.diagnostics_unavailable));
-                continue;
-            }
-            boolean locked = flag.locked;
-            TweakCompatibility.State assessed = eligibility(entry.spec, s);
-            LinearLayout inner = card(entry.title,
-                    getString(R.string.diagnostics_compatibility, statusText(assessed))
-                    + "\n" + getString(R.string.diagnostics_safety_state,
-                          getString(locked ? R.string.diagnostics_locked : R.string.diagnostics_unlocked)));
-            boolean nextLock = !locked;
-            button(inner, nextLock ? R.string.diagnostics_enable_lock : R.string.diagnostics_reset_quarantine,
-                    v -> confirmSafetyLock(s, id, nextLock))
-                    .setEnabled(!pendingPreferences.contains("lock:" + id));
-        }
-        card(getString(R.string.diagnostics_note_title), getString(R.string.diagnostics_note));
+    private void healthReportPage(){
+        heading(R.string.dx03_title);TweakEngine.Entry<HookContext> entry=entryForId(healthFocusHookId);
+        if(entry==null){body.addView(text(getString(R.string.dx03_invalid_selection),14));return;}
+        TweakSpec spec=entry.spec;HookHealthModel.Report report=HookHealthModel.project(spec,snapshot,diagnosticsStore());
+        LinearLayout details=card(entry.title,getString(R.string.dx03_truth));
+        details.addView(text(getString(R.string.dx03_dimensions,healthAxis(report.framework),healthAxis(report.scope),healthAxis(report.optIn),healthAxis(report.quarantine),healthAxis(report.version),statusText(report.eligibility)),14));
+        details.addView(text(getString(R.string.dx03_source_summary,report.matchingImports,report.reportedErrors,report.reportedWarnings,report.sourceSummary.isEmpty()?getString(R.string.dx03_none):report.sourceSummary,healthGap(report.collectorGap),report.retainedDropped),14));
+        details.addView(text(getString(R.string.dx03_advice,healthAdvice(report.advice)),14));
+        for(DiagnosticTimeline.Event event:report.recent)compactDiagnosticRow(details,event.code,getString(R.string.dx03_event_source,event.code,event.source,event.fileSha256,event.lineNumber),null,v->showDiagnosticDetail(event.id()));
+        button(details,R.string.dx03_open_setup,v->showApp(entry));
+        button(details,R.string.dx03_inspect,v->{diagnosticState.filter=new DiagnosticTimeline.Filter();diagnosticState.filter.hookId=spec.id;diagnosticState.groupId="";diagnosticState.pageIndex=0;diagnosticState.scroll[0]=0;goTo(DIAGNOSTICS);});
+        button(details,R.string.dx03_capture,v->goTo(CAPTURE));
+        button(details,R.string.dx03_copy,v->previewHealthReport(report,false));
+        button(details,R.string.r01_export_health,v->previewHealthReport(report,true));
+        UiEnvironment.Port port=service();FrameworkSnapshot.Flag flag=snapshot.flag(spec.id);
+        if(ready(port)&&flag!=null&&flag.enabled!=null&&flag.locked!=null){
+            boolean lock=!flag.locked;button(details,lock?R.string.diagnostics_enable_lock:R.string.diagnostics_reset_quarantine,v->confirmSafetyLock(port,spec.id,lock)).setEnabled(!pendingPreferences.contains("lock:"+spec.id));
+        }else details.addView(text(getString(R.string.diagnostics_unavailable),14));
+        details.addView(text(getString(R.string.diagnostics_note),14));
     }
+    private void previewHealthReport(HookHealthModel.Report report,boolean export){
+        if(diagnosticState.pickerPending()){toast(R.string.r01_picker_pending);return;}
+        final String redacted=HookHealthModel.redactedJson(report);
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.r01_redaction_preview).setMessage(redacted)
+            .setNegativeButton(android.R.string.cancel,null).setPositiveButton(export?R.string.r01_export:R.string.r01_copy,(d,w)->{
+                if(!export){copyDiagnosticText(redacted);return;}
+                if(diagnosticState.pickerPending())return;
+                diagnosticState.pendingHealthExport=report;
+                try{diagnosticExportLauncher.launch("hooklab-health-redacted.zip");}
+                catch(RuntimeException failed){diagnosticState.pendingHealthExport=null;toast(R.string.dx01_export_failed);}
+            }).show();
+    }
+    private void diagnosticsPage(){diagnosticHeader(DIAGNOSTICS);diagnosticsTimelinePage();}
+    private void healthPage(){diagnosticHeader(HEALTH);hookHealthPanel();}
 
     private void confirmSafetyLock(UiEnvironment.Port s, String id, boolean locked) {
         if (!ready(s) || pendingPreferences.contains("lock:" + id)) return;
@@ -1436,9 +1492,9 @@ public final class MainActivity extends AppCompatActivity {
     private void render() {
         if (body == null) return;
         int navId = page == APP_DETAIL || page == APPS || page == GROUP_DETAIL ? NAV_APPS
-                : (page == DIAGNOSTICS || page == CAPTURE) ? NAV_DIAGNOSTICS : NAV_HOME;
+                : diagnosticRoute(page) ? NAV_DIAGNOSTICS : NAV_HOME;
         navigation.getMenu().findItem(navId).setChecked(true);
-        boolean secondary = page >= SETTINGS;
+        boolean secondary = page >= SETTINGS && !diagnosticRoot(page);
         if (secondary) {
             toolbar.setNavigationIcon(R.drawable.ic_nav_back);
             toolbar.setNavigationContentDescription(R.string.ui_back);
@@ -1448,7 +1504,9 @@ public final class MainActivity extends AppCompatActivity {
         switch (page) {
             case APPS: toolbar.setTitle(R.string.ui_hooks); break;
             case DIAGNOSTICS: toolbar.setTitle(R.string.diagnostics); break;
-            case CAPTURE: toolbar.setTitle(R.string.dx02_title); break;
+            case CAPTURE: case HEALTH: toolbar.setTitle(R.string.diagnostics); break;
+            case HEALTH_REPORT: toolbar.setTitle(R.string.dx03_title);break;
+            case EVENT_REPORT: toolbar.setTitle(R.string.r01_event_inspector);break;
             case SETTINGS: toolbar.setTitle(R.string.settings); break;
             case ABOUT: toolbar.setTitle(R.string.about); break;
             case SCOPE: toolbar.setTitle(R.string.scope); break;
@@ -1463,11 +1521,14 @@ public final class MainActivity extends AppCompatActivity {
                 break;
             default: toolbar.setTitle(R.string.app_name);
         }
-        body.removeAllViews();
+        diagnosticRows=null;body.removeAllViews();
         switch (page) {
             case APPS: apps(); break;
             case DIAGNOSTICS: diagnosticsPage(); break;
             case CAPTURE: capturePage(); break;
+            case HEALTH: healthPage();break;
+            case HEALTH_REPORT: healthReportPage();break;
+            case EVENT_REPORT: eventReport();break;
             case SETTINGS: settings(); break;
             case ABOUT: aboutPage(); break;
             case HELP: helpPage(); break;

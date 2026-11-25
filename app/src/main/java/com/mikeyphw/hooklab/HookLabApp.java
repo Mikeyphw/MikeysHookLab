@@ -13,6 +13,14 @@ public final class HookLabApp extends Application implements XposedServiceHelper
     private final com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnosticTimeline =
             new com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline();
     public com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline diagnostics() {return diagnosticTimeline;}
+    // One serialized import/export lane for the process, including Activity recreation.
+    private final java.util.concurrent.ExecutorService diagnosticWorker=java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final CopyOnWriteArraySet<Runnable> diagnosticObservers=new CopyOnWriteArraySet<>();
+    public void diagnosticTask(Runnable task){diagnosticWorker.execute(task);}
+    public void addDiagnosticObserver(Runnable task){diagnosticObservers.add(task);}
+    public void removeDiagnosticObserver(Runnable task){diagnosticObservers.remove(task);}
+    public void diagnosticChanged(){ui.post(()->{for(Runnable observer:diagnosticObservers)observer.run();});}
+
     // DX-02: only user-directed, redacted SAF imports are associated with a session.
     // A stale process-death marker reports interruption, never invents old events.
     private volatile com.mikeyphw.hooklab.diagnostics.CaptureSession captureSession;
@@ -23,7 +31,7 @@ public final class HookLabApp extends Application implements XposedServiceHelper
     public boolean beginCaptureImport(){return captureImportRunning.compareAndSet(false,true);}
     public void endCaptureImport(){captureImportRunning.set(false);}
     public synchronized boolean startCapture(com.mikeyphw.hooklab.diagnostics.CaptureSession next){
-        if(next==null || (captureSession!=null &&
+        if(next==null || captureImportRunning.get() || (captureSession!=null &&
                 captureSession.state()==com.mikeyphw.hooklab.diagnostics.CaptureSession.State.ACTIVE))return false;
         captureSession=next;
         getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE).edit().putBoolean("unfinished",true).apply();
