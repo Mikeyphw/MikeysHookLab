@@ -31,6 +31,7 @@ public final class MccControlActivity extends AppCompatActivity {
     private MaterialButton rootInspect;
     private TextView status;
     private boolean running;
+    private boolean started;
 
     private int dp(int n) { return (int)(n*getResources().getDisplayMetrics().density+.5f); }
 
@@ -66,16 +67,16 @@ public final class MccControlActivity extends AppCompatActivity {
         int gutter = UiLayoutPolicy.contentInsetDp(widthDp);
         content.setPadding(dp(gutter),dp(8),dp(gutter),dp(24));
         scroll.addView(content, new ScrollView.LayoutParams(-1,-2));
-        FrameLayout centered = new FrameLayout(this);
+        FrameLayout centered = new com.mikeyphw.hooklab.ui.AdaptiveContentFrame(this,720);
         centered.addView(scroll, new FrameLayout.LayoutParams(
-            dp(Math.min(720, widthDp)), -1, android.view.Gravity.CENTER_HORIZONTAL));
+            -1, -1, android.view.Gravity.CENTER_HORIZONTAL));
         MaterialToolbar bar=new MaterialToolbar(this);
         FlatUi.toolbar(bar);
         bar.setTitle(R.string.r03_manual_control);
         bar.setNavigationIcon(R.drawable.ic_nav_back);
         bar.setNavigationContentDescription(R.string.ui_back);
         bar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
-        root.addView(bar,new LinearLayout.LayoutParams(-1,dp(com.mikeyphw.hooklab.ui.DesignTokens.TOOLBAR_DP)));
+        root.addView(bar,new LinearLayout.LayoutParams(-1,-2));
         root.addView(centered, new LinearLayout.LayoutParams(-1,0,1));
         TextView title=new TextView(this);
         title.setText(R.string.ui07_mcc_heading);
@@ -143,7 +144,7 @@ public final class MccControlActivity extends AppCompatActivity {
     }
     private final MccManualOperation.Listener operationObserver = snapshot ->
         runOnUiThread(() -> {
-            if(isFinishing()||isDestroyed()||inspect==null||rootInspect==null||setNine==null||status==null)return;
+            if(!started||isFinishing()||isDestroyed()||inspect==null||rootInspect==null||setNine==null||status==null)return;
             boolean active=snapshot.stage==MccManualOperation.Stage.RUNNING;
             running=active;
             inspect.setEnabled(!active);rootInspect.setEnabled(!active);setNine.setEnabled(!active);
@@ -155,9 +156,11 @@ public final class MccControlActivity extends AppCompatActivity {
         });
     @Override protected void onStart(){
         super.onStart();
+        started=true;
         MccManualOperation.shared().addListener(operationObserver);
     }
     @Override protected void onStop(){
+        started=false;
         MccManualOperation.shared().removeListener(operationObserver);
         super.onStop();
     }

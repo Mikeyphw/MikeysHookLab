@@ -10,7 +10,7 @@ FIXTURE='com.mikeyphw.hooklab.qa.DiagnosticFixtureTest#importedFixtureProjection
 FRAMEWORK_TEST='com.mikeyphw.hooklab.ui.FrameworkFixtureTest#connectedCommandsStaleCallbackAndClock'
 TERMUX_TEST='com.mikeyphw.hooklab.termux.TermuxBridgeFixtureTest#syntheticAuthorizationAndReceipt'
 TESTS=[TEST,TEST,FIXTURE,FRAMEWORK_TEST,TERMUX_TEST]
-FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','capture_restart_same_route','health_exact_same_package_routes','health_navigation_no_writes','filtered_multi_app_route','catalog_recreate_and_return','catalog_navigation_no_writes','installed_package_icon_identity','missing_and_unknown_icon_states','no_real_framework']}
+FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','scope_pending_across_recreation','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','capture_restart_same_route','health_exact_same_package_routes','health_navigation_no_writes','filtered_multi_app_route','catalog_recreate_and_return','catalog_navigation_no_writes','installed_package_icon_identity','missing_and_unknown_icon_states','no_real_framework']}
 FIXTURE_EVIDENCE={'schema':'hooklab.diagnostics.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'framework_disconnected':True,'assertions':['three_normalized_events','actual_timeline_projection','filter_one_of_three','raw_marker_not_rendered','store_unchanged','no_framework_service','filter_cancel_preserves_applied','stable_inspector_identity_recreate','isolated_workspaces','clear_filter','single_import_sheet_cancel','unsafe_uri_refused','redaction_preview_cancel_clipboard_unchanged']}
 
 def require(ok,msg):
@@ -20,10 +20,10 @@ def adb(*args):return subprocess.check_output(['adb','-s',SERIAL,*args],timeout=
 def txt(*args):return adb(*args).decode('utf-8')
 def raw(*args):return subprocess.check_output(['adb','-s',SERIAL,*args],timeout=30)
 def git(*args):return subprocess.check_output(['git',*args],text=True,timeout=25).strip()
-def guard():
+def guard(api=36):
     require(os.getenv('GITHUB_ACTIONS')=='true' and os.getenv('RUNNER_OS')=='Linux','HOSTED_ONLY')
     devices=subprocess.check_output(['adb','devices'],text=True,timeout=20).splitlines();require([x.split() for x in devices[1:] if x.strip()]==[[SERIAL,'device']],'unexpected ADB device inventory')
-    require(txt('shell','getprop','ro.kernel.qemu')=='1' and txt('shell','getprop','ro.build.version.sdk')=='36','API36_EMULATOR_REQUIRED')
+    require(api in (29,36) and txt('shell','getprop','ro.kernel.qemu')=='1' and txt('shell','getprop','ro.build.version.sdk')==str(api),'EXPECTED_API_EMULATOR_REQUIRED')
     require(txt('shell','getprop','sys.boot_completed')=='1','EMULATOR_NOT_BOOTED')
     # Adapted from Cinderbox R48 offline gate: ConnectivityService and setting
     # readback, Wi-Fi independent, and explicit absence of default network.

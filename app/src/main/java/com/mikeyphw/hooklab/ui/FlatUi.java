@@ -29,6 +29,7 @@ public final class FlatUi {
         bar.setBackgroundColor(MaterialColors.getColor(bar, R.attr.colorSurface));
         bar.setTitleTextColor(MaterialColors.getColor(bar, R.attr.colorOnSurface));
         bar.setElevation(0f);
+        bar.setMinimumHeight(dp(bar,DesignTokens.TOOLBAR_DP));
     }
     public static void section(MaterialCardView section) {
         section.setRadius(dp(section, DesignTokens.PANEL_RADIUS));
@@ -56,12 +57,28 @@ public final class FlatUi {
         action.setStrokeWidth(0);
         action.setCornerRadius(dp(action, DesignTokens.BUTTON_RADIUS));
         action.setMinHeight(dp(action, Ui08QualityPolicy.MIN_TOUCH_DP));
+        action.setMinimumWidth(dp(action,Ui08QualityPolicy.MIN_TOUCH_DP));
+        action.setSingleLine(false);
+        action.setMaxLines(Integer.MAX_VALUE);
+        action.setEllipsize(null);
     }
     public static void chip(Chip chip) {
         chip.setChipStrokeWidth(0f);
         chip.setElevation(0f);
         chip.setEnsureMinTouchTargetSize(true);
         chip.setChipMinHeight(dp(chip, Ui08QualityPolicy.MIN_TOUCH_DP));
+        chip.setMinimumWidth(dp(chip,Ui08QualityPolicy.MIN_TOUCH_DP));
+    }
+    public static void adaptiveNavigationLabels(NavigationBarView nav) {
+        if(nav.getResources().getConfiguration().fontScale<1.6f)return;
+        wrapNavigationLabels(nav);
+        nav.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->wrapNavigationLabels(nav));
+    }
+    private static void wrapNavigationLabels(View v){
+        if(v instanceof TextView){TextView label=(TextView)v;
+            if(label.getMaxLines()!=3){label.setSingleLine(false);label.setMaxLines(3);label.setEllipsize(null);}
+        }
+        if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++)wrapNavigationLabels(g.getChildAt(i));}
     }
     public static void navigation(NavigationBarView nav) {
         nav.setBackgroundColor(MaterialColors.getColor(nav, R.attr.colorSurfaceContainer));

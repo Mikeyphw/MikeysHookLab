@@ -39,7 +39,7 @@ import static org.junit.Assert.*;
 public final class FrameworkFixtureTest {
     private static final String NEO="neostore.obtainx.manual", DROID="droidify.obtainx.manual";
     private static final String PKG="com.machiav3lli.fdroid";
-    private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","capture_restart_same_route","health_exact_same_package_routes","health_navigation_no_writes","filtered_multi_app_route","catalog_recreate_and_return","catalog_navigation_no_writes","installed_package_icon_identity","missing_and_unknown_icon_states","no_real_framework"};
+    private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","scope_pending_across_recreation","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","capture_restart_same_route","health_exact_same_package_routes","health_navigation_no_writes","filtered_multi_app_route","catalog_recreate_and_return","catalog_navigation_no_writes","installed_package_icon_identity","missing_and_unknown_icon_states","no_real_framework"};
     private static final class FakePort implements UiEnvironment.Port {
         final SharedPreferences flags,safety;
         final Set<String> scope=ConcurrentHashMap.newKeySet();
@@ -207,7 +207,11 @@ public final class FrameworkFixtureTest {
             press(R.string.ui_enable_tweak);switchState(s,true);
             assertTrue(first.writes.get()>writes);assertTrue(first.flags.getBoolean(TweakKeys.enabled(NEO),false));first.denyWrite=false;
             stage="FRAMEWORK_SCOPE";
-            readyText(s,app,R.string.scope_add);press(R.string.scope_add);awaitPending(first);first.answer(false);readyText(s,app,R.string.scope_add);assertTrue(first.scope.isEmpty());
+            readyText(s,app,R.string.scope_add);press(R.string.scope_add);awaitPending(first);
+            int pendingCalls=first.scopeCalls.get();s.recreate();
+            await(s,v->v instanceof TextView&&app.getString(R.string.ui_saving).contentEquals(((TextView)v).getText()));
+            assertEquals(pendingCalls,first.scopeCalls.get());assertTrue(app.frameworkCommands().contains("scope:"+PKG));
+            first.answer(false);readyText(s,app,R.string.scope_add);assertTrue(first.scope.isEmpty());assertFalse(app.frameworkCommands().contains("scope:"+PKG));
             press(R.string.scope_add);awaitPending(first);env.port=replacement;first.answer(true);
             switchState(s,false);readyText(s,app,R.string.scope_add);assertTrue(replacement.scope.isEmpty());
             press(R.string.scope_add);awaitPending(replacement);replacement.answer(true);readyText(s,app,R.string.scope_remove);assertEquals(Collections.singleton(PKG),replacement.scope);

@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Extended, hosted-only production-Activity matrix. No approval or device claims."""
+from __future__ import annotations
+import argparse, hashlib, json, math, os, re, subprocess, sys, time, xml.etree.ElementTree as ET
+from pathlib import Path
+import native_smoke as n
+CASES={
+ 'api29-compact':(29,320,700,2.0,'light'),
+ 'api29-standard':(29,390,844,1.0,'dark'),
+ 'api36-compact':(36,320,700,2.0,'dark'),
+ 'api36-360':(36,360,800,1.6,'light'),
+ 'api36-390':(36,390,844,1.0,'dark'),
+ 'api36-393':(36,393,852,2.0,'amoled'),
+ 'api36-600':(36,600,1000,1.6,'dynamic'),
+ 'api36-840':(36,840,1100,2.0,'light'),
+ 'api36-landscape':(36,844,390,1.6,'system'),
+ 'api36-tablet-landscape':(36,1100,840,1.0,'dark'),
+}
+ROUTES=['home','hooks','group','hook','diagnostics','settings','scope','about','help','privacy','mcc']
+JOURNEY='com.mikeyphw.hooklab.qa.AdaptiveUiTest#adaptiveJourney'
+PERF='com.mikeyphw.hooklab.qa.AdaptiveUiTest#boundedTimelinePerformance'
+# The baseline fixtures provide real Activity state/negative paths; execute again on
+# the primary adaptive case, not simply reuse a different run's result.
+FIXTURES=[n.FIXTURE,n.FRAMEWORK_TEST,n.TERMUX_TEST]
+DENSITY=320
+
+def require(ok,msg):n.require(ok,msg)
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def dump(p,x):p.write_text(json.dumps(x,sort_keys=True,indent=2)+'\n')
+def roster(case):return [JOURNEY,PERF]+(FIXTURES if case=='api36-390' else [])
+def config(case):
+ api,w,h,font,theme=CASES[case];return dict(api=api,width_px=w*2,height_px=h*2,density_dpi=DENSITY,font_scale=font,theme=theme)
+def instrument(test,theme,source):
+ result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',theme,'-e','uxr04_source',source,n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
+ require(result.returncode==0,'instrument transport failed: '+test)
+ # Do not publish raw test output or arbitrary UI/log values. Emit exact roster
+ # markers and bounded source-frame locations on failure.
+ try:n.parse_instrumentation(result.stdout,test)
+ except ValueError:
+  for line in result.stdout.splitlines():
+   if re.fullmatch(r'INSTRUMENTATION_(STATUS_CODE|CODE): -?\d+',line.strip()) or re.fullmatch(r'\s*at com\.mikeyphw\.hooklab\.[\w.$]+\([\w]+\.java:\d+\)',line):print(line,flush=True)
+  raise ValueError('instrumentation failed: '+test) from None
+ print('ADAPTIVE_TEST_PASS '+test,flush=True)
+def pull(out,name):
+ b=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/'+name);require(0<len(b)<=16*1024*1024,'missing or oversized case evidence');(out/name).write_bytes(b)
+def hierarchy(xml,cfg):
+ # No text or content-desc bytes survive the projection. Only boolean semantics
+ # and actual visible screen bounds are exported from the clean test process.
+ root=ET.fromstring(xml);require(root.tag=='hierarchy','unexpected UIAutomator hierarchy')
+ nodes=[]
+ for row in root.iter('node'):
+  if row.get('package')!=n.PKG:continue
+  b=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',row.get('bounds',''));require(b is not None,'invalid hierarchy bounds')
+  x,y,r,t=map(int,b.groups());require(0<=x<=r<=cfg['width_px'] and 0<=y<=t<=cfg['height_px'],'hierarchy outside viewport')
+  if x==r or y==t:continue
+  nodes.append({'bounds':[x,y,r,t],'clickable':row.get('clickable')=='true','enabled':row.get('enabled')=='true','focusable':row.get('focusable')=='true','checked':row.get('checked')=='true','labelled':bool(row.get('text') or row.get('content-desc'))})
+ require(nodes and any(x['clickable'] and x['enabled'] for x in nodes),'empty actionable hierarchy')
+ return nodes
+
+def capture_hierarchy(out,route,cfg):
+ raw=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/'+route+'.xml')
+ require(0<len(raw)<=4*1024*1024,'hierarchy size refused');dump(out/(route+'.hierarchy.json'),hierarchy(raw,cfg))
+ n.adb('shell','run-as',n.PKG,'rm','files/uxr04-adaptive/'+route+'.xml')
+
+def finite(x):return type(x) in (int,float) and math.isfinite(x) and x>=0
+def p95(xs):require(len(xs)>0 and all(finite(x) for x in xs),'invalid performance measurements');return sorted(xs)[math.ceil(.95*len(xs))-1]
+def live_xml():
+ # Only a disposable offline emulator with the verified APK is eligible.
+ path='/data/local/tmp/hooklab-uxr04-window.xml';n.adb('shell','uiautomator','dump',path)
+ try:
+  raw=n.raw('exec-out','cat',path);require(0<len(raw)<=4*1024*1024,'UI dump missing');return ET.fromstring(raw)
+ finally:n.adb('shell','rm','-f',path)
+
+def label_node(root,label):
+ matches=[]
+ for node in root.iter('node'):
+  if node.get('package') not in (n.PKG,'android'):continue
+  if node.get('text')==label or node.get('content-desc')==label:
+   m=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',node.get('bounds',''))
+   if m:
+    x,y,r,b=map(int,m.groups())
+    if x<r and y<b:matches.append((x,y,r,b))
+ return sorted(set(matches))
+
+def tap_label(label,cfg,*,scroll=False):
+ for _ in range(8):
+  matches=label_node(live_xml(),label)
+  if len(matches)==1:
+   x,y,r,b=matches[0];n.adb('shell','input','tap',str((x+r)//2),str((y+b)//2));return
+  require(len(matches)==0,'ambiguous process-death UI control')
+  if not scroll:break
+  w,h=cfg['width_px'],cfg['height_px'];n.adb('shell','input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//3),'400')
+ raise ValueError('process-death control unavailable: '+label)
+
+def launch():
+ text=n.txt('shell','am','start','-W','-a','android.intent.action.MAIN','-c','android.intent.category.LAUNCHER','-f','0x10200000','-n',n.PKG+'/.ui.MainActivity')
+ require('Status: ok' in text,'Activity launch refused');return text
+
+def process_death(cfg):
+ # Start a real import-only capture through the normal app UI, kill its actual
+ # background process (not ActivityScenario.recreate), and restore its task.
+ n.adb('shell','am','force-stop',n.PKG);launch()
+ tap_label('Diagnostics',cfg);tap_label('Guided capture',cfg,scroll=True);tap_label('Choose target',cfg,scroll=True)
+ tap_label('Unregistered package (research only)',cfg,scroll=True);n.adb('shell','input','text','com.example.fixture');tap_label('OK',cfg)
+ tap_label('LSPosed module log',cfg,scroll=True)
+ # Label is read from the actual resource contract, not from a fake state seam.
+ for _ in range(8):
+  root=live_xml()
+  if label_node(root,'Stop capture') or label_node(root,'Mark reproduced action'):break
+  w,h=cfg['width_px'],cfg['height_px'];n.adb('shell','input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//3),'400')
+ else:raise ValueError('capture did not start')
+ before=n.txt('shell','pidof',n.PKG);require(re.fullmatch('[1-9][0-9]*',before) is not None,'process identity ambiguous')
+ n.adb('shell','input','keyevent','KEYCODE_HOME');time.sleep(2);n.adb('shell','am','kill',n.PKG)
+ for _ in range(15):
+  q=subprocess.run(['adb','-s',n.SERIAL,'shell','pidof',n.PKG],capture_output=True,text=True,timeout=10)
+  if q.returncode==1 and not q.stdout.strip():break
+  time.sleep(1)
+ else:raise ValueError('background process did not die')
+ launch();after=n.txt('shell','pidof',n.PKG);require(re.fullmatch('[1-9][0-9]*',after) and before!=after,'process restart not proven')
+ # A task restored to the capture route must report interruption, not an
+ # invented live or completed capture. Do not accept a fresh Home screen.
+ for _ in range(8):
+  root=live_xml()
+  if label_node(root,'Previous capture interrupted'):break
+  w,h=cfg['width_px'],cfg['height_px'];n.adb('shell','input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//3),'400')
+ else:raise ValueError('restored capture interruption not visible')
+ require(not label_node(root,'Stop capture') and not label_node(root,'Mark reproduced action'),'interrupted capture not represented truthfully')
+ return {'old_pid':int(before),'new_pid':int(after),'background_process_killed':True,'capture_interrupted':True,'active_controls_absent':True}
+
+def frame_durations(raw):
+ samples=[];header=None
+ for line in raw.splitlines():
+  if line.startswith('Flags,IntendedVsync,'):header=line.rstrip(',').split(',');continue
+  if line.startswith('---PROFILEDATA---'):header=None;continue
+  if header is None or not re.match(r'^\d+,',line):continue
+  vals=line.rstrip(',').split(',');require(len(vals)==len(header),'framestats row malformed');row=dict(zip(header,vals))
+  if row['Flags']!='0':continue
+  start,end=int(row['IntendedVsync']),int(row['FrameCompleted'])
+  if 0<start<=end<2**63-1:samples.append((end-start)/1_000_000)
+ require(samples,'no completed native frame samples');return samples[-512:]
+
+def launch_performance():
+ starts=[];frames=[]
+ for _ in range(5):
+  n.adb('shell','am','force-stop',n.PKG);text=launch();m=re.search(r'(?m)^TotalTime: (\d+)$',text);require(m is not None,'cold launch duration missing');starts.append(int(m[1]))
+  time.sleep(.5);frames.extend(frame_durations(n.txt('shell','dumpsys','gfxinfo',n.PKG,'framestats')))
+ return {'cold_launch_ms':starts,'cold_launch_p95_ms':p95(starts),'frame_ms':frames,'frame_p95_ms':p95(frames),'budget_enforced':False}
+
+def validate(out,case,expected):
+ from PIL import Image
+ r=json.loads((out/'receipt.json').read_text());cfg=config(case)
+ require(all(r.get(k)==v for k,v in expected.items()) and r.get('case')==case and r.get('configuration')==cfg,'case identity mismatch')
+ require(r.get('status')=='PASS_EXTENDED_NOT_DEVICE_APPROVAL' and r.get('completed_tests')==roster(case),'case roster incomplete')
+ for k in ('app_apk_sha256','android_test_apk_sha256','installed_apk_sha256','installed_test_apk_sha256'):
+  require(re.fullmatch('[a-f0-9]{64}',r.get(k,'')) is not None,'missing APK identity')
+ require(r['app_apk_sha256']==r['installed_apk_sha256'] and r['android_test_apk_sha256']==r['installed_test_apk_sha256'],'installed APK drift')
+ names={'journey.json','performance.json','launch-performance.json'}|({'process-death.json'} if case=='api36-390' else set())|{x+s for x in ROUTES for s in ('.png','.hierarchy.json')}
+ require(set(p.name for p in out.iterdir())==names|{'receipt.json'} and all(p.is_file() and not p.is_symlink() for p in out.iterdir()),'case file roster drift')
+ require(r.get('files')=={x:sha(out/x) for x in sorted(names)},'case file digest drift')
+ j=json.loads((out/'journey.json').read_text());require(j.get('schema')=='hooklab.uxr04.adaptive.v1' and j.get('api')==cfg['api'] and j.get('theme')==cfg['theme'] and j.get('source')==expected['source_sha'] and j.get('framework_disconnected') is True and j.get('physical_device_qualified') is False,'journey identity drift')
+ require([x.get('route') for x in j.get('routes',[])]==ROUTES,'journey route roster drift')
+ require(all(j.get(k) is True for k in ('ime_observed','orientation_round_trip','separate_catalog_targets')),'interaction evidence incomplete')
+ for row in j['routes']:
+  require(abs(row['font_scale']-cfg['font_scale'])<.01 and cfg['width_px']/2-80<=row['width_dp']<=cfg['width_px']/2 and cfg['height_px']/2-100<=row['height_dp']<=cfg['height_px']/2 and row['orientation']==(2 if cfg['width_px']>cfg['height_px'] else 1),'configuration not observed in actual Activity')
+  nodes=json.loads((out/(row['route']+'.hierarchy.json')).read_text());require(isinstance(nodes,list) and 0<len(nodes)<=20000,'invalid sanitized hierarchy')
+  for node in nodes:
+   require(isinstance(node,dict) and set(node)=={'bounds','clickable','enabled','focusable','checked','labelled'} and all(type(node[k]) is bool for k in ('clickable','enabled','focusable','checked','labelled')),'invalid hierarchy node')
+   b=node['bounds'];require(isinstance(b,list) and len(b)==4 and all(type(x) is int for x in b) and 0<=b[0]<b[2]<=cfg['width_px'] and 0<=b[1]<b[3]<=cfg['height_px'],'invalid hierarchy node bounds')
+  require(any(x['clickable'] and x['enabled'] for x in nodes),'no visible action in hierarchy')
+  require(all(finite(row[k]) for k in ('width_dp','height_dp','font_scale','headings','actions','focusable','visible_actions','text_contrast_min','primary_contrast')),'invalid geometry measurements')
+  if row['route'] in ('home','hooks','diagnostics'):require(row.get('rail') is (row['width_dp']>=760),'navigation configuration mismatch')
+  require(row['headings']>0 and row['actions']>0 and row['focusable']>0 and row['visible_actions']>0 and 4.5<=row['text_contrast_min']<=21 and 4.5<=row['primary_contrast']<=21,'accessibility evidence incomplete')
+  with Image.open(out/(row['route']+'.png')) as im:require(im.format=='PNG' and im.size==(cfg['width_px'],cfg['height_px']) and any(lo!=hi for lo,hi in im.convert('RGB').getextrema()),'blank or wrong-sized screenshot')
+ perf=json.loads((out/'performance.json').read_text());require(perf.get('schema')=='hooklab.uxr04.performance.v1' and perf.get('events')==4000 and perf.get('dropped')==1 and perf.get('page_size')==30 and perf.get('budget_enforced') is False and finite(perf.get('import_ms')),'performance fixture drift')
+ require(len(perf['page_action_ms'])==len(perf['sampled_pss_kb'])==5 and all(finite(x) and x>0 for x in perf['sampled_pss_kb']),'performance sample roster drift')
+ launch_perf=json.loads((out/'launch-performance.json').read_text());require(len(launch_perf['cold_launch_ms'])==5 and launch_perf['cold_launch_p95_ms']==p95(launch_perf['cold_launch_ms']) and launch_perf['frame_p95_ms']==p95(launch_perf['frame_ms']) and launch_perf['budget_enforced'] is False,'launch/frame evidence drift')
+ if case=='api36-390':
+  d=json.loads((out/'process-death.json').read_text());require(type(d['old_pid']) is int and type(d['new_pid']) is int and d['old_pid']>0 and d['new_pid']>0 and d['old_pid']!=d['new_pid'] and all(d.get(k) is True for k in ('background_process_killed','capture_interrupted','active_controls_absent')),'real process-death evidence missing')
+ require(finite(j['scenario_launch_ms']),'invalid launch sample')
+ require(r['performance_summary']=={'scenario_launch_ms':j['scenario_launch_ms'],'page_action_p95_ms':p95(perf['page_action_ms']),'sampled_peak_pss_kb':max(perf['sampled_pss_kb']),'cold_launch_p95_ms':launch_perf['cold_launch_p95_ms'],'frame_p95_ms':launch_perf['frame_p95_ms'],'budget_enforced':False},'performance summary drift')
+ return r
+
+def run(out,case):
+ cfg=config(case);ident=n.expected_identity();ident['schema']='hooklab.uxr04.case.v1';require(not out.exists(),'fresh output required');out.mkdir(parents=True)
+ receipt={**ident,'case':case,'configuration':cfg,'status':'IN_PROGRESS','completed_tests':[]};dump(out/'receipt.json',receipt)
+ n.guard(cfg['api']);require(not any(os.environ.get(k) for k in ('HOOKLAB_SIGNING_KEYSTORE_PATH','HOOKLAB_SIGNING_STORE_PASSWORD','HOOKLAB_SIGNING_KEY_ALIAS','HOOKLAB_SIGNING_KEY_PASSWORD')),'release credentials refused')
+ for pkg in (n.PKG,n.PKG+'.test'):
+  q=subprocess.run(['adb','-s',n.SERIAL,'shell','pm','path',pkg],capture_output=True,text=True,timeout=20);require(not q.stdout.strip(),'preexisting APK refused')
+ app=n.one('app/build/outputs/apk/debug/*.apk');test=n.one('app/build/outputs/apk/androidTest/debug/*.apk')
+ for p in (app,test):n.install_apk(p)
+ ah,th=sha(app),sha(test);receipt.update(app_apk_sha256=ah,android_test_apk_sha256=th,installed_apk_sha256=n.installed_digest(n.PKG,ah),installed_test_apk_sha256=n.installed_digest(n.PKG+'.test',th))
+ # Override natural portrait size, then rotate the real display for landscape.
+ natural=f"{min(cfg['width_px'],cfg['height_px'])}x{max(cfg['width_px'],cfg['height_px'])}"
+ n.adb('shell','settings','put','system','accelerometer_rotation','0');n.adb('shell','settings','put','system','user_rotation','1' if cfg['width_px']>cfg['height_px'] else '0')
+ n.adb('shell','settings','put','secure','show_ime_with_hard_keyboard','1');n.adb('shell','wm','size',natural);n.adb('shell','wm','density',str(DENSITY));n.adb('shell','settings','put','system','font_scale',str(cfg['font_scale']));n.adb('shell','cmd','uimode','night','yes')
+ for name in ('window_animation_scale','transition_animation_scale','animator_duration_scale'):n.adb('shell','settings','put','global',name,'0')
+ require(n.txt('shell','wm','size').splitlines()[-1]==f'Override size: {natural}' and n.txt('shell','wm','density').splitlines()[-1]==f'Override density: {DENSITY}' and abs(float(n.txt('shell','settings','get','system','font_scale'))-cfg['font_scale'])<.01,'viewport readback mismatch')
+ for method in roster(case):
+  instrument(method,cfg['theme'],ident['source_sha']);receipt['completed_tests'].append(method);dump(out/'receipt.json',receipt)
+  if method==JOURNEY:
+   for name in ['journey.json']+[x+'.png' for x in ROUTES]:pull(out,name)
+   for route in ROUTES:capture_hierarchy(out,route,cfg)
+  elif method==PERF:pull(out,'performance.json')
+ # Performance sampling is deliberately separate from screenshot capture.
+ launch_perf=launch_performance();dump(out/'launch-performance.json',launch_perf)
+ if case=='api36-390':dump(out/'process-death.json',process_death(cfg))
+ j=json.loads((out/'journey.json').read_text());p=json.loads((out/'performance.json').read_text())
+ receipt.update(status='PASS_EXTENDED_NOT_DEVICE_APPROVAL',files={f.name:sha(f) for f in sorted(out.iterdir()) if f.name!='receipt.json'},performance_summary={'scenario_launch_ms':j['scenario_launch_ms'],'page_action_p95_ms':p95(p['page_action_ms']),'sampled_peak_pss_kb':max(p['sampled_pss_kb']),'cold_launch_p95_ms':launch_perf['cold_launch_p95_ms'],'frame_p95_ms':launch_perf['frame_p95_ms'],'budget_enforced':False});dump(out/'receipt.json',receipt)
+ try:validate(out,case,ident)
+ except Exception:receipt['status']='FAIL_EXTENDED_VERIFICATION';dump(out/'receipt.json',receipt);raise
+
+def verify_all(root,expected):
+ require(set(p.name for p in root.iterdir())==set(CASES),'missing or extra extended matrix shard')
+ return {case:validate(root/case,case,expected)['performance_summary'] for case in CASES}
+def external_identity(source,tree,run_id,attempt):
+ require(re.fullmatch('[0-9a-f]{40}',source or '') and re.fullmatch('[0-9a-f]{40}',tree or '') and re.fullmatch('[1-9][0-9]*',run_id or '') and re.fullmatch('[1-9][0-9]*',attempt or ''),'invalid external evidence identity')
+ require(n.git('rev-parse','HEAD')==source and n.git('rev-parse','HEAD^{tree}')==tree,'external verifier source drift')
+ return {'schema':'hooklab.uxr04.case.v1','source_sha':source,'source_tree':tree,'run_id':run_id,'run_attempt':attempt,'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
+def main():
+ p=argparse.ArgumentParser();p.add_argument('mode',choices=['run','verify','aggregate']);p.add_argument('--case',choices=CASES);p.add_argument('--out',type=Path,required=True);p.add_argument('--source');p.add_argument('--tree');p.add_argument('--run-id');p.add_argument('--attempt');p.add_argument('--summary',type=Path);a=p.parse_args()
+ try:
+  external=any(x is not None for x in (a.source,a.tree,a.run_id,a.attempt,a.summary))
+  if a.mode=='run':require(a.case is not None and not external,'case required; external identity forbidden in capture');run(a.out,a.case)
+  else:
+   expected=external_identity(a.source,a.tree,a.run_id,a.attempt) if external else n.expected_identity();expected['schema']='hooklab.uxr04.case.v1'
+   if a.mode=='verify':require(a.case is not None and a.summary is None,'case required');validate(a.out,a.case,expected)
+   else:
+    result=verify_all(a.out,expected)
+    if a.summary is not None:require(a.summary.is_file() and not a.summary.is_symlink() and json.loads(a.summary.read_text())==result,'hosted aggregate disagrees with independent case verification')
+    print(json.dumps(result,sort_keys=True))
+  return 0
+ except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as e:print('EXTENDED_UI_REFUSED',e,file=sys.stderr);return 2
+if __name__=='__main__':raise SystemExit(main())

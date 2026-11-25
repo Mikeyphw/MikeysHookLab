@@ -31,12 +31,16 @@ check("getRemotePreferences(" not in ui and "getScope(" not in ui
 check("private void render()" in ui and "stateStore.start(next ->" in ui
       and "snapshot.equals(next)" in ui and "previousScroll" in ui,
       "snapshot_driven_current_screen_updates")
-check("newSingleThreadExecutor" in store and "ticket != generation" in store
+app = read("app/src/main/java/com/mikeyphw/hooklab/HookLabApp.java")
+check("frameworkWorker=java.util.concurrent.Executors.newSingleThreadExecutor" in app
+      and "environment.app.frameworkTask(" in store and "ticket != generation" in store
+      and "epoch==lifecycleEpoch" in store
       and "bound != environment.currentService()" in store and "observer == null" in store,
       "single_worker_generation_and_lifecycle_gates")
 check("prefs.edit().putBoolean(key, value).commit()" in store
       and "prefs.getBoolean(key, !value) == value" in store
-      and "if (isReady(expected))" in store,
+      and "if(canStart(expected,epoch))" in store
+      and "epoch==lifecycleEpoch&&isReady(expected)" in store,
       "framework_confirmed_writes_not_optimistic")
 check("writeSafetyLock(UiEnvironment.Port expected, String id" in store
       and "TweakDiagnostics.quarantineKey(id)" in store

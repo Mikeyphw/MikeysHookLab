@@ -18,6 +18,17 @@ public final class UiLayoutPolicyTest {
                 || !UiLayoutPolicy.useRail(width));
         }
     }
+    @Test public void compactOrLargeTextStacksActions() {
+        for(int width:new int[]{320,360,390,393,600,840}) {
+            assertTrue(UiLayoutPolicy.stackActions(width,1.6f));
+            assertTrue(UiLayoutPolicy.stackActions(width,2f));
+            assertEquals(width<360,UiLayoutPolicy.stackActions(width,1f));
+        }
+    }
+    @Test public void adaptiveRailKeepsMoreSpaceForLargeLabels(){
+        assertEquals(88,UiLayoutPolicy.railWidthDp(1f));assertEquals(112,UiLayoutPolicy.railWidthDp(1.6f));assertEquals(144,UiLayoutPolicy.railWidthDp(2f));
+        assertTrue(840-UiLayoutPolicy.railWidthDp(2f)>600);
+    }
     @Test public void guttersStayReadable() {
         assertEquals(12, UiLayoutPolicy.contentInsetDp(320));
         assertEquals(20, UiLayoutPolicy.contentInsetDp(390));

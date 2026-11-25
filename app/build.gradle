@@ -44,6 +44,9 @@ android {
         }
     }
     buildToolsVersion '36.0.0'
+    buildFeatures {
+        resValues = true
+    }
     defaultConfig {
         applicationId 'com.mikeyphw.hooklab'
         minSdk 29

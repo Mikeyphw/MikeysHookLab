@@ -113,7 +113,7 @@ check(all(term in ui for term in ('stateStore.start(', 'stateStore.refresh()',
       and 'DynamicColors.applyToActivityIfAvailable(this)' in ui
       and 'snapshot.eligibility(spec)' in ui
       and all(term in state_store for term in ('getRemotePreferences(TweakKeys.GROUP)',
-             'getRemotePreferences(TweakDiagnostics.GROUP)', 'worker.execute(',
+             'getRemotePreferences(TweakDiagnostics.GROUP)', 'environment.app.frameworkTask(',
              'ticket != generation', 'expected == environment.currentService()',
              'prefs.edit().putBoolean(key, value).commit()', 'prefs.getBoolean(key, !value) == value',
              'requestScope(', 'removeScope(', 'main.post(', 'FrameworkSnapshot.loading()'))
@@ -296,9 +296,9 @@ check('group.packages' in main_ui05 and 'removeScope(expected, pkg)' in main_ui0
       and 'requestScope(expected, pkg)' in main_ui05
       and 'confirmSafetyLock(s, spec.id, !lock)' in main_ui05,
       'UI-05 independent per-target scope and per-hook safety control')
-check('saved = prefs != null && prefs.edit().putBoolean(key, value).commit()' in store_ui05
+check('prefs!=null&&prefs.edit().putBoolean(key, value).commit()' in store_ui05
       and 'prefs.getBoolean(key, !value) == value' in store_ui05
-      and 'refresh(); // Re-read framework truth' in store_ui05,
+      and 'environment.app.frameworkCommandsChanged();' in store_ui05 and 'frameworkObserver = ' in main_ui05 and 'stateStore.refresh()' in main_ui05,
       'UI-05 framework remote preference commit/readback source contract')
 check('showGroup(HookGroupCatalog.Group group)' in main_ui05
       and 'goTo(GROUP_DETAIL,true)' in main_ui05
@@ -418,7 +418,7 @@ ui07_mcc=read('app/src/main/java/com/mikeyphw/hooklab/mcc/MccControlActivity.jav
 ui07_work=read('app/src/main/java/com/mikeyphw/hooklab/mcc/MccManualOperation.java')
 ui07_identity=read('app/src/main/java/com/mikeyphw/hooklab/ui/Ui07Identity.java')
 check('Ui07ScopeModel.project(environment.all()' in ui07_main
-      and 'ready(expected),scopedPackages(expected),pendingScope' in ui07_main
+      and 'ready(expected),scopedPackages(expected),stateStore.pendingScope()' in ui07_main
       and 'row.canRequest()' in ui07_main and 'row.canRemove()' in ui07_main
       and 'removeScope(expected,row.packageName)' in ui07_main
       and 'State.SCOPE_UNKNOWN' in ui07_scope and 'State.PENDING' in ui07_scope,
@@ -438,7 +438,7 @@ check('getPackageInfo(' in ui07_main and 'GET_SIGNING_CERTIFICATES' in ui07_main
       'UI-07 P03 runtime app identity, signing fingerprint, privacy and native Help')
 check('case HELP: helpPage(); break;' in ui07_main
       and 'out.putInt("page", page)' in ui07_main
-      and 'Math.min(PRIVACY, state.getInt("page"))' in ui07_main
+      and 'if(page<HOME||page>PRIVACY)page=HOME' in ui07_main
       and 'out.putInt("helpReturnPage", helpReturnPage)' in ui07_main
       and 'status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE)' in ui07_mcc
       and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui07ScopeModelTest.java').is_file()
