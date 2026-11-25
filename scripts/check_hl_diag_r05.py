@@ -12,7 +12,12 @@ for x in ('HOST_KEY=0xd01ebe4d','host.branch.getByte(delegate)!=8','code!=FRAME.
  assert x in h,x
 assert all(x in b for x in ('active=true','identity==object','disposed=true','identity=null;source=null','!active||disposed'))
 for x in ('getPrimaryClip(','setPrimaryClip(','startService(','RUN_COMMAND','Runtime.getRuntime(','ProcessBuilder('):assert x not in h,x
-assert 'getCallingPackage()' in a and 'getLongVersionCode()' in a and 'setIntent(new Intent())' in a
+assert 'getCallingPackage()' in a and 'getLongVersionCode()' in a
+assert 'if (TermuxCommandPolicy.ACTION_SETTINGS.equals(action))' in a
+assert 'setIntent(new Intent(this, TermuxBridgeActivity.class)' in a
+assert '.setAction(TermuxCommandPolicy.ACTION_SETTINGS));' in a
+assert 'setIntent(new Intent());' in a  # preview still discards action and payload
+assert 'setIntent(inbound)' not in a and 'new Intent(inbound)' not in a
 assert a.count('startService(request)')==1 and 'setPositiveButton(R.string.termux_r05_execute,(d,w)->dispatch(text,dir,interpreter))' in a
 assert 'if(dispatched||!confirming||source==null' in a and 'dispatched=true;run.setEnabled(false);source=null' in a
 assert 'requestPermissions(new String[]{TermuxCommandPolicy.PERMISSION}' in a and 'Never dispatch here' in a

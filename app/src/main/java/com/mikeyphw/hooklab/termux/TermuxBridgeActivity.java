@@ -63,7 +63,15 @@ public final class TermuxBridgeActivity extends AppCompatActivity {
                 event("PREVIEW_ACCEPTED");
             }else if(!TermuxCommandPolicy.ACTION_SETTINGS.equals(action))throw new SecurityException();
         }catch(Exception invalid){event("REQUEST_REFUSED");finish();return;}
-        setIntent(new Intent()); // Keep the request in memory only, not in saved instance state.
+        // Never retain caller-supplied extras, ClipData, URI grants, or executable source.
+        // The settings-only route needs its trusted lifecycle identity: AndroidX
+        // ActivityScenario (and route observers) compare action and component.
+        if (TermuxCommandPolicy.ACTION_SETTINGS.equals(action)) {
+            setIntent(new Intent(this, TermuxBridgeActivity.class)
+                    .setAction(TermuxCommandPolicy.ACTION_SETTINGS));
+        } else {
+            setIntent(new Intent()); // Command-preview identity and payload stay discarded.
+        }
         if(source!=null)getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         preferences=getSharedPreferences(PREFS,MODE_PRIVATE);
         WindowCompat.setDecorFitsSystemWindows(getWindow(),false);

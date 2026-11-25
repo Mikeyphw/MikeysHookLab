@@ -187,8 +187,55 @@ def expected_identity():
     require(all(re.fullmatch('[1-9][0-9]*',os.environ.get(k,'')) for k in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT')),'invalid run identity')
     return {'schema':'hooklab.native.smoke.v1','source_sha':source,'source_tree':git('rev-parse','HEAD^{tree}'),'run_id':os.environ['GITHUB_RUN_ID'],'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'],'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
 
+FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE'))
+# Restrict exported frames to our three instrumentation classes. Raw stack/message/UI text
+# can contain private or attacker-controlled data; it is never written or printed.
+FRAME_CLASSES={t.split('#')[0]:t.split('#')[0].rsplit('.',1)[-1]+'.java' for t in TESTS}
+SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock'))
+SAFE_EXCEPTION_TYPES=frozenset(('java.lang.AssertionError','java.lang.IllegalStateException','java.lang.IllegalArgumentException','java.lang.NullPointerException','java.lang.RuntimeException','java.lang.SecurityException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.AppNotIdleException','androidx.test.espresso.NoActivityResumedException','androidx.test.espresso.base.RootViewPicker$RootViewWithoutFocusException'))
+
+def failure_details(output,test_id,ordinal,completed,rc,reason):
+    require(test_id in TESTS and ordinal==len(completed)+1 and list(completed)==TESTS[:ordinal-1] and ordinal<=len(TESTS) and TESTS[ordinal-1]==test_id,'failure roster drift')
+    require(reason in ('TEST_FAILED','TRANSPORT_FAILED','TIMEOUT','SPAWN_FAILED'),'invalid failure reason')
+    if isinstance(output,bytes):output=output.decode('utf-8','replace')
+    stages=[];frames=[];exceptions=[];codes=[]
+    for line in (output or '').splitlines():
+        line=line.strip()
+        if line.startswith('INSTRUMENTATION_STATUS: stack='):line=line.split('=',1)[1].strip()
+        match=re.fullmatch(r'(?:Caused by: )?([A-Za-z0-9_.$]+)(?::(?: UXR00_STAGE_([A-Z_]+)|.*))?',line)
+        if match and match[1] in SAFE_EXCEPTION_TYPES:
+            if match[1] not in exceptions:exceptions.append(match[1])
+            if match[2] in FAILURE_STAGES and match[2] not in stages:stages.append(match[2])
+        match=re.fullmatch(r'at ([A-Za-z0-9_.$]+)\.([A-Za-z0-9_$]+)\(([A-Za-z0-9_]+\.java):(\d{1,5})\)',line)
+        if match and match[1] in FRAME_CLASSES and match[2] in SAFE_FRAME_METHODS and match[3]==FRAME_CLASSES[match[1]] and 0<int(match[4])<=10000:
+            frame={'class':match[1],'method':match[2],'file':match[3],'line':int(match[4])}
+            if frame not in frames and len(frames)<16:frames.append(frame)
+        match=re.fullmatch(r'INSTRUMENTATION_(STATUS_CODE|CODE): (-?\d{1,3})',line)
+        if match and len(codes)<32:codes.append({'kind':match[1],'code':int(match[2])})
+    return {'test_id':test_id,'ordinal':ordinal,'completed_tests':list(completed),'child_exit_code':rc,'reason':reason,'stage':stages[0] if len(stages)==1 else 'UNKNOWN','exception_types':exceptions,'source_frames':frames,'status_codes':codes}
+
+def run_instrumentation(out,ident,test_id,completed):
+    ordinal=len(completed)+1;reason='TRANSPORT_FAILED';output='';rc=None
+    try:
+        result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',test_id,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=240)
+        rc=result.returncode;output=result.stdout
+        require(rc==0,'instrumentation child failed '+test_id)
+        reason='TEST_FAILED';parse_instrumentation(output,test_id)
+    except (ValueError,OSError,subprocess.SubprocessError) as failure:
+        if isinstance(failure,subprocess.TimeoutExpired):reason='TIMEOUT';output=failure.stdout or ''
+        elif isinstance(failure,OSError):reason='SPAWN_FAILED'
+        details=failure_details(output,test_id,ordinal,completed,rc,reason)
+        # Receipt is exact-source/run bound, not a success or a full visual receipt.
+        record={**ident,'status':'INSTRUMENTATION_FAILED','failure':details}
+        (out/'receipt.json').write_text(json.dumps(record,indent=2,sort_keys=True)+'\n')
+        print('INSTRUMENTATION_FAILURE '+json.dumps(details,sort_keys=True),file=sys.stderr,flush=True)
+        raise ValueError('instrumentation '+reason+' '+test_id) from None
+    completed.append(test_id)
+    (out/'receipt.json').write_text(json.dumps({**ident,'status':'IN_PROGRESS','completed_tests':completed},sort_keys=True)+'\n')
+    print('INSTRUMENTATION_PASS',test_id,flush=True)
+
 def run(out):
-    ident=expected_identity();require(not out.exists(),'fresh output required');out.mkdir(parents=True);(out/'receipt.json').write_text(json.dumps({**ident,'status':'NOT_RUN'}));guard()
+    ident=expected_identity();require(not out.exists(),'fresh output required');out.mkdir(parents=True);(out/'receipt.json').write_text(json.dumps({**ident,'status':'IN_PROGRESS','completed_tests':[]}));guard()
     for name in (PKG,PKG+'.test'):
         res=subprocess.run(['adb','-s',SERIAL,'shell','pm','path',name],capture_output=True,text=True,timeout=20);require(not res.stdout.strip(),'preexisting app refused')
     app=one('app/build/outputs/apk/debug/*.apk');test=one('app/build/outputs/apk/androidTest/debug/*.apk')
@@ -204,17 +251,8 @@ def run(out):
     release=one('app/build/outputs/apk/release/*.apk');isolation=release_check(app,release,test)
     def dump(path,value):path.write_text(json.dumps(value,indent=2,sort_keys=True)+'\n')
     dump(out/'release-isolation.json',isolation);dump(out/'environment.json',environment())
-    def instrument(test_id):
-        result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',test_id,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=240)
-        try:
-            require(result.returncode==0,'instrumentation child failed '+test_id);parse_instrumentation(result.stdout,test_id)
-        except ValueError:
-            print('INSTRUMENTATION_FAILED_TEST '+test_id+' rc='+str(result.returncode),file=sys.stderr,flush=True)
-            for line in result.stdout.splitlines():
-                if re.fullmatch(r'INSTRUMENTATION_(?:STATUS_CODE|CODE): -?\d+',line.strip()) or re.fullmatch(r'INSTRUMENTATION_STATUS: (?:class|test)=[A-Za-z0-9_.$]+',line.strip()):
-                    print(line.strip(),file=sys.stderr,flush=True)
-            raise
-        print('INSTRUMENTATION_PASS',test_id,flush=True)
+    completed=[]
+    def instrument(test_id):run_instrumentation(out,ident,test_id,completed)
     def capture(suffix):
         records={}
         for name in ROUTES:
@@ -234,7 +272,11 @@ def run(out):
     for name in ('fixture','framework-fixture'):
         f=out/(name+'.json');f.write_bytes(raw('exec-out','run-as',PKG,'cat','files/uxr00-native-smoke/'+f.name))
     receipt={**ident,'status':'BASELINE_PASS_NOT_VISUAL_APPROVAL','tests':TESTS,'fixture_sha256':digest(out/'fixture.json'),'framework_fixture_sha256':digest(out/'framework-fixture.json'),'release_isolation_sha256':digest(out/'release-isolation.json'),'environment_sha256':digest(out/'environment.json'),'app_apk_sha256':ah,'android_test_apk_sha256':th,'installed_apk_sha256':installed_digest(PKG,ah),'installed_test_apk_sha256':installed_digest(PKG+'.test',th),'debug_certificate_sha256':m.group(1).lower(),'screenshots':records,'repeat_screenshots':repeat_records,'repeat_calibration':repeat}
-    dump(out/'receipt.json',receipt);verify(out,ident);print('NATIVE_BASELINE_PASS_NOT_VISUAL_APPROVAL')
+    dump(out/'receipt.json',receipt)
+    try:verify(out,ident)
+    except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):
+        dump(out/'receipt.json',{**ident,'status':'EVIDENCE_VERIFICATION_FAILED','completed_tests':completed});raise
+    print('NATIVE_BASELINE_PASS_NOT_VISUAL_APPROVAL')
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['run','verify']);p.add_argument('--out',type=Path,required=True);a=p.parse_args()

@@ -36,6 +36,45 @@ class FoundationTests(unittest.TestCase):
         native_smoke.parse_instrumentation(ok,t)
         for wrong in (ok.replace('STATUS_CODE: 0','STATUS_CODE: -2'),ok.replace(m,'other'),ok.replace('OK (1 test)','OK (0 tests)'),ok+'FAILURES!!!'):
             with self.assertRaises(ValueError):native_smoke.parse_instrumentation(wrong,t)
+    def test_settings_lifecycle_identity_and_payload_scrub(self):
+        bridge=(ROOT/'app/src/main/java/com/mikeyphw/hooklab/termux/TermuxBridgeActivity.java').read_text()
+        native=(ROOT/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/NativeBaselineTest.java').read_text()
+        self.assertIn('setIntent(new Intent(this, TermuxBridgeActivity.class)',bridge)
+        self.assertIn('.setAction(TermuxCommandPolicy.ACTION_SETTINGS));',bridge)
+        self.assertIn('setIntent(new Intent());',bridge)
+        self.assertNotIn('setIntent(inbound)',bridge)
+        for term in ('ActivityScenario.launch(settings)','synthetic_unused_payload','assertNull(a.getIntent().getExtras())','assertNull(a.getIntent().getClipData())','assertNull(a.getIntent().getData())','assertEquals(0,a.getIntent().getFlags())','UXR00_STAGE_'):
+            self.assertIn(term,native)
+    def test_instrumentation_failure_safe_source_bound_receipt(self):
+        from unittest.mock import patch
+        from subprocess import CompletedProcess, TimeoutExpired
+        ident={'source_sha':'a'*40,'source_tree':'b'*40,'run_id':'42','run_attempt':'1','repository':'Mikeyphw/MikeysHookLab','physical_device_qualified':False}
+        klass=native_smoke.TEST.split('#')[0]
+        output='\n'.join(['INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: UXR00_STAGE_SETTINGS_LAUNCH','Caused by: java.lang.AssertionError: private-token=DO_NOT_EXPORT',f' at {klass}.realActivityOfflineNavigation(NativeBaselineTest.java:146)',' at attacker.secret.Bad.private(Bad.java:42)','INSTRUMENTATION_STATUS_CODE: -2','INSTRUMENTATION_CODE: -1'])
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d);completed=[]
+            with patch.object(native_smoke.subprocess,'run',return_value=CompletedProcess([],0,output,'secret stderr')):
+                with self.assertRaisesRegex(ValueError,'TEST_FAILED'):native_smoke.run_instrumentation(path,ident,native_smoke.TEST,completed)
+            record=json.loads((path/'receipt.json').read_text());self.assertEqual(record['status'],'INSTRUMENTATION_FAILED');self.assertEqual(record['source_sha'],ident['source_sha']);self.assertEqual(record['failure']['stage'],'SETTINGS_LAUNCH');self.assertEqual(record['failure']['source_frames'],[{'class':klass,'method':'realActivityOfflineNavigation','file':'NativeBaselineTest.java','line':146}]);self.assertEqual(completed,[])
+            self.assertNotIn('DO_NOT_EXPORT',json.dumps(record));self.assertNotIn('attacker.secret',json.dumps(record));self.assertNotIn('secret stderr',json.dumps(record))
+            with patch.object(native_smoke.subprocess,'run',side_effect=TimeoutExpired(['adb'],240,output=b'secret')):
+                with self.assertRaisesRegex(ValueError,'TIMEOUT'):native_smoke.run_instrumentation(path,ident,native_smoke.TEST,completed)
+            self.assertEqual(json.loads((path/'receipt.json').read_text())['failure']['reason'],'TIMEOUT')
+            with patch.object(native_smoke.subprocess,'run',side_effect=OSError('secret')):
+                with self.assertRaisesRegex(ValueError,'SPAWN_FAILED'):native_smoke.run_instrumentation(path,ident,native_smoke.TEST,completed)
+            self.assertEqual(json.loads((path/'receipt.json').read_text())['failure']['reason'],'SPAWN_FAILED')
+            with patch.object(native_smoke.subprocess,'run',return_value=CompletedProcess([],7,output,'')):
+                with self.assertRaisesRegex(ValueError,'TRANSPORT_FAILED'):native_smoke.run_instrumentation(path,ident,native_smoke.TEST,completed)
+            self.assertEqual(json.loads((path/'receipt.json').read_text())['failure']['child_exit_code'],7)
+            record=f'INSTRUMENTATION_STATUS: class={klass}\nINSTRUMENTATION_STATUS: test=realActivityOfflineNavigation\n'
+            ok=record+'INSTRUMENTATION_STATUS_CODE: 1\n'+record+'INSTRUMENTATION_STATUS_CODE: 0\nOK (1 test)\nINSTRUMENTATION_CODE: -1\n'
+            with patch.object(native_smoke.subprocess,'run',return_value=CompletedProcess([],0,ok,'')):
+                native_smoke.run_instrumentation(path,ident,native_smoke.TEST,completed)
+                native_smoke.run_instrumentation(path,ident,native_smoke.TEST,completed)
+            self.assertEqual(completed,[native_smoke.TEST,native_smoke.TEST]);self.assertEqual(json.loads((path/'receipt.json').read_text())['status'],'IN_PROGRESS')
+            with self.assertRaisesRegex(ValueError,'roster drift'):native_smoke.failure_details(output,native_smoke.TEST,3,completed,0,'TEST_FAILED')
+            wrong=output.replace('SETTINGS_LAUNCH','PRIVATE_VALUE')
+            self.assertEqual(native_smoke.failure_details(wrong,native_smoke.TEST,1,[],0,'TEST_FAILED')['stage'],'UNKNOWN')
     def test_instrumentation_sdk_filter(self):
         source=(ROOT/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/NativeBaselineTest.java').read_text()
         self.assertIn('@androidx.test.filters.SdkSuppress(minSdkVersion = 36, maxSdkVersion = 36)',source)

@@ -115,6 +115,8 @@ public final class NativeBaselineTest {
         return false;
     }
     @Test public void realActivityOfflineNavigation() throws Exception {
+        String stage="PRECONDITIONS";
+        try {
         assertEquals(36,android.os.Build.VERSION.SDK_INT);
         var instrumentation=InstrumentationRegistry.getInstrumentation();
         var app=(HookLabApp)instrumentation.getTargetContext().getApplicationContext();
@@ -123,26 +125,44 @@ public final class NativeBaselineTest {
         assertTrue(app.getSharedPreferences("appearance",android.content.Context.MODE_PRIVATE).edit().clear()
                 .putInt("night",androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES)
                 .putBoolean("dynamicColors",false).commit());
+        stage="MAIN_LAUNCH";
         try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
+            stage="DISCONNECTED_SETTLE";
             long until=android.os.SystemClock.elapsedRealtime()+12000;
             boolean settled=false;
             do{final boolean[] found={false};s.onActivity(a->found[0]=containsText(a.getWindow().getDecorView(),a.getString(R.string.status_disconnected)));settled=found[0];if(!settled)Thread.sleep(50);}while(!settled&&android.os.SystemClock.elapsedRealtime()<until);
             assertTrue("Disconnected framework did not settle",settled);
-            capture(s,"home",HOME,R.string.app_name);
-            onView(withId(HOOKS)).perform(click());capture(s,"hooks",HOOKS,R.string.ui_hooks);
-            onView(withId(DIAGNOSTICS)).perform(click());capture(s,"diagnostics",DIAGNOSTICS,R.string.diagnostics);
-            onView(withId(HOME)).perform(click());
-            s.recreate();s.onActivity(a->{NavigationBarView n=find(a.getWindow().getDecorView(),NavigationBarView.class);assertNotNull(n);assertEquals(HOME,n.getSelectedItemId());});
+            stage="HOME_CAPTURE";capture(s,"home",HOME,R.string.app_name);
+            stage="HOOKS_TAP";onView(withId(HOOKS)).perform(click());
+            stage="HOOKS_CAPTURE";capture(s,"hooks",HOOKS,R.string.ui_hooks);
+            stage="DIAGNOSTICS_TAP";onView(withId(DIAGNOSTICS)).perform(click());
+            stage="DIAGNOSTICS_CAPTURE";capture(s,"diagnostics",DIAGNOSTICS,R.string.diagnostics);
+            stage="HOME_TAP";onView(withId(HOME)).perform(click());
+            stage="HOME_RECREATE";s.recreate();s.onActivity(a->{NavigationBarView n=find(a.getWindow().getDecorView(),NavigationBarView.class);assertNotNull(n);assertEquals(HOME,n.getSelectedItemId());});
         }
         // R05 settings-only route: preserve the real bridge without granting permission or executing anything.
+        stage="SETTINGS_LAUNCH";
         android.content.Intent settings=new android.content.Intent(instrumentation.getTargetContext(),
                 com.mikeyphw.hooklab.termux.TermuxBridgeActivity.class)
-                .setAction(com.mikeyphw.hooklab.termux.TermuxCommandPolicy.ACTION_SETTINGS);
+                .setAction(com.mikeyphw.hooklab.termux.TermuxCommandPolicy.ACTION_SETTINGS)
+                .putExtra("synthetic_unused_payload", "FIXTURE_MUST_NOT_SURVIVE");
         try(ActivityScenario<com.mikeyphw.hooklab.termux.TermuxBridgeActivity> bridge=ActivityScenario.launch(settings)){
+            stage="SETTINGS_ASSERTIONS";
             bridge.onActivity(a->{View decor=a.getWindow().getDecorView();
+                // Regression for lifecycle identity without retaining any inbound payload.
+                assertEquals(com.mikeyphw.hooklab.termux.TermuxCommandPolicy.ACTION_SETTINGS,a.getIntent().getAction());
+                assertEquals(new android.content.ComponentName(a,com.mikeyphw.hooklab.termux.TermuxBridgeActivity.class),a.getIntent().getComponent());
+                assertNull(a.getIntent().getExtras());assertNull(a.getIntent().getData());
+                assertNull(a.getIntent().getClipData());assertEquals(0,a.getIntent().getFlags());
                 assertTrue(containsText(decor,a.getString(R.string.termux_r05_settings_intro)));
                 assertFalse(containsText(decor,a.getString(R.string.termux_r05_review_run)));
             });
+            stage="SETTINGS_CLOSE";
+        }
+        } catch (AssertionError | Exception failure) {
+            // Stable synthetic marker: host exports only the allowlisted stage, exception
+            // class and source locations, never the exception message or UI/log contents.
+            throw new AssertionError("UXR00_STAGE_"+stage,failure);
         }
     }
 }
