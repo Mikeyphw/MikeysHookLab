@@ -8,12 +8,10 @@ from pathlib import Path
 import reference
 
 SCHEMA='hooklab.visual.candidate.v1'
-MAP={'home':'VIS-024','hooks':'VIS-002','by-app':'VIS-003','group-detail':'VIS-004','hook-detail':'VIS-005','diagnostics':'VIS-006'}
-NAV={'home':201,'hooks':202,'by-app':202,'group-detail':202,'hook-detail':202,'diagnostics':203}
-DEEP={'group-detail','hook-detail'}
-def root_route(route):return 'hooks' if route=='by-app' else route
+from visual_routes import MAP,NAV,DEEP,TITLE,DISCONNECTED,THEME
+from visual_body import compare as compare_body
 LABELS={'home':'Home','hooks':'Hooks','diagnostics':'Diagnostics'}
-TITLE={'home':'HookLab','hooks':'Hooks','by-app':'Hooks','group-detail':'Group details','hook-detail':'Hook configuration','diagnostics':'Diagnostics'}
+def root_route(route):return {201:'home',202:'hooks',203:'diagnostics'}.get(NAV[route])
 
 def need(ok,msg):
     if not ok:raise ValueError(msg)
@@ -82,22 +80,31 @@ def native_controls(g,route):
     for k in v:
         r=v[k];need(set(r)==({'label','bounds','font_sp','color'} if k=='title' else {'label','bounds','font_sp','color','selected'}),'invalid native semantic fields')
         box(r['bounds']);need(numeric(r['font_sp']) and 0<r['font_sp']<=100 and isinstance(r['color'],list) and len(r['color'])==3 and all(type(x) is int and 0<=x<=255 for x in r['color']),'invalid native typography')
-        need(isinstance(r['label'],str) and r['label'] in ({TITLE[route],"Mikey's HookLab"} if k=='title' and route=='home' else {TITLE[route] if k=='title' else LABELS[k]}),'unapproved native label '+k)
+        need(isinstance(r['label'],str) and r['label'] in ({TITLE[route],"Mikey's HookLab"} if k=='title' and route in ('home','connected-home','light-home') else {TITLE[route] if k=='title' else LABELS[k]}),'unapproved native label '+k)
         if k!='title':need(type(r['selected']) is bool and r['selected']==(k==root_route(route)),'wrong native selection')
     return v
 
 def metrics(a,b):
     from PIL import ImageChops, ImageStat
+    import numpy as np
     need(a.size==b.size,'image dimensions differ');a=a.convert('RGB');b=b.convert('RGB');d=ImageChops.difference(a,b);h=d.getextrema()
-    # Exact changed pixel ratio, not channel ratio. SSIM averages independent
-    # local luminance windows; no masking or alignment optimizations.
-    changed=sum(1 for pixel in d.getdata() if pixel!=(0,0,0))/(a.width*a.height)
-    la=a.convert('L');lb=b.convert('L');scores=[]
-    for y in range(0,a.height,8):
-        for x in range(0,a.width,8):
-            crop=(x,y,min(x+8,a.width),min(y+8,a.height));u=list(la.crop(crop).getdata());v=list(lb.crop(crop).getdata());n=len(u);mu=sum(u)/n;mv=sum(v)/n;vu=sum((z-mu)**2 for z in u)/n;vv=sum((z-mv)**2 for z in v)/n;cov=sum((p-mu)*(q-mv) for p,q in zip(u,v))/n
-            scores.append(((2*mu*mv+6.5025)*(2*cov+58.5225))/((mu*mu+mv*mv+6.5025)*(vu+vv+58.5225)))
-    return {'changed_pixel_ratio':round(changed,8),'ssim':round(sum(scores)/len(scores),8),'mean_abs_rgb':round(sum(ImageStat.Stat(d).mean)/3,5),'max_rgb_delta':max(v[1] for v in h)}
+    # Keep exactly the same non-overlapping 8x8 luminance SSIM windows,
+    # including partial edge windows. Integer sums are exact and no pixel is
+    # masked or interpolated. Vectorization avoids repeated PIL crop allocation.
+    width,height=a.size
+    channels=d.split();changed=1-ImageChops.lighter(ImageChops.lighter(channels[0],channels[1]),channels[2]).histogram()[0]/(width*height)
+    if changed==0:return {'changed_pixel_ratio':0.0,'ssim':1.0,'mean_abs_rgb':0.0,'max_rgb_delta':0}
+    def tiles(image):
+        u=np.asarray(image.convert('L'),dtype=np.int64)
+        u=np.pad(u,((0,(-height)%8),(0,(-width)%8)))
+        return u.reshape((u.shape[0]//8,8,u.shape[1]//8,8)).transpose(0,2,1,3)
+    u=tiles(a);v=tiles(b)
+    n=np.minimum(8,height-8*np.arange(u.shape[0]))[:,None]*np.minimum(8,width-8*np.arange(u.shape[1]))[None,:]
+    total=lambda x:x.sum(axis=(2,3),dtype=np.int64)
+    mu=total(u)/n;mv=total(v)/n
+    vu=total(u*u)/n-mu*mu;vv=total(v*v)/n-mv*mv;cov=total(u*v)/n-mu*mv
+    scores=((2*mu*mv+6.5025)*(2*cov+58.5225))/((mu*mu+mv*mv+6.5025)*(vu+vv+58.5225))
+    return {'changed_pixel_ratio':round(changed,8),'ssim':round(float(scores.mean()),8),'mean_abs_rgb':round(sum(ImageStat.Stat(d).mean)/3,5),'max_rgb_delta':max(v[1] for v in h)}
 
 def compare_controls(expected,actual,tol):
     results=[]
@@ -146,12 +153,12 @@ def evaluate(root,ref,native,out,verify=False):
                     q=Path(tmp)/'reproduced.png';triptych(r,n,q)
                     with Image.open(q) as expected,Image.open(p) as actual_img:need(expected.size==actual_img.size and ImageChops.difference(expected.convert('RGB'),actual_img.convert('RGB')).getbbox() is None,'triptych drift')
             else:triptych(r,n,p)
-        records.append({'route':route,'reference_case':case,'native_sha256':digest(native/(route+'.png')),'reference_sha256':digest(ref/(case+'.png')),'candidate_metrics':m,'region_metrics':regions,'semantic_controls':rows,'triptych_sha256':digest(p),'fixture_equivalence':False,'visual_approved':False})
+        records.append({'route':route,'reference_case':case,'native_sha256':digest(native/(route+'.png')),'reference_sha256':digest(ref/(case+'.png')),'candidate_metrics':m,'region_metrics':regions,'semantic_controls':rows,'body_comparison':compare_body(rg,ng,route),'triptych_sha256':digest(p),'fixture_equivalence':False,'visual_approved':False})
     result={**ident,'schema':SCHEMA,'reference_manifest_sha256':digest(ref/'manifest.json'),'native_receipt_sha256':digest(native/'receipt.json'),'contract_sha256':digest(root/'design/hooklab/02_CONTRACT/visual-contract.json'),'browser_semantic_roster_sha256':reference.ROSTER_SHA256,'coverage':{'reference_cases':24,'candidate_comparisons':len(MAP),'approved_cases':0},'uncompared_cases':sorted(set(f'VIS-{i:03}' for i in range(1,25))-set(MAP.values())),'status':'CANDIDATE_COMPARISON_ONLY','native_goldens_approved':False,'repeat_calibration':nr['repeat_calibration'],'cases':records}
     path=out/'visual-report.json'
     if verify:need(load(path)==result and {p.name for p in out.iterdir()}=={'visual-report.json',*(r+'-triptych.png' for r in MAP)},'comparison report/file drift')
     else:dump(path,result)
-    print('CANDIDATE_COMPARISON_VERIFIED 6/24; 0 APPROVED; NO VISUAL ACCEPTANCE',flush=True)
+    print(f'CANDIDATE_COMPARISON_VERIFIED {len(MAP)}/24; 0 APPROVED; NO VISUAL ACCEPTANCE',flush=True)
     return result
 
 def main():

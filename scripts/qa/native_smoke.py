@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse, hashlib, json, os, re, subprocess, sys, time
 from pathlib import Path
 PKG='com.mikeyphw.hooklab'; SERIAL='emulator-5554'
-ROUTES={'home':201,'hooks':202,'by-app':202,'group-detail':202,'hook-detail':202,'diagnostics':203}
+from visual_routes import NAV as ROUTES, DISCONNECTED, THEME
 TEST='com.mikeyphw.hooklab.qa.NativeBaselineTest#realActivityOfflineNavigation'
 FIXTURE='com.mikeyphw.hooklab.qa.DiagnosticFixtureTest#importedFixtureProjectionAndFilter'
 FRAMEWORK_TEST='com.mikeyphw.hooklab.ui.FrameworkFixtureTest#connectedCommandsStaleCallbackAndClock'
@@ -99,14 +99,16 @@ def verify(out,expected):
     return receipt
 
 def validate_geometry(g,route):
-    require(set(g)=={'route','selected_menu','real_activity','disconnected','density','width_dp','font_scale','insets_px','views','semantic_controls'},'unexpected native hierarchy metadata')
-    require(g['route']==route and g['selected_menu']==ROUTES[route] and g['real_activity'] is True and g['disconnected'] is True and g['width_dp']==390 and g['density']==2 and g['font_scale']==1 and 10<len(g['views'])<=4000,'wrong native geometry')
+    require(set(g)=={'route','selected_menu','real_activity','disconnected','density','width_dp','font_scale','insets_px','views','semantic_controls','build_source','theme','framework_fixture','body_controls','palette'},'unexpected native hierarchy metadata')
+    require(g['route']==route and g['selected_menu']==ROUTES[route] and g['real_activity'] is True and g['disconnected'] is DISCONNECTED[route] and g['framework_fixture'] is (not DISCONNECTED[route]) and g['theme']==THEME[route] and re.fullmatch('[0-9a-f]{40}',g['build_source']) and g['width_dp']==390 and g['density']==2 and g['font_scale']==1 and 10<len(g['views'])<=4000,'wrong native geometry')
     insets=g['insets_px'];require(isinstance(insets,list) and len(insets)==4 and all(type(x) is int and 0<=x<=200 for x in insets),'invalid system insets')
     for row in g['views']:
         keys={'class','clickable','enabled','focusable','heading','bounds_px','width_dp','height_dp'}
         require(set(row) in (keys,keys|{'text_size_px','text_color'}),'non-allowlisted hierarchy field')
         require(re.fullmatch('[A-Za-z0-9_$]+',row['class']) and all(type(row[k]) is bool for k in ('clickable','enabled','focusable','heading')),'invalid hierarchy identity')
         b=row['bounds_px'];require(len(b)==4 and all(type(x) is int for x in b) and 0<=b[0]<b[2]<=780 and 0<=b[1]<b[3]<=1688,'invalid visible native bounds')
+    from visual_body import validate as validate_body
+    validate_body(g,route)
     from visual import native_controls
     native_controls(g,route)
 
@@ -122,7 +124,7 @@ def validate_receipt_files(out,receipt):
         seen=set();records={}
         for route in ROUTES:
             image=out/(route+suffix+'.png');geo=out/(route+suffix+'.json');require(0<image.stat().st_size<=12*1024*1024 and 0<geo.stat().st_size<=2*1024*1024,'invalid evidence size');h=digest(image);require(h not in seen,'duplicate screenshot');seen.add(h)
-            validate_geometry(json.loads(geo.read_text()),route);records[route]={'png':h,'geometry':digest(geo)}
+            geometry=json.loads(geo.read_text());validate_geometry(geometry,route);require(geometry['build_source']==receipt['source_sha'],'installed build source drift');records[route]={'png':h,'geometry':digest(geo)}
         require(records==receipt[field],'native screenshot hash drift')
     require(set(receipt['repeat_calibration'])==set(ROUTES),'repeat calibration missing')
     for result in receipt['repeat_calibration'].values():require(result['ssim']>=.99 and result['changed_pixel_ratio']<=.01,'native repeat not within strict thresholds')
@@ -207,11 +209,11 @@ def expected_identity():
     require(all(re.fullmatch('[1-9][0-9]*',os.environ.get(k,'')) for k in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT')),'invalid run identity')
     return {'schema':'hooklab.native.smoke.v1','source_sha':source,'source_tree':git('rev-parse','HEAD^{tree}'),'run_id':os.environ['GITHUB_RUN_ID'],'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'],'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
 
-FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','R02_EXPAND','R02_GROUP_CAPTURE','R02_HOOK_CAPTURE','R02_BY_APP_CAPTURE','R02_CATALOG_ROUTES','R02_SINGLE_GROUP','R02_ICON_PROVIDER','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT','FRAMEWORK_SETUP','FRAMEWORK_PREFERENCES','FRAMEWORK_SCOPE','FRAMEWORK_GROUP','HEALTH_EXACT_ROUTE','CAPTURE_START','CAPTURE_ACTIVE_RENDER','CAPTURE_MARKER','CAPTURE_STOP','CAPTURE_RESTART','FRAMEWORK_RECEIPT'))
+FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','R02_EXPAND','R02_GROUP_CAPTURE','R02_HOOK_CAPTURE','R02_BY_APP_CAPTURE','R02_CATALOG_ROUTES','R02_SINGLE_GROUP','R02_ICON_PROVIDER','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT','FRAMEWORK_SETUP','FRAMEWORK_PREFERENCES','FRAMEWORK_SCOPE','FRAMEWORK_GROUP','HEALTH_EXACT_ROUTE','CAPTURE_START','CAPTURE_ACTIVE_RENDER','CAPTURE_MARKER','CAPTURE_STOP','CAPTURE_RESTART','FRAMEWORK_RECEIPT','R03_CONNECTED','R03_SETTINGS','R03_SCOPE','R03_ABOUT','R03_HELP','R03_PRIVACY','R03_LIGHT','R03_MCC'))
 # Restrict exported frames to our three instrumentation classes. Raw stack/message/UI text
 # can contain private or attacker-controlled data; it is never written or printed.
 FRAME_CLASSES={t.split('#')[0]:t.split('#')[0].rsplit('.',1)[-1]+'.java' for t in TESTS}
-SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock','press','readyText','switchState','await','awaitPending','settledScreenshot','awaitCommittedFrame','captureGeometry','syntheticAuthorizationAndReceipt'))
+SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock','press','readyText','switchState','await','awaitPending','settledScreenshot','awaitCommittedFrame','captureGeometry','syntheticAuthorizationAndReceipt','captureWholeApp','bodyEvidence','bodyControl'))
 SAFE_EXCEPTION_TYPES=frozenset(('java.lang.AssertionError','java.lang.IllegalStateException','java.lang.IllegalArgumentException','java.lang.NullPointerException','java.lang.RuntimeException','java.lang.SecurityException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.AppNotIdleException','androidx.test.espresso.NoActivityResumedException','androidx.test.espresso.base.RootViewPicker$RootViewWithoutFocusException'))
 
 def failure_details(output,test_id,ordinal,completed,rc,reason):
@@ -237,7 +239,7 @@ def failure_details(output,test_id,ordinal,completed,rc,reason):
 def run_instrumentation(out,ident,test_id,completed):
     ordinal=len(completed)+1;reason='TRANSPORT_FAILED';output='';rc=None
     try:
-        result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',test_id,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=240)
+        result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',test_id,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=480 if test_id==TEST else 240)
         rc=result.returncode;output=result.stdout
         require(rc==0,'instrumentation child failed '+test_id)
         reason='TEST_FAILED';parse_instrumentation(output,test_id)

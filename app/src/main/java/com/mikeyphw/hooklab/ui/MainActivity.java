@@ -60,7 +60,7 @@ public final class MainActivity extends AppCompatActivity {
     private ScrollView scroll;
     private SharedPreferences appearance;
     private static final int HOME = 0, APPS = 1, DIAGNOSTICS = 2;
-    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7, CAPTURE = 8, HELP = 9, HEALTH = 10, HEALTH_REPORT = 11, EVENT_REPORT = 12, PACKAGE_DETAIL = 13;
+    private static final int SETTINGS = 3, ABOUT = 4, SCOPE = 5, APP_DETAIL = 6, GROUP_DETAIL = 7, CAPTURE = 8, HELP = 9, HEALTH = 10, HEALTH_REPORT = 11, EVENT_REPORT = 12, PACKAGE_DETAIL = 13, PRIVACY = 14;
     private static final int MENU_SETTINGS = 100, MENU_SCOPE = 101, MENU_ABOUT = 102;
     private static final int NAV_HOME = 201, NAV_APPS = 202, NAV_DIAGNOSTICS = 203;
     private static final int THEME_AMOLED = 100;
@@ -75,7 +75,7 @@ public final class MainActivity extends AppCompatActivity {
     private boolean diagnosticRoot(int route){return route==DIAGNOSTICS||route==HEALTH||route==CAPTURE;}
     private boolean diagnosticRoute(int route){return diagnosticRoot(route)||route==HEALTH_REPORT||route==EVENT_REPORT;}
     private final Runnable diagnosticObserver=()->{
-        if(!isFinishing()&&!isDestroyed()&&diagnosticRoute(page)){
+        if(!isFinishing()&&!isDestroyed()&&(diagnosticRoute(page)||page==HOME)){
             int previous=scroll.getScrollY();render();scroll.post(()->scroll.scrollTo(0,previous));
         }
     };
@@ -124,7 +124,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private boolean validFrame(Bundle b){
         int route=b.getInt("route",-1);
-        if(route<HOME||route>PACKAGE_DETAIL)return false;
+        if(route<HOME||route>PRIVACY)return false;
         if(route==APP_DETAIL&&entryForId(b.getString("hook"))==null)return false;
         if(route==GROUP_DETAIL&&HookDetailRoute.group(HookGroupCatalog.groups(environment.all()),b.getString("group"))==null)return false;
         if(route==PACKAGE_DETAIL&&CatalogRoutes.members(environment.all(),b.getString("app")).isEmpty())return false;
@@ -160,8 +160,8 @@ public final class MainActivity extends AppCompatActivity {
         FlatUi.section(surface);
         LinearLayout inner = new LinearLayout(this);
         inner.setOrientation(LinearLayout.VERTICAL);
-        inner.setPadding(dp(18), dp(18), dp(18), dp(18));
-        TextView titleView = text(title, 20);
+        inner.setPadding(dp(DesignTokens.PANEL_PADDING), dp(DesignTokens.PANEL_PADDING), dp(DesignTokens.PANEL_PADDING), dp(DesignTokens.PANEL_PADDING));
+        TextView titleView = text(title, DesignTokens.SECTION_SP);
         FlatUi.sectionHeading(titleView);
         inner.addView(titleView);
         TextView detail = text(description, 14);
@@ -207,10 +207,10 @@ public final class MainActivity extends AppCompatActivity {
         LinearLayout line=horizontal();LinearLayout navigationRow=horizontal();navigationRow.setPadding(dp(4),dp(8),dp(4),dp(8));
         navigationRow.addView(iconStack(packages));
         LinearLayout labels=new LinearLayout(this);labels.setOrientation(LinearLayout.VERTICAL);labels.setPadding(dp(8),0,0,0);
-        labels.addView(text(title,17));labels.addView(text(detail,13));navigationRow.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
+        labels.addView(text(title,DesignTokens.ROW_SP));labels.addView(muted(detail,13));navigationRow.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
         labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);navigationRow.setContentDescription(title+", "+detail+", "+android.text.TextUtils.join(", ",new java.util.TreeSet<>(packages)));
         navigationRow.setTag("r02:open:"+key);
-        FlatUi.actionRow(navigationRow,open);line.addView(navigationRow,new LinearLayout.LayoutParams(0,-2,1));
+        FlatUi.actionRow(navigationRow,open);navigationRow.setMinimumHeight(dp(DesignTokens.ROW_DP));line.addView(navigationRow,new LinearLayout.LayoutParams(0,-2,1));
         if(expand!=null){
             android.widget.ImageButton chevron=new android.widget.ImageButton(this);
             chevron.setBackground(null);
@@ -295,10 +295,10 @@ public final class MainActivity extends AppCompatActivity {
         android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
         background.setColor(MaterialColors.getColor(search,
                 com.google.android.material.R.attr.colorSurfaceContainer));
-        background.setCornerRadius(dp(12));
+        background.setCornerRadius(dp(24));
         search.setBackground(background);
         search.setPadding(dp(16), dp(10), dp(16), dp(10));
-        search.setMinimumHeight(dp(48));
+        search.setMinimumHeight(dp(52));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.topMargin = dp(8);
         body.addView(search, lp);
@@ -616,10 +616,10 @@ public final class MainActivity extends AppCompatActivity {
         LinearLayout row=horizontal();row.setPadding(dp(12),dp(10),dp(12),dp(10));
         if(pkg!=null&&!pkg.isEmpty())row.addView(hostIcon(pkg));
         LinearLayout labels=new LinearLayout(this);labels.setOrientation(LinearLayout.VERTICAL);
-        TextView name=text(title,16);labels.addView(name);labels.addView(text(detail,13));
+        TextView name=text(title,DesignTokens.ROW_SP);labels.addView(name);labels.addView(muted(detail,13));
         row.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
         labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);row.setContentDescription(title+", "+detail);
-        FlatUi.actionRow(row,action);parent.addView(row,new LinearLayout.LayoutParams(-1,-2));
+        FlatUi.actionRow(row,action);row.setMinimumHeight(dp(DesignTokens.ROW_DP));parent.addView(row,new LinearLayout.LayoutParams(-1,-2));
         return row;
     }
     private void renderDiagnosticRows(){
@@ -753,7 +753,7 @@ public final class MainActivity extends AppCompatActivity {
         icons=new AppIconProvider(this,new HashSet<>(java.util.Arrays.asList("br.art.code.meucronogramacapilar","com.machiav3lli.fdroid","com.looker.droidify","com.fugo.wowsolitaire","com.openai.chatgpt")));
         diagnosticState=new androidx.lifecycle.ViewModelProvider(this).get(DiagnosticWorkspaceState.class);
         stateStore = new FrameworkStateStore(environment);
-        page = state == null ? HOME : Math.max(HOME, Math.min(PACKAGE_DETAIL, state.getInt("page")));
+        page = state == null ? HOME : Math.max(HOME, Math.min(PRIVACY, state.getInt("page")));
         selectedHookId = state == null ? null : state.getString("selectedHookId");
         helpReturnPage = state == null ? SETTINGS : state.getInt("helpReturnPage", SETTINGS);
         if(helpReturnPage != SETTINGS && helpReturnPage != SCOPE && helpReturnPage != ABOUT) helpReturnPage=SETTINGS;
@@ -818,7 +818,8 @@ public final class MainActivity extends AppCompatActivity {
         root.setBackgroundColor(FlatUi.canvas(this));
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, w) -> {
             Insets i = w.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(i.left, i.top, i.right, i.bottom);
+            int ime=w.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            v.setPadding(i.left, i.top, i.right, Math.max(i.bottom,ime));
             return w;
         });
         LinearLayout content = new LinearLayout(this);
@@ -851,14 +852,14 @@ public final class MainActivity extends AppCompatActivity {
             return true;
         });
         toolbar.setNavigationOnClickListener(v -> navigateBack());
-        content.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(56)));
+        content.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(DesignTokens.TOOLBAR_DP)));
 
         scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
         int insetDp = UiLayoutPolicy.contentInsetDp(widthDp);
-        body.setPadding(dp(insetDp), dp(12), dp(insetDp), dp(32));
+        body.setPadding(dp(insetDp), dp(8), dp(insetDp), dp(24));
         scroll.addView(body);
         content.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
@@ -1032,21 +1033,31 @@ public final class MainActivity extends AppCompatActivity {
         t.setTextColor(MaterialColors.getColor(t, com.google.android.material.R.attr.colorOnSurface));
         return t;
     }
+    private MaterialTextView muted(CharSequence value,int sp){
+        MaterialTextView t=text(value,sp);t.setTextColor(MaterialColors.getColor(t,com.google.android.material.R.attr.colorOnSurfaceVariant));return t;
+    }
+    private void sectionTitle(int id){
+        TextView t=text(getString(id),DesignTokens.SECTION_SP);t.setTypeface(t.getTypeface(),android.graphics.Typeface.BOLD);
+        t.setPadding(0,dp(16),0,dp(8));FlatUi.sectionHeading(t);body.addView(t);
+    }
+    private void row(LinearLayout parent,int title,CharSequence detail,View.OnClickListener action){
+        compactDiagnosticRow(parent,getString(title),detail,null,action);
+    }
     private void heading(int id) {
-        TextView t = text(getString(id), 32); t.setTypeface(t.getTypeface(), android.graphics.Typeface.BOLD);
+        TextView t = text(getString(id), DesignTokens.HERO_SP); t.setTypeface(t.getTypeface(), android.graphics.Typeface.BOLD);
         t.setAccessibilityHeading(true); body.addView(t);
     }
     private LinearLayout card(CharSequence title, CharSequence description) {
         MaterialCardView card = new MaterialCardView(this); FlatUi.section(card);
         LinearLayout inner = new LinearLayout(this); inner.setOrientation(LinearLayout.VERTICAL);
-        inner.setPadding(dp(18), dp(18), dp(18), dp(18));
-        TextView titleView = text(title, 20);
+        inner.setPadding(dp(DesignTokens.PANEL_PADDING), dp(DesignTokens.PANEL_PADDING), dp(DesignTokens.PANEL_PADDING), dp(DesignTokens.PANEL_PADDING));
+        TextView titleView = text(title, DesignTokens.SECTION_SP);
         FlatUi.sectionHeading(titleView);
         inner.addView(titleView);
-        TextView detail = text(description, 16); detail.setPadding(0, dp(8), 0, 0); inner.addView(detail);
+        TextView detail = text(description, DesignTokens.DETAIL_SP); detail.setPadding(0, dp(8), 0, 0); inner.addView(detail);
         card.addView(inner);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.topMargin = dp(16); body.addView(card, lp);
+        lp.topMargin = dp(DesignTokens.SPACE); body.addView(card, lp);
         return inner;
     }
     private MaterialButton button(LinearLayout parent, int label, View.OnClickListener click) {
@@ -1165,7 +1176,13 @@ public final class MainActivity extends AppCompatActivity {
         card(groupName(group), group.description + "\n" + getString(R.string.ui_group_no_toggle));
         UiEnvironment.Port expected = service();
         Set<String> scope = scopedPackages(expected);
-        body.addView(text(getString(R.string.ui05_scope_targets), 22));
+        sectionTitle(R.string.ui05_group_hooks);
+        for (TweakSpec spec : group.members) {
+            TweakEngine.Entry<HookContext> entry = entryForId(spec.id);
+            if (entry == null) continue;
+            catalogCard(body,entry);
+        }
+        sectionTitle(R.string.ui05_scope_targets);
         for (String pkg : group.packages) {
             boolean approved = scope != null && scope.contains(pkg);
             LinearLayout target = catalogSurface(body);
@@ -1178,12 +1195,14 @@ public final class MainActivity extends AppCompatActivity {
                         .setEnabled(!pendingScope.contains(pkg));
             } else target.addView(text(getString(R.string.scope_unavailable), 14));
         }
-        body.addView(text(getString(R.string.ui05_group_hooks), 22));
-        for (TweakSpec spec : group.members) {
-            TweakEngine.Entry<HookContext> entry = entryForId(spec.id);
-            if (entry == null) continue;
-            catalogCard(body,entry);
-        }
+
+        LinearLayout evidence=catalogSurface(body);
+        row(evidence,R.string.dx03_inspect,getString(R.string.ui06_import_warning),v->{
+            DiagnosticTimeline.Filter filter=new DiagnosticTimeline.Filter();
+            Set<String> members=new HashSet<>();for(TweakSpec member:group.members)members.add(member.id);
+            filter.groupHooks=java.util.Collections.unmodifiableSet(members);
+            diagnosticState.filter=filter;diagnosticState.groupId=group.id;diagnosticState.pageIndex=0;diagnosticState.scroll[0]=0;goTo(DIAGNOSTICS);
+        });
     }
 
     private void appDetail() {
@@ -1269,38 +1288,50 @@ public final class MainActivity extends AppCompatActivity {
         LinearLayout next = card(getString(R.string.ui_next_steps),
                 getString(R.string.ui_restart_target));
         next.addView(text(getString(R.string.ui_host_log_note), 14));
+        button(next,R.string.dx03_inspect,v->{diagnosticState.filter=new DiagnosticTimeline.Filter();diagnosticState.filter.hookId=spec.id;diagnosticState.groupId="";diagnosticState.pageIndex=0;diagnosticState.scroll[0]=0;goTo(DIAGNOSTICS);});
     }
 
     private void home() {
-        heading(R.string.app_name);
-        body.addView(text(getString(R.string.tagline), 18));
+        body.addView(muted(getString(R.string.app_name),12));
+        heading(R.string.tagline);
+        body.addView(muted(getString(R.string.r03_home_intro),14));
         // UI-06: truthful projection of the framework snapshot and DX-01 imports.
         // No read or write path here can install, toggle, scope or start hooks.
         HomeDashboardModel.Summary summary = HomeDashboardModel.project(
                 environment.all(), HookGroupCatalog.groups(environment.all()),
                 snapshot, diagnosticsStore());
-        card(getString(R.string.ui06_overview), getString(R.string.ui06_counts,
-                summary.hookCount, summary.groupCount, summary.packageCount)
-                + "\n" + getString(R.string.ui06_scoped,
-                    summary.scopedPackageCount < 0 ? getString(R.string.ui_unknown)
-                        : Integer.toString(summary.scopedPackageCount)));
-        LinearLayout readiness = card(getString(R.string.ui06_readiness),
-                connection(service()) + "\n" + getString(R.string.ui06_readiness_counts,
-                    summary.eligibleConfigurations, summary.problems,
-                    summary.disabled, summary.unknown));
-        readiness.addView(text(getString(R.string.ui06_not_runtime), 14));
-        if (!ready(service()))
-            readiness.addView(text(getString(R.string.ui_framework_help), 14));
-        if (summary.attentionHookId != null) {
-            TweakEngine.Entry<HookContext> attention = entryForId(summary.attentionHookId);
-            if (attention != null) {
-                LinearLayout issue = card(getString(R.string.ui06_needs_attention),
-                        attention.title + ": " + statusText(eligibility(attention.spec, service())));
-                catalogCard(issue,attention);
+        LinearLayout framework=card(getString(R.string.ui06_readiness),connection(service()));
+        TextView connectionBadge=muted(getString(snapshot.ready()?R.string.r03_connected:R.string.r03_unconfirmed),14);
+        connectionBadge.setTextColor(snapshot.ready()?MaterialColors.getColor(connectionBadge,androidx.appcompat.R.attr.colorPrimary):getColor(R.color.hooklab_warning));
+        framework.addView(connectionBadge);
+        framework.addView(muted(getString(R.string.ui06_not_runtime),14));
+        if (!ready(service()))framework.addView(muted(getString(R.string.ui_framework_help),14));
+        row(framework,R.string.r03_scope,getString(R.string.ui06_scoped,
+                summary.scopedPackageCount<0?getString(R.string.ui_unknown):Integer.toString(summary.scopedPackageCount)),v->goTo(SCOPE));
+        LinearLayout metrics=new LinearLayout(this);
+        int width=getResources().getConfiguration().screenWidthDp-2*UiLayoutPolicy.contentInsetDp(getResources().getConfiguration().screenWidthDp);
+        boolean columns=DesignTokens.columns(width,getResources().getConfiguration().fontScale)==3;
+        metrics.setOrientation(columns?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL);
+        body.addView(metrics,new LinearLayout.LayoutParams(-1,-2));
+        metric(metrics,summary.groupCount,R.string.r03_groups,columns);
+        metric(metrics,summary.hookCount,R.string.r03_hooks,columns);
+        metric(metrics,summary.packageCount,R.string.r03_apps,columns);
+        LinearLayout readiness=card(getString(R.string.ui06_overview),getString(R.string.ui06_readiness_counts,
+                summary.eligibleConfigurations,summary.problems,summary.disabled,summary.unknown));
+        readiness.addView(muted(getString(R.string.ui06_counts,summary.hookCount,summary.groupCount,summary.packageCount),12));
+        if (!summary.attentionHookIds.isEmpty()) {
+            LinearLayout issue=card(getString(R.string.ui06_needs_attention),getString(R.string.r03_attention_summary,summary.problems));
+            for(String id:summary.attentionHookIds){
+                TweakEngine.Entry<HookContext> attention=entryForId(id);
+                if(attention!=null)compactDiagnosticRow(issue,attention.title,statusText(eligibility(attention.spec,service())),attention.spec.packageName,v->openHookHealth(attention.spec));
             }
         } else if (summary.unknown > 0) {
             card(getString(R.string.ui06_unknown_title), getString(R.string.ui06_unknown_detail));
         }
+        LinearLayout shortcuts = card(getString(R.string.ui06_quick_actions),
+                getString(R.string.ui06_quick_help));
+        row(shortcuts,R.string.ui06_browse_hooks,getString(R.string.ui_catalog_intro),v->goTo(APPS));
+        row(shortcuts,R.string.ui06_open_diagnostics,getString(R.string.ui07_help_logs_title),v->goTo(DIAGNOSTICS));
         if (summary.latestImported == null) {
             card(getString(R.string.ui06_recent), getString(R.string.ui06_no_imports));
         } else {
@@ -1311,13 +1342,16 @@ public final class MainActivity extends AppCompatActivity {
             recent.addView(text(getString(R.string.ui06_import_warning), 14));
             recent.addView(text(getString(R.string.ui06_import_retention,
                     summary.importedCount, summary.evictedCount), 14));
+            row(recent,R.string.r01_event_inspector,event.code,v->showDiagnosticDetail(event.id()));
         }
-        LinearLayout shortcuts = card(getString(R.string.ui06_quick_actions),
-                getString(R.string.ui06_quick_help));
-        button(shortcuts, R.string.ui06_browse_hooks, v -> goTo(APPS));
-        button(shortcuts, R.string.ui06_open_diagnostics, v -> goTo(DIAGNOSTICS));
-        button(shortcuts, R.string.scope, v -> goTo(SCOPE));
         // DX-02 capture exists under Diagnostics; Home quick actions remain navigation-only.
+    }
+    private void metric(LinearLayout parent,int value,int label,boolean columns){
+        MaterialCardView surface=new MaterialCardView(this);FlatUi.section(surface);
+        LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(12),dp(12),dp(12),dp(12));
+        content.addView(text(Integer.toString(value),26));content.addView(muted(getString(label),12));surface.addView(content);
+        LinearLayout.LayoutParams lp=columns?new LinearLayout.LayoutParams(0,-2,1):new LinearLayout.LayoutParams(-1,-2);
+        lp.topMargin=dp(8);if(columns&&parent.getChildCount()>0)lp.setMarginStart(dp(8));parent.addView(surface,lp);
     }
     private void saveTweak(UiEnvironment.Port s, String id, boolean enabled) {
         if (!ready(s) || !pendingPreferences.add(id)) return;
@@ -1360,7 +1394,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     /** UI-07 uses only the immutable framework snapshot; never infer missing scope. */
     private void scopePage() {
-        heading(R.string.scope);
+        heading(R.string.r03_scope);
         UiEnvironment.Port expected=service();
         Ui07ScopeModel.Listing listing=Ui07ScopeModel.project(environment.all(),
                 ready(expected),scopedPackages(expected),pendingScope);
@@ -1490,20 +1524,6 @@ public final class MainActivity extends AppCompatActivity {
                 }).show();
     }
 
-    private void themeChip(ChipGroup group, int label, int mode, int current) {
-        Chip chip = new Chip(this);
-        chip.setText(label);
-        chip.setCheckable(true);
-        FlatUi.chip(chip);
-        chip.setChecked(mode == current);
-        chip.setOnClickListener(v -> {
-            if (mode == appearance.getInt("night", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM))
-                return;
-            appearance.edit().putInt("night", mode).apply();
-            recreate();
-        });
-        group.addView(chip);
-    }
     private void verboseLogging() {
         LinearLayout panel = card(getString(R.string.verbose_lsposed_heading),
                 getString(R.string.ui_logging_summary));
@@ -1511,6 +1531,7 @@ public final class MainActivity extends AppCompatActivity {
         boolean available = ready(service()) && snapshot.verboseLogging != null
                 && !pendingPreferences.contains("verbose");
         sw.setText(R.string.verbose_lsposed_logs);
+        sw.setMinimumHeight(dp(DesignTokens.ROW_DP));
         sw.setChecked(Boolean.TRUE.equals(snapshot.verboseLogging));
         sw.setEnabled(available);
         sw.setOnCheckedChangeListener((view, wanted) -> {
@@ -1552,9 +1573,14 @@ public final class MainActivity extends AppCompatActivity {
         LinearLayout identity=card(getString(R.string.ui07_about_identity),
                 getString(R.string.ui07_app_identity,getPackageName(),version));
         identity.addView(text(getString(R.string.ui07_signer_fingerprint,signer),14));
+        row(identity,R.string.r03_repository,getString(R.string.r03_repository_hint),v->{
+            try{startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://github.com/Mikeyphw/MikeysHookLab")));}
+            catch(android.content.ActivityNotFoundException | SecurityException unavailable){toast(R.string.r03_repository_unavailable);}
+        });
+        identity.addView(text(getString(R.string.r03_source,getString(R.string.hooklab_build_source)),14));
         card(getString(R.string.ui07_framework_contract),
                 getString(R.string.ui07_framework_help,connection(service())));
-        card(getString(R.string.ui07_privacy_heading),getString(R.string.ui07_privacy_note));
+        LinearLayout privacy=catalogSurface(body);row(privacy,R.string.r03_privacy,getString(R.string.ui07_privacy_note),v->goTo(PRIVACY));
         LinearLayout next=card(getString(R.string.ui07_next_steps),
                 getString(R.string.ui07_about_limitations));
         button(next,R.string.ui07_open_help,v -> openHelp());
@@ -1566,32 +1592,47 @@ public final class MainActivity extends AppCompatActivity {
     }
     private void helpPage(){
         heading(R.string.ui07_help_title);
-        card(getString(R.string.ui07_help_setup_title),getString(R.string.ui07_help_setup_body));
+        LinearLayout setup=card(getString(R.string.ui07_help_setup_title),getString(R.string.ui07_help_setup_body));
+        row(setup,R.string.ui07_open_hooks,getString(R.string.ui_catalog_intro),v->goTo(APPS));
         card(getString(R.string.ui07_help_scope_title),getString(R.string.ui07_help_scope_body));
-        card(getString(R.string.ui07_help_mcc_title),getString(R.string.ui07_help_mcc_body));
-        card(getString(R.string.ui07_help_logs_title),getString(R.string.ui07_help_logs_body));
-        card(getString(R.string.ui07_help_privacy_title),getString(R.string.ui07_help_privacy_body));
+        LinearLayout manual=catalogSurface(body);
+        row(manual,R.string.ui07_help_mcc_title,getString(R.string.ui07_help_mcc_body),v->startActivity(new Intent(this,MccControlActivity.class)));
+        LinearLayout logs=card(getString(R.string.ui07_help_logs_title),getString(R.string.ui07_help_logs_body));
+        row(logs,R.string.ui07_open_diagnostics,getString(R.string.ui06_import_warning),v->goTo(DIAGNOSTICS));
+        LinearLayout privacy=catalogSurface(body);row(privacy,R.string.r03_privacy,getString(R.string.ui07_help_privacy_body),v->goTo(PRIVACY));
         LinearLayout actions=card(getString(R.string.ui07_next_steps),getString(R.string.ui07_help_action_warning));
-        button(actions,R.string.ui07_open_hooks,v -> goTo(APPS));
         button(actions,R.string.ui07_open_scope,v -> goTo(SCOPE));
-        button(actions,R.string.ui07_open_diagnostics,v -> goTo(DIAGNOSTICS));
+    }
+    private void privacyPage(){
+        heading(R.string.r03_privacy_heading);
+        body.addView(muted(getString(R.string.r03_privacy_intro),14));
+        card(getString(R.string.r03_collection),getString(R.string.ui07_privacy_note));
+        card(getString(R.string.r03_retention),getString(R.string.r03_retention_detail));
+        card(getString(R.string.r03_copy_export),getString(R.string.r03_copy_export_detail));
+        card(getString(R.string.r03_framework_logs),getString(R.string.verbose_lsposed_description));
+        LinearLayout next=catalogSurface(body);row(next,R.string.ui07_open_diagnostics,getString(R.string.ui07_help_logs_body),v->goTo(DIAGNOSTICS));
     }
     private void settings() {
         heading(R.string.settings);
-        LinearLayout appearanceCard=card(getString(R.string.appearance),
-                getString(R.string.ui_theme_description));
-        ChipGroup themes=new ChipGroup(this);
-        themes.setSingleSelection(true);
+        body.addView(muted(getString(R.string.r03_settings_intro),14));
+        sectionTitle(R.string.appearance);
+        LinearLayout appearanceCard=catalogSurface(body);
         int current=appearance.getInt("night",AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        themeChip(themes,R.string.system_theme,AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,current);
-        themeChip(themes,R.string.light_theme,AppCompatDelegate.MODE_NIGHT_NO,current);
-        themeChip(themes,R.string.dark_theme,AppCompatDelegate.MODE_NIGHT_YES,current);
-        themeChip(themes,R.string.ui_amoled_theme,THEME_AMOLED,current);
-        appearanceCard.addView(themes);
+        final int[] modes={AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,AppCompatDelegate.MODE_NIGHT_NO,AppCompatDelegate.MODE_NIGHT_YES,THEME_AMOLED};
+        final int[] labels={R.string.system_theme,R.string.light_theme,R.string.dark_theme,R.string.ui_amoled_theme};
+        int selected=0;for(int i=0;i<modes.length;i++)if(modes[i]==current)selected=i;
+        final int checked=selected;
+        row(appearanceCard,R.string.r03_theme,getString(labels[checked]),v->{
+            CharSequence[] options=new CharSequence[labels.length];for(int i=0;i<labels.length;i++)options[i]=getString(labels[i]);
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.r03_theme)
+                .setSingleChoiceItems(options,checked,(dialog,which)->{dialog.dismiss();if(modes[which]!=current){appearance.edit().putInt("night",modes[which]).apply();recreate();}})
+                .setNegativeButton(android.R.string.cancel,null).show();
+        });
         appearanceCard.addView(text(getString(R.string.ui07_appearance_scope),14));
         if(Build.VERSION.SDK_INT>=31){
             MaterialSwitch dynamic=new MaterialSwitch(this);
             dynamic.setText(R.string.ui_dynamic_colors);
+            dynamic.setMinimumHeight(dp(DesignTokens.ROW_DP));
             dynamic.setChecked(appearance.getBoolean("dynamicColors",true));
             dynamic.setEnabled(current!=THEME_AMOLED);
             dynamic.setOnCheckedChangeListener((view,wanted)->{
@@ -1601,28 +1642,32 @@ public final class MainActivity extends AppCompatActivity {
             appearanceCard.addView(dynamic);
             appearanceCard.addView(text(getString(R.string.ui_dynamic_colors_detail),14));
         }
+        sectionTitle(R.string.ui07_framework_section);
         LinearLayout framework=card(getString(R.string.ui07_framework_section),
                 connection(service())+"\n"+getString(R.string.ui07_framework_warning));
-        button(framework,R.string.ui07_open_scope,v -> goTo(SCOPE));
-        button(framework,R.string.ui07_open_hooks,v -> goTo(APPS));
+        row(framework,R.string.r03_scope,getString(R.string.ui07_scope_warning),v->goTo(SCOPE));
+        row(framework,R.string.ui07_open_hooks,getString(R.string.ui_catalog_intro),v->goTo(APPS));
         verboseLogging(); // Existing framework-owned preference + verified commit/readback.
         LinearLayout termux=card(getString(R.string.termux_r05_settings_label),
                 getString(R.string.termux_r05_settings_description));
         button(termux,R.string.termux_r05_settings_label,v -> startActivity(
                 new Intent(this,com.mikeyphw.hooklab.termux.TermuxBridgeActivity.class)
                     .setAction(com.mikeyphw.hooklab.termux.TermuxCommandPolicy.ACTION_SETTINGS)));
-        LinearLayout support=card(getString(R.string.ui07_help_title),
-                getString(R.string.ui07_settings_support));
-        button(support,R.string.ui07_open_help,v -> openHelp());
-        button(support,R.string.about,v -> goTo(ABOUT));
+        sectionTitle(R.string.diagnostics);
+        LinearLayout logs=catalogSurface(body);row(logs,R.string.r03_privacy,getString(R.string.r03_privacy_intro),v->goTo(PRIVACY));
+        sectionTitle(R.string.r03_information);
+        LinearLayout support=catalogSurface(body);
+        row(support,R.string.about,getString(R.string.r03_repository),v->goTo(ABOUT));
+        row(support,R.string.ui07_open_help,getString(R.string.ui07_settings_support),v->openHelp());
     }
     private void render() {
         if (body == null) return;
         int navId = page == APP_DETAIL || page == APPS || page == GROUP_DETAIL || page==PACKAGE_DETAIL ? NAV_APPS
                 : diagnosticRoute(page) ? NAV_DIAGNOSTICS : NAV_HOME;
         navigation.getMenu().findItem(navId).setChecked(true);
-        navigation.setVisibility(page==GROUP_DETAIL||page==APP_DETAIL||page==PACKAGE_DETAIL?View.GONE:View.VISIBLE);
         boolean secondary = page >= SETTINGS && !diagnosticRoot(page);
+        navigation.setVisibility(secondary?View.GONE:View.VISIBLE);
+        for(int item:new int[]{MENU_SETTINGS,MENU_SCOPE,MENU_ABOUT})toolbar.getMenu().findItem(item).setVisible(!secondary);
         if (secondary) {
             toolbar.setNavigationIcon(R.drawable.ic_nav_back);
             toolbar.setNavigationContentDescription(R.string.ui_back);
@@ -1637,8 +1682,9 @@ public final class MainActivity extends AppCompatActivity {
             case EVENT_REPORT: toolbar.setTitle(R.string.r01_event_inspector);break;
             case SETTINGS: toolbar.setTitle(R.string.settings); break;
             case ABOUT: toolbar.setTitle(R.string.about); break;
-            case SCOPE: toolbar.setTitle(R.string.scope); break;
-            case HELP: toolbar.setTitle(R.string.ui07_help_title); break;
+            case SCOPE: toolbar.setTitle(R.string.r03_scope); break;
+            case PRIVACY: toolbar.setTitle(R.string.r03_privacy); break;
+            case HELP: toolbar.setTitle(R.string.r03_help_bar); break;
             case GROUP_DETAIL:
                 HookGroupCatalog.Group group = selectedGroup();
                 toolbar.setTitle(group == null ? R.string.ui_hooks : R.string.r02_group_details);
@@ -1661,6 +1707,7 @@ public final class MainActivity extends AppCompatActivity {
             case SETTINGS: settings(); break;
             case ABOUT: aboutPage(); break;
             case HELP: helpPage(); break;
+            case PRIVACY: privacyPage(); break;
             case SCOPE: scopePage(); break;
             case APP_DETAIL: appDetail(); break;
             case PACKAGE_DETAIL: packageDetail();break;

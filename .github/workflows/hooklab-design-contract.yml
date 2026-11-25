@@ -40,7 +40,7 @@ jobs:
           sudo apt-get install -y fonts-roboto zsh
           fc-cache -f
           fc-match Roboto -f '%{family}\n' | grep -F Roboto
-          python -m pip install 'playwright==1.57.0' 'Pillow==11.3.0'
+          python -m pip install 'playwright==1.57.0' 'Pillow==11.3.0' 'numpy==2.3.5'
           python -m playwright install --with-deps chromium
       - name: Verify actual persistent Zsh session in isolated PTY
         run: python3 -B scripts/qa/termux_session_check.py --require-zsh

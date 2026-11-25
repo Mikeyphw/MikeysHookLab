@@ -140,6 +140,55 @@ public final class FrameworkFixtureTest {
         drawable.setBounds(0,0,64,64);drawable.draw(new android.graphics.Canvas(image));return image;
     }
     private static void press(int id){onView(withText(id)).perform(scrollTo(),click());}
+    /** Connected candidate screenshots use full real catalog and synthetic framework
+     * snapshot only. The existing fixture transport spies assert zero writes. */
+    public static void captureWholeApp() throws Exception {
+        HookLabApp app=(HookLabApp)InstrumentationRegistry.getInstrumentation().getTargetContext().getApplicationContext();
+        assertNull(app.currentService());
+        FakePort fake=new FakePort(app,"whole-app");
+        fake.scope.add(PKG);
+        UiEnvironment fixture=new UiEnvironment(app){
+            @Override Port currentService(){return fake;}
+            @Override Long installedVersion(TweakSpec spec){return spec.minVersion;}
+        };
+        SharedPreferences prefs=app.getSharedPreferences("appearance",Context.MODE_PRIVATE);
+        assertTrue(prefs.edit().clear().putInt("night",androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES).putBoolean("dynamicColors",false).commit());
+        String stage="R03_CONNECTED";
+        try(AutoCloseable lease=UiEnvironmentFactory.installInstrumentationFixture(fixture);ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
+            await(s,v->v instanceof TextView&&((TextView)v).getText().toString().contains("Synthetic QA framework"));
+            readyText(s,app,R.string.r03_connected);
+            s.onActivity(a->{View root=a.getWindow().getDecorView();assertTrue(count(root,v->v instanceof TextView&&a.getString(R.string.ui06_counts,fixture.all().size(),HookGroupCatalog.groups(fixture.all()).size(),HookGroupCatalog.byPackage(fixture.all()).size()).contentEquals(((TextView)v).getText()))==1);});
+            com.mikeyphw.hooklab.qa.NativeBaselineTest.capture(s,"connected-home",201,R.string.app_name);
+            stage="R03_SETTINGS";onView(withId(100)).perform(click());readyText(s,app,R.string.r03_theme);
+            com.mikeyphw.hooklab.qa.NativeBaselineTest.capture(s,"settings",201,R.string.settings);
+            // Explicit theme chooser: cancellation and local preference changes are independent of framework commands.
+            press(R.string.r03_theme);onView(withText(android.R.string.cancel)).perform(click());assertEquals(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES,prefs.getInt("night",0));
+            stage="R03_SCOPE";press(R.string.r03_scope);readyText(s,app,R.string.scope_remove);
+            com.mikeyphw.hooklab.qa.NativeBaselineTest.capture(s,"scope",201,R.string.r03_scope);
+            press(R.string.scope_remove);onView(withText(android.R.string.cancel)).perform(click());assertEquals(Set.of(PKG),fake.scope);assertEquals(0,fake.scopeCalls.get());
+            androidx.test.espresso.Espresso.pressBack();
+            stage="R03_ABOUT";press(R.string.about);s.onActivity(a->{String source=a.getString(R.string.hooklab_build_source);assertTrue(source.matches("[0-9a-f]{40}"));assertTrue(count(a.getWindow().getDecorView(),v->v instanceof TextView&&a.getString(R.string.r03_source,source).contentEquals(((TextView)v).getText()))==1);});
+            com.mikeyphw.hooklab.qa.NativeBaselineTest.capture(s,"about",201,R.string.about);
+            stage="R03_HELP";press(R.string.ui07_open_help);com.mikeyphw.hooklab.qa.NativeBaselineTest.capture(s,"help",201,R.string.r03_help_bar);
+            stage="R03_PRIVACY";press(R.string.r03_privacy);com.mikeyphw.hooklab.qa.NativeBaselineTest.capture(s,"privacy",201,R.string.r03_privacy);
+            s.recreate();readyText(s,app,R.string.r03_privacy_heading);
+            androidx.test.espresso.Espresso.pressBack();readyText(s,app,R.string.ui07_help_setup_title);
+            androidx.test.espresso.Espresso.pressBack();readyText(s,app,R.string.ui07_about_identity);
+            androidx.test.espresso.Espresso.pressBack();readyText(s,app,R.string.r03_theme);
+            stage="R03_LIGHT";
+            press(R.string.r03_theme);onView(withText(R.string.light_theme)).perform(click());
+            await(s,v->v instanceof TextView&&app.getString(R.string.light_theme).contentEquals(((TextView)v).getText()));
+            assertEquals(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO,prefs.getInt("night",0));
+            androidx.test.espresso.Espresso.pressBack();readyText(s,app,R.string.r03_connected);
+            com.mikeyphw.hooklab.qa.NativeBaselineTest.capture(s,"light-home",201,R.string.app_name);
+            // AMOLED ignores dynamic palette; prove persistence on real Activity recreation.
+            onView(withId(100)).perform(click());press(R.string.r03_theme);onView(withText(R.string.ui_amoled_theme)).perform(click());
+            await(s,v->v instanceof TextView&&app.getString(R.string.ui_amoled_theme).contentEquals(((TextView)v).getText()));
+            s.recreate();s.onActivity(a->{assertEquals(0xff000000,FlatUi.canvas(a));assertEquals(100,prefs.getInt("night",0));});
+            assertEquals(0,fake.writes.get());assertEquals(0,fake.scopeCalls.get());assertNull(fake.pending.get());assertNull(app.currentService());
+        } catch(Throwable failure){throw new AssertionError("UXR00_STAGE_"+stage,failure);}
+        finally{assertTrue(prefs.edit().clear().putInt("night",androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES).putBoolean("dynamicColors",false).commit());}
+    }
     @Test public void connectedCommandsStaleCallbackAndClock()throws Exception{
         String stage="FRAMEWORK_SETUP";
         try {

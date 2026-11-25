@@ -1,12 +1,20 @@
 {
   "approval": "CANDIDATE_ONLY",
   "baseline_map": {
+    "about": "VIS-018",
     "by-app": "VIS-003",
+    "connected-home": "VIS-001",
     "diagnostics": "VIS-006",
     "group-detail": "VIS-004",
+    "help": "VIS-019",
     "home": "VIS-024",
     "hook-detail": "VIS-005",
-    "hooks": "VIS-002"
+    "hooks": "VIS-002",
+    "light-home": "VIS-021",
+    "mcc": "VIS-017",
+    "privacy": "VIS-020",
+    "scope": "VIS-016",
+    "settings": "VIS-015"
   },
   "cases": [
     {
@@ -188,12 +196,20 @@
     "hooks": "Hooks"
   },
   "required_title": {
+    "about": "About",
     "by-app": "Hooks",
+    "connected-home": "HookLab",
     "diagnostics": "Diagnostics",
     "group-detail": "Group details",
+    "help": "Help",
     "home": "HookLab",
     "hook-detail": "Hook configuration",
-    "hooks": "Hooks"
+    "hooks": "Hooks",
+    "light-home": "HookLab",
+    "mcc": "Manual control",
+    "privacy": "Privacy",
+    "scope": "Scope & permissions",
+    "settings": "Settings"
   },
   "schema": "hooklab.visual.contract.v1",
   "tolerances": {

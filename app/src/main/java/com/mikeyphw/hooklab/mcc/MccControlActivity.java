@@ -64,22 +64,22 @@ public final class MccControlActivity extends AppCompatActivity {
         content.setOrientation(LinearLayout.VERTICAL);
         int widthDp = getResources().getConfiguration().screenWidthDp;
         int gutter = UiLayoutPolicy.contentInsetDp(widthDp);
-        content.setPadding(dp(gutter),dp(28),dp(gutter),dp(24));
+        content.setPadding(dp(gutter),dp(8),dp(gutter),dp(24));
         scroll.addView(content, new ScrollView.LayoutParams(-1,-2));
         FrameLayout centered = new FrameLayout(this);
         centered.addView(scroll, new FrameLayout.LayoutParams(
             dp(Math.min(720, widthDp)), -1, android.view.Gravity.CENTER_HORIZONTAL));
         MaterialToolbar bar=new MaterialToolbar(this);
         FlatUi.toolbar(bar);
-        bar.setTitle(R.string.ui07_mcc_heading);
+        bar.setTitle(R.string.r03_manual_control);
         bar.setNavigationIcon(R.drawable.ic_nav_back);
         bar.setNavigationContentDescription(R.string.ui_back);
         bar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
-        root.addView(bar,new LinearLayout.LayoutParams(-1,dp(56)));
+        root.addView(bar,new LinearLayout.LayoutParams(-1,dp(com.mikeyphw.hooklab.ui.DesignTokens.TOOLBAR_DP)));
         root.addView(centered, new LinearLayout.LayoutParams(-1,0,1));
         TextView title=new TextView(this);
         title.setText(R.string.ui07_mcc_heading);
-        title.setTextSize(32f);
+        title.setTextSize(com.mikeyphw.hooklab.ui.DesignTokens.HERO_SP);
         title.setTypeface(title.getTypeface(), Typeface.BOLD);
         title.setTextColor(MaterialColors.getColor(title, com.google.android.material.R.attr.colorOnSurface));
         title.setAccessibilityHeading(true);
@@ -108,7 +108,10 @@ public final class MccControlActivity extends AppCompatActivity {
         status.setTextColor(MaterialColors.getColor(status,
             com.google.android.material.R.attr.colorOnSurface));
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        content.addView(status,new LinearLayout.LayoutParams(-1,-2));
+        com.google.android.material.card.MaterialCardView statePanel=new com.google.android.material.card.MaterialCardView(this);
+        FlatUi.section(statePanel);LinearLayout stateContent=new LinearLayout(this);stateContent.setOrientation(LinearLayout.VERTICAL);stateContent.setPadding(dp(16),dp(16),dp(16),dp(16));
+        TextView stateHeading=new TextView(this);stateHeading.setText(R.string.r03_manual_state);stateHeading.setTextSize(17);FlatUi.sectionHeading(stateHeading);stateContent.addView(stateHeading);
+        stateContent.addView(status,new LinearLayout.LayoutParams(-1,-2));statePanel.addView(stateContent);content.addView(statePanel,new LinearLayout.LayoutParams(-1,-2));
         setContentView(root);
         inspect.setOnClickListener(v -> operation(true));
         rootInspect.setOnClickListener(v -> new androidx.appcompat.app.AlertDialog.Builder(this)

@@ -6,6 +6,8 @@ from pathlib import Path
 from unittest.mock import patch
 from PIL import Image,ImageDraw
 import visual,native_smoke,verify_ui_artifacts
+from visual_routes import BODY
+from visual_body import PALETTE
 ROOT=Path(__file__).resolve().parents[2]
 REF=None
 class VisualReportChecks(unittest.TestCase):
@@ -21,7 +23,7 @@ class VisualReportChecks(unittest.TestCase):
                     b=a.convert('RGB').resize((780,1688));ImageDraw.Draw(b).rectangle((10,10,70,70),fill=(20,200,100));b.save(nat/(route+'.png'))
                 controls=visual.browser_controls(visual.load(ref/(case+'.json')),route)
                 controls['title']['bounds'][0]+=4
-                geo={'route':route,'selected_menu':visual.NAV[route],'real_activity':True,'disconnected':True,'width_dp':390,'density':2,'font_scale':1,'insets_px':[0,48,0,48],'views':[{'class':'View','clickable':False,'enabled':True,'focusable':False,'heading':False,'bounds_px':[0,48,100,148],'width_dp':50,'height_dp':50} for _ in range(11)],'semantic_controls':controls}
+                geo={'route':route,'selected_menu':visual.NAV[route],'real_activity':True,'disconnected':visual.DISCONNECTED[route],'framework_fixture':not visual.DISCONNECTED[route],'theme':visual.THEME[route],'build_source':'1'*40,'width_dp':390,'density':2,'font_scale':1,'insets_px':[0,48,0,48],'views':[{'class':'View','clickable':False,'enabled':True,'focusable':False,'heading':False,'bounds_px':[0,48,100,148],'width_dp':50,'height_dp':50} for _ in range(11)],'semantic_controls':controls,'palette':PALETTE[visual.THEME[route]],'body_controls':{k:{'label':v['label'],'instances':[{'clickable':True,'enabled':True,'visible':False,'geometry':None}]} for k,v in BODY.get(route,{}).items()}}
                 visual.dump(nat/(route+'.json'),geo);records[route]={'png':visual.digest(nat/(route+'.png')),'geometry':visual.digest(nat/(route+'.json'))}
             for route in visual.MAP:
                 for ext in ('.png','.json'):shutil.copy2(nat/(route+ext),nat/(route+'-repeat'+ext))

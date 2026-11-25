@@ -438,7 +438,7 @@ check('getPackageInfo(' in ui07_main and 'GET_SIGNING_CERTIFICATES' in ui07_main
       'UI-07 P03 runtime app identity, signing fingerprint, privacy and native Help')
 check('case HELP: helpPage(); break;' in ui07_main
       and 'out.putInt("page", page)' in ui07_main
-      and 'Math.min(PACKAGE_DETAIL, state.getInt("page"))' in ui07_main
+      and 'Math.min(PRIVACY, state.getInt("page"))' in ui07_main
       and 'out.putInt("helpReturnPage", helpReturnPage)' in ui07_main
       and 'status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE)' in ui07_mcc
       and (r/'app/src/test/java/com/mikeyphw/hooklab/ui/Ui07ScopeModelTest.java').is_file()

@@ -5,9 +5,9 @@ import org.junit.Test;
 
 public final class UiLayoutPolicyTest {
     @Test public void phoneAndTabletThreshold() {
-        for (int width : new int[] {320, 360, 480, 600, 839})
+        for (int width : new int[] {320, 360, 480, 600, 759})
             assertFalse(UiLayoutPolicy.useRail(width));
-        for (int width : new int[] {840, 841, 1024, 1200})
+        for (int width : new int[] {760, 761, 1024, 1200})
             assertTrue(UiLayoutPolicy.useRail(width));
     }
     @Test public void contentNeverOverflowsAvailableWidth() {
@@ -19,7 +19,9 @@ public final class UiLayoutPolicyTest {
         }
     }
     @Test public void guttersStayReadable() {
-        assertEquals(16, UiLayoutPolicy.contentInsetDp(320));
-        assertEquals(24, UiLayoutPolicy.contentInsetDp(600));
+        assertEquals(12, UiLayoutPolicy.contentInsetDp(320));
+        assertEquals(20, UiLayoutPolicy.contentInsetDp(390));
+        assertEquals(20, UiLayoutPolicy.contentInsetDp(600));
+        assertEquals(32, UiLayoutPolicy.contentInsetDp(760));
     }
 }

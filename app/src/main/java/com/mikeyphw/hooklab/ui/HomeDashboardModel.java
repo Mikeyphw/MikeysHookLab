@@ -5,6 +5,7 @@ import com.mikeyphw.hooklab.core.TweakCompatibility;
 import com.mikeyphw.hooklab.core.TweakSpec;
 import com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -19,15 +20,17 @@ public final class HomeDashboardModel {
         public final int hookCount, groupCount, packageCount, scopedPackageCount;
         public final int eligibleConfigurations, problems, disabled, unknown;
         public final String attentionHookId;
+        public final List<String> attentionHookIds;
         public final DiagnosticTimeline.Event latestImported;
         public final int importedCount, evictedCount;
         private Summary(int hooks,int groups,int packages,int scoped,int eligible,
-                int problems,int disabled,int unknown,String attention,
+                int problems,int disabled,int unknown,List<String> attention,
                 DiagnosticTimeline.Event latest,int imported,int evicted) {
             this.hookCount=hooks;this.groupCount=groups;this.packageCount=packages;
             this.scopedPackageCount=scoped;this.eligibleConfigurations=eligible;
             this.problems=problems;this.disabled=disabled;this.unknown=unknown;
-            this.attentionHookId=attention;this.latestImported=latest;
+            this.attentionHookIds=Collections.unmodifiableList(new ArrayList<>(attention));
+            this.attentionHookId=attention.isEmpty()?null:attention.get(0);this.latestImported=latest;
             this.importedCount=imported;this.evictedCount=evicted;
         }
     }
@@ -59,7 +62,7 @@ public final class HomeDashboardModel {
             for(String pkg:packages)if(state.scope.contains(pkg))scoped++;
         }
         int eligible=0,problems=0,disabled=0,unknown=0;
-        String attention=null;
+        List<String> attention=new ArrayList<>();
         for(TweakSpec spec:registered){
             TweakCompatibility.State result=state.eligibility(spec);
             switch(result){
@@ -68,7 +71,7 @@ public final class HomeDashboardModel {
                 case QUARANTINED:
                 case VERSION_UNSUPPORTED:
                     problems++;
-                    if(attention==null)attention=spec.id;
+                    if(attention.size()<3)attention.add(spec.id);
                     break;
                 case DISABLED:disabled++;break; // Intentional opt-out is not a fault
                 default:unknown++;break; // Includes disconnected, missing prefs/version

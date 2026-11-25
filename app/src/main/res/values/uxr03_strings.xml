@@ -1,0 +1,29 @@
+<resources>
+    <string name="r03_home_intro">A focused workspace for your Android hooks.</string>
+    <string name="r03_groups">Groups</string>
+    <string name="r03_hooks">Hooks</string>
+    <string name="r03_apps">Target apps</string>
+    <string name="r03_scope">Scope &amp; permissions</string>
+    <string name="r03_settings_intro">Appearance, framework access and privacy.</string>
+    <string name="r03_information">Information</string>
+    <string name="r03_theme">Theme</string>
+    <string name="r03_privacy">Privacy</string>
+    <string name="r03_privacy_heading">Privacy &amp; logs</string>
+    <string name="r03_privacy_intro">Explicit, bounded and redacted.</string>
+    <string name="r03_collection">Collection and source limits</string>
+    <string name="r03_retention">Retention</string>
+    <string name="r03_retention_detail">Imported diagnostic records are bounded and retained in memory. Process loss discards that evidence. Export explicitly if you need a retained copy.</string>
+    <string name="r03_copy_export">Copy and export</string>
+    <string name="r03_copy_export_detail">Only an explicit copy action writes the selected redacted record to the clipboard. Export uses the system document picker with source provenance. Imported evidence is not authenticated runtime proof.</string>
+    <string name="r03_framework_logs">Framework logging</string>
+    <string name="r03_repository">Repository: Mikeyphw/MikeysHookLab</string>
+    <string name="r03_source">Build source: %1$s</string>
+    <string name="r03_manual_control">Manual control</string>
+    <string name="r03_manual_state">Storage and operation status</string>
+    <string name="r03_help_bar">Help</string>
+    <string name="r03_connected">Configuration service connected</string>
+    <string name="r03_unconfirmed">Configuration service not confirmed</string>
+    <string name="r03_attention_summary">%1$d configurations need attention. Showing up to three.</string>
+    <string name="r03_repository_hint">Open the public project in your browser.</string>
+    <string name="r03_repository_unavailable">No browser available to open the repository.</string>
+</resources>

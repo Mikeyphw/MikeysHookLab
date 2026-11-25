@@ -31,7 +31,7 @@ public final class FlatUi {
         bar.setElevation(0f);
     }
     public static void section(MaterialCardView section) {
-        section.setRadius(dp(section, 12));
+        section.setRadius(dp(section, DesignTokens.PANEL_RADIUS));
         section.setCardElevation(0f);
         section.setUseCompatPadding(false);
         section.setStrokeWidth(0);
@@ -54,7 +54,7 @@ public final class FlatUi {
     public static void button(MaterialButton action) {
         action.setElevation(0f);
         action.setStrokeWidth(0);
-        action.setCornerRadius(dp(action, 12));
+        action.setCornerRadius(dp(action, DesignTokens.BUTTON_RADIUS));
         action.setMinHeight(dp(action, Ui08QualityPolicy.MIN_TOUCH_DP));
     }
     public static void chip(Chip chip) {
@@ -64,16 +64,18 @@ public final class FlatUi {
         chip.setChipMinHeight(dp(chip, Ui08QualityPolicy.MIN_TOUCH_DP));
     }
     public static void navigation(NavigationBarView nav) {
-        nav.setBackgroundColor(MaterialColors.getColor(nav, R.attr.colorSurface));
+        nav.setBackgroundColor(MaterialColors.getColor(nav, R.attr.colorSurfaceContainer));
         nav.setElevation(0f);
         int on = MaterialColors.getColor(nav, androidx.appcompat.R.attr.colorPrimary);
         int off = MaterialColors.getColor(nav, R.attr.colorOnSurfaceVariant);
         ColorStateList tint = new ColorStateList(
             new int[][] { new int[]{android.R.attr.state_checked}, new int[]{} },
-            new int[]{on, off});
-        nav.setItemIconTintList(tint);
+            new int[]{MaterialColors.getColor(nav, R.attr.colorOnSurface), off});
+        nav.setItemIconTintList(new ColorStateList(
+            new int[][] {new int[]{android.R.attr.state_checked}, new int[]{}},
+            new int[]{MaterialColors.getColor(nav, R.attr.colorOnPrimary), off}));
         nav.setItemTextColor(tint);
         nav.setItemActiveIndicatorColor(ColorStateList.valueOf(
-            MaterialColors.getColor(nav, R.attr.colorSurfaceVariant)));
+            on));
     }
 }
