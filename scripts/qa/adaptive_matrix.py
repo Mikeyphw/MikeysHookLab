@@ -72,11 +72,21 @@ def home_geometry_checkpoint(source):
   return row
  except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
 
+def viewport_failure(source,test):
+ try:
+  raw=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/viewport-failure.json');require(0<len(raw)<=4096,'viewport failure receipt size')
+  row=json.loads(raw);keys={'schema','source','test','width_px','height_px','rotation','density_dpi','width_dp','height_dp','font_scale'}
+  if not isinstance(row,dict) or set(row)!=keys or row['schema']!='hooklab.uxr04.viewport-failure.v1' or row['source']!=source or row['test']!=test.split('#')[-1]:return None
+  if any(type(row[k]) is not int or not 0<row[k]<=10000 for k in ('width_px','height_px','density_dpi','width_dp','height_dp')):return None
+  if type(row['rotation']) is not int or row['rotation'] not in range(4) or not finite(row['font_scale']) or not 0<row['font_scale']<=5:return None
+  return row
+ except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
+
 def lock_matrix_rotation(cfg):
  rotation='1' if cfg['width_px']>cfg['height_px'] else '0'
  # API29 has settings-based rotation but not the newer wm user-rotation command.
  # Both paths read back actual platform settings, while each instrumentation
- # process independently freezes and checks its real display before launch.
+ # process independently freezes rotation and checks the resumed real Activity display.
  n.adb('shell','settings','put','system','accelerometer_rotation','0')
  n.adb('shell','settings','put','system','user_rotation',rotation)
  if cfg['api']>=36:
@@ -88,7 +98,7 @@ def instrument(test,cfg,source,out):
  lock_matrix_rotation(cfg)
  # A checkpoint from a different invocation must never be accepted as current.
  n.clear_failure_checkpoint()
- if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json')
+ if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json')
  result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
  try:
   require(result.returncode==0,'instrument transport failed: '+test)
@@ -96,6 +106,7 @@ def instrument(test,cfg,source,out):
  except ValueError:
   failure=failure_info(result.stdout,test,result.returncode);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES)
   if test==JOURNEY and failure['checkpoint_phase']=='HOME_SCROLL':failure['home_target_geometry']=home_geometry_checkpoint(source)
+  if failure['checkpoint_phase']=='VIEWPORT_READY':failure['viewport_geometry']=viewport_failure(source,test)
   dump(out/'failure.json',failure)
   print('ADAPTIVE_FAILURE '+json.dumps(failure,sort_keys=True),flush=True)
   raise ValueError('instrumentation failed: '+test) from None
@@ -134,6 +145,7 @@ def live_xml():
 # expose a text child and an actionable ancestor; deduplicate that same owner.
 CONTROL_IDS={k:n.PKG+':id/hooklab_'+v for k,v in {
  'primary_navigation':'primary_navigation','capture_tab':'capture_tab','capture_target':'capture_target',
+ 'capture_research':'capture_research','capture_module':'capture_module',
  'capture_package':'capture_package','capture_stop':'capture_stop','capture_mark':'capture_mark',
  'capture_interrupted':'capture_interrupted'}.items()}
 
@@ -169,11 +181,19 @@ def tap_control(selector,cfg,*,resource=None,scope=None,scroll=False):
    n.adb('shell','input','tap',str((x+r)//2),str((y+b)//2));return
   require(len(matches)==0,'ambiguous process-death UI control: '+selector)
   if not scroll:break
-  scroll_capture(cfg)
+  scroll_capture(cfg,root=root)
  raise ValueError('process-death control unavailable: '+selector)
 
-def scroll_capture(cfg):
- w,h=cfg['width_px'],cfg['height_px'];n.adb('shell','input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//3),'400')
+def scroll_capture(cfg,*,root=None):
+ w,h=cfg['width_px'],cfg['height_px']
+ # Scroll the actual dialog/list viewport rather than tapping/swiping outside
+ # it. The app may expose nested scroll containers; prefer the smallest visible
+ # enabled scroll owner, which is the active dialog when it is present.
+ candidates=[] if root is None else [bounds(x) for x in root.iter('node') if x.get('package')==n.PKG and x.get('scrollable')=='true' and x.get('enabled')=='true' and bounds(x)]
+ if candidates:
+  l,t,r,b=min(candidates,key=lambda x:(x[2]-x[0])*(x[3]-x[1]));require(0<=l<r<=w and 0<=t<b<=h,'capture scroll owner outside viewport');x=(l+r)//2;y0=t+(b-t)*3//4;y1=t+(b-t)//4
+ else:x=w//2;y0=h*3//4;y1=h//3
+ n.adb('shell','input','swipe',str(x),str(y0),str(x),str(y1),'400')
 
 def launch():
  text=n.txt('shell','am','start','-W','-a','android.intent.action.MAIN','-c','android.intent.category.LAUNCHER','-f','0x10200000','-n',n.PKG+'/.ui.MainActivity')
@@ -186,11 +206,11 @@ def process_death(cfg):
  tap_control('Diagnostics',cfg,scope='primary_navigation')
  tap_control('Guided capture',cfg,resource='capture_tab',scroll=True)
  tap_control('Choose target',cfg,resource='capture_target',scroll=True)
- tap_control('Unregistered package (research only)',cfg,scroll=True)
+ tap_control('Unregistered package (research only)',cfg,resource='capture_research',scroll=True)
  # Verify the specific real dialog input before using shell input.
  field=control_nodes(live_xml(),'capture_package');require(len(field)==1,'capture package input missing/ambiguous')
  x,y,r,b=bounds(field[0]);n.adb('shell','input','tap',str((x+r)//2),str((y+b)//2));n.adb('shell','input','text','com.example.fixture');tap_control('OK',cfg)
- tap_control('LSPosed module log',cfg,scroll=True)
+ tap_control('LSPosed module log',cfg,resource='capture_module',scroll=True)
  for _ in range(8):
   root=live_xml()
   if control_nodes(root,'capture_stop',action=True) or control_nodes(root,'capture_mark',action=True):break

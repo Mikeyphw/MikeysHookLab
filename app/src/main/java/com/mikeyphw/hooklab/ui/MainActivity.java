@@ -423,12 +423,31 @@ public final class MainActivity extends AppCompatActivity {
                     this::exportCaptureDocument);
     private HookLabApp captureApp(){return (HookLabApp)getApplication();}
     private long captureClock(){return environment.elapsedRealtime();}
+    /** Real individually actionable dialog rows; no dependence on ListView's
+     * inaccessible item-click ownership or translated text for automation. */
+    private void captureChoiceDialog(int title,String[] labels,int[] identities,java.util.function.IntConsumer selected){
+        if(labels.length!=identities.length||labels.length==0)throw new IllegalArgumentException("capture choice roster");
+        ScrollView choices=new ScrollView(this);
+        LinearLayout rows=new LinearLayout(this);rows.setOrientation(LinearLayout.VERTICAL);
+        choices.addView(rows,new ScrollView.LayoutParams(-1,-2));
+        androidx.appcompat.app.AlertDialog dialog=new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(title).setView(choices).setNegativeButton(android.R.string.cancel,null).create();
+        for(int i=0;i<labels.length;i++){
+            final int index=i;MaterialTextView row=new MaterialTextView(this);
+            if(identities[i]!=View.NO_ID)row.setId(identities[i]);
+            row.setText(labels[i]);row.setTextSize(16);row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(24),dp(12),dp(24),dp(12));
+            FlatUi.actionRow(row,v->{dialog.dismiss();selected.accept(index);});
+            rows.addView(row,new LinearLayout.LayoutParams(-1,-2));
+        }
+        dialog.show();
+    }
     private void selectCaptureSource(TweakSpec hook,String researchPackage){
         final String[] ids={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};
         final String[] labels={getString(R.string.dx01_module),getString(R.string.dx01_framework),
                 getString(R.string.dx01_logcat_import)};
-        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle(R.string.dx02_choose_source)
-            .setItems(labels,(dialog,which) -> {
+        captureChoiceDialog(R.string.dx02_choose_source,labels,
+            new int[]{R.id.hooklab_capture_module,View.NO_ID,View.NO_ID},which -> {
                 if(which<0 || which>=ids.length)return;
                 com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline timeline=diagnosticsStore();
                 long mark=com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(timeline);
@@ -443,7 +462,7 @@ public final class MainActivity extends AppCompatActivity {
                 // Starting or replacing a capture changes the current page model.
                 // A same-page navigation normally does nothing; explicitly render this transition.
                 goTo(CAPTURE, true);
-            }).show();
+            });
     }
     private void selectCaptureTarget(){
         final List<TweakSpec> specs=environment.all();
@@ -455,8 +474,9 @@ public final class MainActivity extends AppCompatActivity {
             titles[i]=(entry==null?spec.id:entry.title)+" · "+spec.packageName;
         }
         titles[specs.size()]=getString(R.string.dx02_research_target);
-        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle(R.string.dx02_choose_target)
-            .setItems(titles,(dialog,index) -> {
+        int[] identities=new int[titles.length];java.util.Arrays.fill(identities,View.NO_ID);
+        identities[specs.size()]=R.id.hooklab_capture_research;
+        captureChoiceDialog(R.string.dx02_choose_target,titles,identities,index -> {
                 if(index<specs.size()) {selectCaptureSource(specs.get(index),null);return;}
                 android.widget.EditText input=new android.widget.EditText(this);
                 input.setId(R.id.hooklab_capture_package);input.setSingleLine(true);input.setHint(R.string.dx02_package_hint);
@@ -474,7 +494,7 @@ public final class MainActivity extends AppCompatActivity {
                         }
                         selectCaptureSource(null,pkg);
                     }).show();
-            }).show();
+            });
     }
     private void captureMarker(com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode code){
         com.mikeyphw.hooklab.diagnostics.CaptureSession capture=captureApp().capture();
@@ -964,6 +984,9 @@ public final class MainActivity extends AppCompatActivity {
             backRoutes.clear();returning=true;try{goTo(target);}finally{returning=false;}
             return true;
         });
+        // The edge-to-edge root already allocates all system-bar/cutout insets.
+        // Material navigation otherwise pads itself again (landscape rail lost 117px).
+        ViewCompat.setOnApplyWindowInsetsListener(navigation,(v,insets)->insets);
         FlatUi.navigation(navigation);
         FlatUi.adaptiveNavigationLabels(navigation);
         FlatUi.enforceChromeTargets(toolbar,navigation);

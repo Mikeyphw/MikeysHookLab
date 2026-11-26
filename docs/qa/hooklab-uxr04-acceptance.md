@@ -37,3 +37,8 @@ F02 exact source `68a9269ef41cfdfb3d24ffbd38e1b57017e7848e`: 3/5 workflows passe
 ### F04 exact F03 qualification repair
 
 Source `20724a6995b7ba8c8bd3e7c08254831fc619509a`, tree `a9bce675e4df4a4518af861bc9a4cc5ad4a238ec`. Extended 45724979860 attempt 1: 2/10 success, 6 runtime failures, 2 Maven 429 build failures. Native baseline passed. Correct API29 rotation compatibility, independently freeze display in each instrumentation, enforce actual toolbar/nav/row geometry, retain full ATF, add source-bound safe Home geometry on refusal, use real stable capture resources and actionable owner selection. Single hosted build emits one exact pair; all ten jobs independently verify installed hashes, aggregate compares against exact downloaded pair; operator independently rehashes twelve artifacts. Full rerun required if retrying the workflow. All real runtime gates pending, no physical-device/visual/release approval.
+
+
+### F05 measured failure repair
+
+F04 `ccb228f7faaaf94dc55c12c52a34c87b398be4f5` shared APK build passed; 6/10 cases passed. Tablet landscape rail targets 59px versus 96px, overflow 80px versus 96px in both failed tablet cases. Landscape stopped on launcher-side rotation wait, and primary API36-390 passed all five instrumentation tests before unavailable research choice. F05 removes duplicate Material nav insets, allocates actual overflow width, checks measured chrome targets on the real Home Activity, verifies exact rotated display after Activity resume, and uses individual stable capture choice rows with dialog-scoped scrolling. Real process death and all original matrix, accessibility, performance and shared APK gates remain mandatory. Local source QA is not native/hosted/device acceptance.

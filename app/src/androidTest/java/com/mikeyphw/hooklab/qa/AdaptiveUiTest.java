@@ -159,31 +159,41 @@ public final class AdaptiveUiTest {
         int width=Integer.parseInt(args.getString("uxr04_width_px","0"));
         int height=Integer.parseInt(args.getString("uxr04_height_px","0"));
         assertTrue("valid matrix orientation",width>0&&height>0);
-        // UiAutomation can reset rotation at instrumentation startup/teardown.
-        // Freeze from within each fresh test process before Activity creation.
-        if(width>height)device.setOrientationLeft();else device.setOrientationNatural();
-        for(int i=0;i<50;i++){
-            ins.waitForIdleSync();
-            if(device.getDisplayWidth()==width&&device.getDisplayHeight()==height)return;
-            SystemClock.sleep(200);
-        }
-        fail("matrix display rotation did not converge before Activity launch");
+        // The launcher can insist on portrait even with a valid rotation lock.
+        // Request the exact system rotation before launch, but measure the real
+        // application display only after the production Activity is resumed.
+        assertTrue("matrix rotation freeze refused",ins.getUiAutomation().setRotation(width>height
+            ?android.app.UiAutomation.ROTATION_FREEZE_90:android.app.UiAutomation.ROTATION_FREEZE_0));
     }
     private void awaitInitialViewport(ActivityScenario<MainActivity> scenario)throws Exception {
         android.os.Bundle args=InstrumentationRegistry.getArguments();
         int width=Integer.parseInt(args.getString("uxr04_width_px","0")),height=Integer.parseInt(args.getString("uxr04_height_px","0"));
         float font=Float.parseFloat(args.getString("uxr04_font_scale","0"));
         assertTrue("valid matrix viewport",width>0&&height>0&&font>=1f);
+        final int[] sample=new int[6];final float[] observedFont={0f};
         for(int i=0;i<50;i++){
             ins.waitForIdleSync();final boolean[] observed={false};
             scenario.onActivity(a->{android.content.res.Configuration c=a.getResources().getConfiguration();
-                observed[0]=c.orientation==(width>height?2:1)&&Math.abs(c.fontScale-font)<.01f
+                android.view.Display display=a.getWindowManager().getDefaultDisplay();
+                android.graphics.Point real=new android.graphics.Point();display.getRealSize(real);
+                sample[0]=real.x;sample[1]=real.y;sample[2]=display.getRotation();sample[3]=c.densityDpi;
+                sample[4]=c.screenWidthDp;sample[5]=c.screenHeightDp;observedFont[0]=c.fontScale;
+                observed[0]=real.x==width&&real.y==height&&display.getRotation()==(width>height?android.view.Surface.ROTATION_90:android.view.Surface.ROTATION_0)
+                    &&c.orientation==(width>height?2:1)&&Math.abs(c.fontScale-font)<.01f
                     &&c.densityDpi==320&&c.screenWidthDp>=width/2-80&&c.screenWidthDp<=width/2
                     &&c.screenHeightDp>=height/2-100&&c.screenHeightDp<=height/2;
             });
-            if(observed[0]&&device.getDisplayWidth()==width&&device.getDisplayHeight()==height)return;
+            if(observed[0])return;
+            // Bounded recovery of the same requested lock, not an orientation
+            // fallback: the exact dimensions, rotation and screenshot still gate.
+            if(i==10||i==25)prepareMatrixOrientation();
             SystemClock.sleep(200);
         }
+        JSONObject observed=new JSONObject().put("schema","hooklab.uxr04.viewport-failure.v1")
+            .put("source",args.getString("uxr04_source","")).put("test",activeTest)
+            .put("width_px",sample[0]).put("height_px",sample[1]).put("rotation",sample[2])
+            .put("density_dpi",sample[3]).put("width_dp",sample[4]).put("height_dp",sample[5]).put("font_scale",observedFont[0]);
+        Files.write(new File(folder,"viewport-failure.json").toPath(),observed.toString().getBytes(StandardCharsets.UTF_8));
         fail("actual matrix viewport did not settle");
     }
     private void awaitOrientation(ActivityScenario<MainActivity> scenario,int wanted)throws Exception {
@@ -242,6 +252,22 @@ public final class AdaptiveUiTest {
             long launch=SystemClock.elapsedRealtime()-started;
             phase("VIEWPORT_READY");awaitInitialViewport(s);
             phase("HOME_SCROLL");homeTargetGeometry(s);
+            s.onActivity(a->{
+                View root=a.getWindow().getDecorView();int minimum=Math.round(48*a.getResources().getDisplayMetrics().density);
+                NavigationBarView nav=find(root,NavigationBarView.class);assertNotNull(nav);
+                for(int i=0;i<nav.getMenu().size();i++){
+                    View action=nav.findViewById(nav.getMenu().getItem(i).getItemId());assertNotNull(action);
+                    Rect rect=new Rect();assertTrue(action.getGlobalVisibleRect(rect));
+                    assertTrue("navigation visible target below 48dp",rect.width()>=minimum&&rect.height()>=minimum);
+                }
+                MaterialToolbar toolbar=find(root,MaterialToolbar.class);assertNotNull(toolbar);
+                androidx.appcompat.widget.ActionMenuView menu=find(toolbar,androidx.appcompat.widget.ActionMenuView.class);assertNotNull(menu);
+                for(int i=0;i<menu.getChildCount();i++){
+                    View action=menu.getChildAt(i);if(!action.isShown()||!action.isEnabled()||!action.isClickable())continue;
+                    Rect rect=new Rect();assertTrue(action.getGlobalVisibleRect(rect));
+                    assertTrue("toolbar visible target below 48dp",rect.width()>=minimum&&rect.height()>=minimum);
+                }
+            });
             // The real shortcut row owns accessibility and the click target; its
             // decorative child text is deliberately hidden from AT. Scroll the
             // actual action, then assert it is exposed before capturing Home.

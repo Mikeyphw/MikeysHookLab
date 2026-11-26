@@ -29,6 +29,7 @@ import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import static androidx.test.espresso.Espresso.onView;
+import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.action.ViewActions.*;
 import static androidx.test.espresso.matcher.ViewMatchers.*;
 import static org.junit.Assert.*;
@@ -280,7 +281,7 @@ public final class FrameworkFixtureTest {
             stage="CAPTURE_START";
             press(R.string.dx02_capture);press(R.string.dx02_choose_target);
             TweakEngine.Entry<HookContext> neo=env.entries().stream().filter(e->NEO.equals(e.spec.id)).findFirst().orElseThrow();
-            onView(withText(neo.title+" · "+PKG)).perform(click());onView(withText(R.string.dx01_module)).perform(click());
+            onView(withText(neo.title+" · "+PKG)).perform(scrollTo(),click());onView(withId(R.id.hooklab_capture_module)).check(matches(isClickable())).perform(scrollTo(),click());
             assertNotNull(app.capture());assertEquals(NEO,app.capture().targetHookId);assertEquals(CaptureSession.State.ACTIVE,app.capture().state());
             stage="CAPTURE_ACTIVE_RENDER";
             // The screen is already CAPTURE; require the real active controls immediately
@@ -294,7 +295,7 @@ public final class FrameworkFixtureTest {
             CaptureSession previous=app.capture();
             stage="CAPTURE_RESTART";
             press(R.string.dx02_new);
-            onView(withText(neo.title+" · "+PKG)).perform(click());onView(withText(R.string.dx01_module)).perform(click());
+            onView(withText(neo.title+" · "+PKG)).perform(scrollTo(),click());onView(withId(R.id.hooklab_capture_module)).check(matches(isClickable())).perform(scrollTo(),click());
             assertNotSame(previous,app.capture());assertEquals(CaptureSession.State.ACTIVE,app.capture().state());
             assertEquals(0,app.capture().markersCount());
             onView(withText(R.string.dx02_mark_repro)).check(androidx.test.espresso.assertion.ViewAssertions.matches(isEnabled()));

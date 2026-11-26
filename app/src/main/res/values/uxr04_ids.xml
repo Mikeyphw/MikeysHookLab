@@ -7,4 +7,6 @@
     <item name="hooklab_capture_stop" type="id" />
     <item name="hooklab_capture_mark" type="id" />
     <item name="hooklab_capture_interrupted" type="id" />
+    <item name="hooklab_capture_research" type="id" />
+    <item name="hooklab_capture_module" type="id" />
 </resources>

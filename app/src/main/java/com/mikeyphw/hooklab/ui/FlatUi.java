@@ -94,7 +94,17 @@ public final class FlatUi {
                 View child=toolbar.getChildAt(i);
                 if(child instanceof androidx.appcompat.widget.ActionMenuView){
                     androidx.appcompat.widget.ActionMenuView menu=(androidx.appcompat.widget.ActionMenuView)child;
-                    for(int j=0;j<menu.getChildCount();j++)ensureTarget(menu.getChildAt(j));
+                    for(int j=0;j<menu.getChildCount();j++){
+                        View action=menu.getChildAt(j);ensureTarget(action);
+                        // AppCompat's overflow is created with WRAP_CONTENT and can
+                        // still measure 40dp despite a larger suggested minimum.
+                        android.view.ViewGroup.LayoutParams params=action.getLayoutParams();
+                        if(params instanceof androidx.appcompat.widget.ActionMenuView.LayoutParams
+                            &&((androidx.appcompat.widget.ActionMenuView.LayoutParams)params).isOverflowButton
+                            &&params.width<dp(action,Ui08QualityPolicy.MIN_TOUCH_DP)){
+                            params.width=dp(action,Ui08QualityPolicy.MIN_TOUCH_DP);action.setLayoutParams(params);
+                        }
+                    }
                 }else if(child instanceof android.widget.ImageButton&&child.isClickable())ensureTarget(child);
             }
             for(int i=0;i<nav.getMenu().size();i++){

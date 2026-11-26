@@ -14,6 +14,12 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowActionModeOverlay">true</item>
+        <item name="actionOverflowButtonStyle">@style/Widget.HookLab.Overflow</item>
+    </style>
+    <style name="Widget.HookLab.Overflow" parent="Widget.AppCompat.ActionButton.Overflow">
+        <item name="android:minWidth">48dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:layout_width">48dp</item>
     </style>
     <style name="Theme.HookLab.Amoled" parent="Theme.HookLab">
         <item name="colorSurface">#000000</item>

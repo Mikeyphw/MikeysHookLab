@@ -47,6 +47,7 @@ class AdaptiveMatrixTests(unittest.TestCase):
   with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=lambda *args: 'lock 1' if args[:2]==('shell','wm') else '0' if args[-1]=='accelerometer_rotation' else '1'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'parse_instrumentation'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='')):
    for method in (a.JOURNEY,a.PERF):a.instrument(method,cfg,'a'*40,Path('.'))
    self.assertEqual([x.args for x in adb.call_args_list if x.args[:3]==('shell','wm','user-rotation')],[('shell','wm','user-rotation','lock','1')]*2)
+   self.assertEqual(sum(x.args[-1]=='files/uxr04-adaptive/viewport-failure.json' for x in adb.call_args_list),2)
   with patch.object(a.n,'adb'),patch.object(a.n,'txt',return_value='free'),patch.object(a.subprocess,'run') as child:
    with self.assertRaisesRegex(ValueError,'rotation lock'):a.instrument(a.PERF,cfg,'a'*40,Path('.'))
    child.assert_not_called()
@@ -149,7 +150,7 @@ class AdaptiveMatrixTests(unittest.TestCase):
   for resource in a.CONTROL_IDS.values():
    name=resource.split('/')[-1];self.assertIn('R.id.'+name,activity);self.assertIn('name="'+name+'"',ids)
   self.assertIn('FlatUi.enforceChromeTargets(toolbar,navigation)',activity);self.assertIn('setItemMinimumHeight(dp(nav,64))',flat);self.assertIn('view.setMinimumWidth(minimum)',flat);self.assertIn('view.setMinimumHeight(minimum)',flat)
-  self.assertEqual(test.count('prepareMatrixOrientation();'),2);self.assertIn('if(width>height)device.setOrientationLeft();else device.setOrientationNatural();',test)
+  self.assertEqual(test.count('prepareMatrixOrientation();'),3);self.assertIn('ins.getUiAutomation().setRotation(width>height',test);self.assertIn('display.getRealSize(real)',test);self.assertIn('real.x==width&&real.y==height',test);self.assertIn('ViewCompat.setOnApplyWindowInsetsListener(navigation,(v,insets)->insets)',activity);self.assertIn('.isOverflowButton',flat);self.assertIn('params.width=dp(action,Ui08QualityPolicy.MIN_TOUCH_DP)',flat);self.assertIn('navigation visible target below 48dp',test);self.assertIn('toolbar visible target below 48dp',test);self.assertIn('captureChoiceDialog(R.string.dx02_choose_target',activity);self.assertIn('captureChoiceDialog(R.string.dx02_choose_source',activity);self.assertIn('FlatUi.actionRow(row,v->{dialog.dismiss();selected.accept(index);})',activity)
   self.assertIn('AccessibilityChecks.enable().setRunChecksFromRootView(true)',test);self.assertNotIn('setSuppressingResultMatcher',test)
 
  def test_home_geometry_checkpoint_rejects_private_and_stale_data(self):
@@ -172,3 +173,27 @@ class AdaptiveMatrixTests(unittest.TestCase):
     build=a.publish_apks(out,expected)
    self.assertEqual(build['apks']['app']['sha256'],a.sha(app));self.assertEqual(build['apks']['test']['sha256'],a.sha(test));self.assertEqual(a.shared_apks(out,expected),build)
    with self.assertRaisesRegex(ValueError,'fresh shared APK'):a.publish_apks(out,expected)
+
+ def test_dialog_choice_uses_unique_real_resource_and_dialog_scroll_bounds(self):
+  from unittest.mock import patch
+  cfg=a.config('api36-390');rid=a.CONTROL_IDS['capture_research']
+  viewport=f'<node package="{a.n.PKG}" scrollable="true" enabled="true" bounds="[100,200][680,1200]"/>'
+  root=a.ET.fromstring('<hierarchy>'+viewport+'</hierarchy>')
+  choice=a.ET.fromstring(f'<hierarchy><node package="{a.n.PKG}" resource-id="{rid}" clickable="true" enabled="true" bounds="[120,800][660,960]"/></hierarchy>')
+  with patch.object(a,'live_xml',side_effect=[root,choice]),patch.object(a.n,'adb') as adb:
+   a.tap_control('research',cfg,resource='capture_research',scroll=True)
+   self.assertEqual(adb.call_args_list[0].args,('shell','input','swipe','390','950','390','450','400'))
+   self.assertEqual(adb.call_args_list[1].args,('shell','input','tap','390','880'))
+  duplicate=a.ET.fromstring('<hierarchy>'+a.ET.tostring(choice[0],encoding='unicode')*2+'</hierarchy>')
+  with patch.object(a,'live_xml',return_value=duplicate),patch.object(a.n,'adb') as adb:
+   with self.assertRaisesRegex(ValueError,'ambiguous'):a.tap_control('research',cfg,resource='capture_research')
+   adb.assert_not_called()
+
+ def test_viewport_failure_rejects_wrong_source_test_and_extra_private_data(self):
+  from unittest.mock import patch
+  row={'schema':'hooklab.uxr04.viewport-failure.v1','source':'a'*40,'test':'adaptiveJourney','width_px':1688,'height_px':780,'rotation':1,'density_dpi':320,'width_dp':844,'height_dp':390,'font_scale':1.6}
+  with patch.object(a.n,'raw',side_effect=lambda *args:json.dumps(row).encode()):
+   self.assertEqual(a.viewport_failure('a'*40,a.JOURNEY),row)
+   self.assertIsNone(a.viewport_failure('b'*40,a.JOURNEY));self.assertIsNone(a.viewport_failure('a'*40,a.PERF))
+   row['rotation']=True;self.assertIsNone(a.viewport_failure('a'*40,a.JOURNEY));row['rotation']=1
+   row['text']='PRIVATE';self.assertIsNone(a.viewport_failure('a'*40,a.JOURNEY))
