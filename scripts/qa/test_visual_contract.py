@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[2]
 class VisualContractTest(unittest.TestCase):
     def setUp(self):self.contract=visual.validate_contract(ROOT)
     def test_exact_coverage_and_no_approval(self):
-        self.assertEqual(len(self.contract['cases']),24);self.assertFalse(any(c['native_approved'] for c in self.contract['cases']));self.assertEqual(len(self.contract['baseline_map']),6)
+        self.assertEqual(len(self.contract['cases']),24);self.assertFalse(any(c['native_approved'] for c in self.contract['cases']));self.assertEqual(len(self.contract['baseline_map']),14)
     def altered(self,edit,match):
         with tempfile.TemporaryDirectory() as d:
             r=Path(d);shutil.copytree(ROOT/'design',r/'design');p=r/'design/hooklab/02_CONTRACT/visual-contract.json';v=json.loads(p.read_text());edit(v);p.write_text(json.dumps(v))

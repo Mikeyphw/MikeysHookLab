@@ -93,6 +93,16 @@ class FoundationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'roster drift'):native_smoke.failure_details(output,native_smoke.TEST,3,completed,0,'TEST_FAILED')
             wrong=output.replace('SETTINGS_LAUNCH','PRIVATE_VALUE')
             self.assertEqual(native_smoke.failure_details(wrong,native_smoke.TEST,1,[],0,'TEST_FAILED')['stage'],'UNKNOWN')
+    def test_structured_cause_checkpoint_refuses_stale_and_private_payload(self):
+        from unittest.mock import patch
+        row={'schema':'hooklab.qa.failure.v1','source':'a'*40,'test':'connectedCommandsStaleCallbackAndClock','phase':'R02_CATALOG_SEARCH_EDIT','exception_classes':['androidx.test.espresso.PerformException'],'accessibility_checks':['TouchTargetSizeCheck'],'source_frames':['com.mikeyphw.hooklab.ui.FrameworkFixtureTest.connectedCommandsStaleCallbackAndClock(FrameworkFixtureTest.java:251)']}
+        call=lambda: native_smoke.failure_checkpoint('a'*40,native_smoke.FRAMEWORK_TEST,native_smoke.FAILURE_STAGES)
+        with patch.object(native_smoke,'raw',side_effect=lambda *a:json.dumps(row).encode()):
+            self.assertEqual(call(),row)
+            for key,bad in [('source','b'*40),('test','another'),('phase','PRIVATE'),('exception_classes',['attacker.private.Data']),('accessibility_checks',['PRIVATE']),('source_frames',['PRIVATE']),('source_frames',row['source_frames']*2)]:
+                old=row[key];row[key]=bad;self.assertIsNone(call(),key);row[key]=old
+            row['raw']='private text';self.assertIsNone(call())
+        with patch.object(native_smoke,'adb') as adb:native_smoke.clear_failure_checkpoint();adb.assert_called_once_with('shell','run-as',native_smoke.PKG,'rm','-f','files/uxr04-adaptive/failure-detail.json','files/uxr04-adaptive/failure-detail.tmp')
     def test_instrumentation_sdk_filter(self):
         source=(ROOT/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/NativeBaselineTest.java').read_text()
         self.assertIn('@androidx.test.filters.SdkSuppress(minSdkVersion = 36, maxSdkVersion = 36)',source)

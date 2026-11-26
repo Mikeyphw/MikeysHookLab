@@ -12,6 +12,28 @@ if (signingRequested && !hooklabSigningEnv.values().every { it != null && !it.is
     throw new GradleException('HOOKLAB_SIGNING_PARTIAL_CONFIG_REFUSED')
 }
 
+// Display-only provenance: use the actual checked-out commit, not GITHUB_SHA
+// (which may be the synthetic pull-request merge ref). Unknown outside clean Git.
+def hooklabBuildSource = 'unknown'
+try {
+    def sourceResult = providers.exec {
+        workingDir rootProject.projectDir
+        commandLine 'git', 'rev-parse', '--verify', 'HEAD'
+        ignoreExitValue = true
+    }
+    def statusResult = providers.exec {
+        workingDir rootProject.projectDir
+        commandLine 'git', 'status', '--porcelain', '--untracked-files=all'
+        ignoreExitValue = true
+    }
+    def source = sourceResult.standardOutput.asText.get().trim()
+    if (sourceResult.result.get().exitValue == 0 && statusResult.result.get().exitValue == 0 &&
+            (source ==~ /[0-9a-f]{40}/) && statusResult.standardOutput.asText.get().trim().isEmpty()) {
+        hooklabBuildSource = source
+    }
+} catch (Exception ignored) {
+    // Source exports and builds without Git are not source-attested.
+}
 android {
     namespace 'com.mikeyphw.hooklab'
     // Android SDK Platform 37 is published as android-37.0.
@@ -22,6 +44,9 @@ android {
         }
     }
     buildToolsVersion '36.0.0'
+    buildFeatures {
+        resValues = true
+    }
     defaultConfig {
         applicationId 'com.mikeyphw.hooklab'
         minSdk 29
@@ -29,6 +54,7 @@ android {
         versionCode 10
         versionName '0.7.1'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        resValue 'string', 'hooklab_build_source', hooklabBuildSource
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

@@ -56,6 +56,57 @@ public final class NativeBaselineTest {
                 .put("font_sp",text.getTextSize()/scaled)
                 .put("color",new JSONArray().put((c>>16)&255).put((c>>8)&255).put(c&255));
     }
+    /** Observe fixed resource-labelled controls only; no imported or private values. */
+    private static void fixedLabels(View v, String expected, java.util.List<TextView> matches){
+        if(!v.isShown())return;
+        if(v instanceof TextView && expected.contentEquals(((TextView)v).getText()))matches.add((TextView)v);
+        if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)fixedLabels(g.getChildAt(i),expected,matches);}
+    }
+    private static JSONObject bodyControl(View root,String expected,float density)throws Exception{
+        java.util.List<TextView> matches=new java.util.ArrayList<>();fixedLabels(root,expected,matches);
+        assertFalse("Missing fixed body control: "+expected,matches.isEmpty());
+        JSONArray rows=new JSONArray();
+        for(TextView t:matches){
+            View control=t;
+            // Row action may belong to the containing native button rather than its label.
+            for(android.view.ViewParent parent=t.getParent();!control.isClickable()&&parent instanceof View;parent=parent.getParent()){
+                View candidate=(View)parent;
+                if(candidate instanceof android.widget.ScrollView)break;
+                if(candidate.isClickable()){control=candidate;break;}
+            }
+            Rect b=new Rect();boolean visible=control.getGlobalVisibleRect(b);
+            JSONObject row=new JSONObject().put("clickable",control.isClickable()).put("enabled",control.isEnabled()).put("visible",visible);
+            row.put("geometry",visible?semantic(control,t,density):JSONObject.NULL);rows.put(row);
+        }
+        return new JSONObject().put("label",expected).put("instances",rows);
+    }
+    private static JSONObject bodyEvidence(View root,android.content.Context c,String route,float density)throws Exception{
+        JSONObject result=new JSONObject();String[] keys;int[] ids;
+        switch(route){
+            case "home": case "connected-home": case "light-home": keys=new String[]{"scope","browse","diagnostics","readiness","recent","groups","hooks-count","apps-count"};ids=new int[]{R.string.r03_scope,R.string.ui06_browse_hooks,R.string.ui06_open_diagnostics,R.string.ui06_readiness,R.string.ui06_recent,R.string.r03_groups,R.string.r03_hooks,R.string.r03_apps};break;
+            case "settings": keys=new String[]{"theme","dynamic","scope","verbose","privacy","about","help"};ids=new int[]{R.string.r03_theme,R.string.ui_dynamic_colors,R.string.r03_scope,R.string.verbose_lsposed_logs,R.string.r03_privacy,R.string.about,R.string.ui07_open_help};break;
+            case "scope": keys=new String[]{"summary","request","remove"};ids=new int[]{R.string.ui07_scope_heading,R.string.scope_add,R.string.scope_remove};break;
+            case "mcc": keys=new String[]{"inspect","confirm","root-inspect","status"};ids=new int[]{R.string.ui07_mcc_inspect,R.string.ui07_mcc_write,R.string.root_platform_inspect,R.string.r03_manual_state};break;
+            case "about": keys=new String[]{"identity","repository","privacy","help"};ids=new int[]{R.string.ui07_about_identity,R.string.r03_repository,R.string.r03_privacy,R.string.ui07_open_help};break;
+            case "help": keys=new String[]{"setup","hooks","logs","diagnostics","privacy","manual"};ids=new int[]{R.string.ui07_help_setup_title,R.string.ui07_open_hooks,R.string.ui07_help_logs_title,R.string.ui07_open_diagnostics,R.string.r03_privacy,R.string.ui07_help_mcc_title};break;
+            case "privacy": keys=new String[]{"collection","retention","copy-export","framework-logs","diagnostics"};ids=new int[]{R.string.r03_collection,R.string.r03_retention,R.string.r03_copy_export,R.string.r03_framework_logs,R.string.ui07_open_diagnostics};break;
+            case "hooks": case "by-app": keys=new String[]{"groups","by-app"};ids=new int[]{R.string.ui_groups,R.string.ui_by_app};break;
+            case "group-detail": keys=new String[]{"hooks","scope","evidence"};ids=new int[]{R.string.ui05_group_hooks,R.string.ui05_scope_targets,R.string.dx03_inspect};break;
+            case "hook-detail": keys=new String[]{"identity","preference","health","evidence"};ids=new int[]{R.string.ui05_hook_evidence,R.string.ui_tweak_setting,R.string.dx03_view_health,R.string.dx03_inspect};break;
+            default:return result;
+        }
+        for(int i=0;i<keys.length;i++)result.put(keys[i],bodyControl(root,c.getString(ids[i]),density));
+        return result;
+    }
+    private static JSONObject palette(android.content.Context c)throws Exception{
+        int[] attrs={com.google.android.material.R.attr.colorSurface,com.google.android.material.R.attr.colorSurfaceContainer,com.google.android.material.R.attr.colorSurfaceVariant,com.google.android.material.R.attr.colorOnSurface,com.google.android.material.R.attr.colorOnSurfaceVariant,androidx.appcompat.R.attr.colorPrimary,com.google.android.material.R.attr.colorOnPrimary,com.google.android.material.R.attr.colorOutlineVariant,androidx.appcompat.R.attr.colorError};
+        String[] names={"bg","surface","surface2","ink","muted","accent","on","line","error"};JSONObject result=new JSONObject();
+        for(int i=0;i<attrs.length;i++){
+            assertTrue("Unresolved palette attribute: "+names[i],c.getTheme().resolveAttribute(attrs[i],new android.util.TypedValue(),true));
+            result.put(names[i],String.format(java.util.Locale.ROOT,"#%06x",com.google.android.material.color.MaterialColors.getColor(c,attrs[i],0)&0xffffff));
+        }
+        result.put("warn",String.format(java.util.Locale.ROOT,"#%06x",c.getColor(R.color.hooklab_warning)&0xffffff));return result;
+    }
     private static void project(View v, JSONArray rows, float density) throws Exception {
         Rect b=new Rect();
         if(!v.isShown() || !v.getGlobalVisibleRect(b))return;
@@ -79,7 +130,7 @@ public final class NativeBaselineTest {
     }
     // Force each sample to observe a newly submitted hardware-rendered frame,
     // not repeated readback of one retained surface buffer. No pixel editing.
-    private static void awaitCommittedFrame(ActivityScenario<MainActivity> scenario) throws Exception {
+    private static void awaitCommittedFrame(ActivityScenario<? extends androidx.appcompat.app.AppCompatActivity> scenario) throws Exception {
         java.util.concurrent.CountDownLatch committed=new java.util.concurrent.CountDownLatch(1);
         scenario.onActivity(a->{
             View decor=a.getWindow().getDecorView();
@@ -94,7 +145,7 @@ public final class NativeBaselineTest {
         // compositor time to latch the frame before the ordinary screenshot.
         Thread.sleep(100);
     }
-    private static SettledCapture settledScreenshot(ActivityScenario<MainActivity> scenario,String name,int menu,int title) throws Exception {
+    private static SettledCapture settledScreenshot(ActivityScenario<? extends androidx.appcompat.app.AppCompatActivity> scenario,String name,int menu,int title) throws Exception {
         var ins=InstrumentationRegistry.getInstrumentation();
         final long[] fade={0};
         scenario.onActivity(a->{
@@ -129,22 +180,28 @@ public final class NativeBaselineTest {
             throw new AssertionError("Viewport did not settle for three consecutive samples");
         }finally{if(previous!=null)previous.recycle();}
     }
-    private static JSONObject captureGeometry(ActivityScenario<MainActivity> scenario,String name,int menu,int title){
+    private static JSONObject captureGeometry(ActivityScenario<? extends androidx.appcompat.app.AppCompatActivity> scenario,String name,int menu,int title){
         final JSONObject[] geometry={null};
         scenario.onActivity(a->{try{
             assertEquals("com.mikeyphw.hooklab",a.getPackageName());
-            assertEquals(MainActivity.class,a.getClass());
+            assertEquals(name.equals("mcc")?com.mikeyphw.hooklab.mcc.MccControlActivity.class:MainActivity.class,a.getClass());
             assertNull(((HookLabApp)a.getApplication()).currentService());
             View decor=a.getWindow().getDecorView();
             MaterialToolbar toolbar=find(decor,MaterialToolbar.class);assertNotNull(toolbar);
             assertEquals(a.getString(title),String.valueOf(toolbar.getTitle()));
-            NavigationBarView nav=find(decor,NavigationBarView.class);assertNotNull(nav);
-            assertEquals(3,nav.getMenu().size());assertEquals(menu,nav.getSelectedItemId());
-            boolean deep=name.equals("group-detail")||name.equals("hook-detail");
-            assertEquals(!deep,nav.isShown());
+            NavigationBarView nav=find(decor,NavigationBarView.class);
+            boolean manual=name.equals("mcc");
+            boolean deep=manual||java.util.Set.of("group-detail","hook-detail","settings","scope","about","help","privacy").contains(name);
+            if(manual){assertNull(nav);assertEquals(0,menu);}else{
+                assertNotNull(nav);assertEquals(3,nav.getMenu().size());assertEquals(menu,nav.getSelectedItemId());assertEquals(!deep,nav.isShown());
+            }
             if(deep){assertNotNull(toolbar.getNavigationIcon());assertEquals(a.getString(R.string.ui_back),String.valueOf(toolbar.getNavigationContentDescription()));}
             float density=a.getResources().getDisplayMetrics().density;
-            JSONObject g=new JSONObject(); g.put("route",name);g.put("selected_menu",menu);g.put("real_activity",true);g.put("disconnected",true);g.put("density",density);
+            JSONObject g=new JSONObject(); g.put("route",name);g.put("selected_menu",menu);g.put("real_activity",true);boolean fixture=java.util.Set.of("connected-home","settings","scope","about","help","privacy","light-home").contains(name);
+            g.put("disconnected",!fixture);g.put("framework_fixture",fixture);g.put("density",density);
+            g.put("build_source",a.getString(R.string.hooklab_build_source));
+            String theme=(a.getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?"dark":"light";
+            assertEquals(name.equals("light-home")?"light":"dark",theme);g.put("theme",theme);
             g.put("width_dp",a.getResources().getConfiguration().screenWidthDp);
             g.put("font_scale",a.getResources().getConfiguration().fontScale);
             WindowInsets wi=decor.getRootWindowInsets();assertNotNull(wi);
@@ -159,12 +216,12 @@ public final class NativeBaselineTest {
                 String nameLabel=String.valueOf(nav.getMenu().findItem(ids[n]).getTitle());
                 controls.put(keys[n],semantic(item,label(item,nameLabel),density).put("selected",nav.getSelectedItemId()==ids[n]));
             }
-            g.put("semantic_controls",controls);geometry[0]=g;
+            g.put("semantic_controls",controls);g.put("body_controls",bodyEvidence(decor,a,name,density));g.put("palette",palette(a));geometry[0]=g;
         }catch(Exception e){throw new AssertionError(e);}});
         assertNotNull(geometry[0]);
         return geometry[0];
     }
-    private static void capture(ActivityScenario<MainActivity> scenario, String name, int menu, int title) throws Exception {
+    public static void capture(ActivityScenario<? extends androidx.appcompat.app.AppCompatActivity> scenario, String name, int menu, int title) throws Exception {
         var ins=InstrumentationRegistry.getInstrumentation();
         ins.waitForIdleSync();UiDevice.getInstance(ins).waitForIdle();
         File folder=new File(ins.getTargetContext().getFilesDir(),"uxr00-native-smoke");
@@ -227,6 +284,16 @@ public final class NativeBaselineTest {
             stage="HOME_TAP";onView(withId(HOME)).perform(click());
             stage="HOME_RECREATE";s.recreate();s.onActivity(a->{NavigationBarView n=find(a.getWindow().getDecorView(),NavigationBarView.class);assertNotNull(n);assertEquals(HOME,n.getSelectedItemId());});
         }
+        stage="R03_CONNECTED";
+        com.mikeyphw.hooklab.ui.FrameworkFixtureTest.captureWholeApp();
+        stage="R03_MCC";
+        try(ActivityScenario<com.mikeyphw.hooklab.mcc.MccControlActivity> manual=ActivityScenario.launch(com.mikeyphw.hooklab.mcc.MccControlActivity.class)){
+            assertEquals(com.mikeyphw.hooklab.mcc.MccManualOperation.Stage.IDLE,com.mikeyphw.hooklab.mcc.MccManualOperation.shared().snapshot().stage);
+            capture(manual,"mcc",0,R.string.r03_manual_control);
+            onView(androidx.test.espresso.matcher.ViewMatchers.withText(R.string.ui07_mcc_write)).perform(androidx.test.espresso.action.ViewActions.scrollTo(),click());
+            onView(androidx.test.espresso.matcher.ViewMatchers.withText(android.R.string.cancel)).perform(click());
+            assertEquals(com.mikeyphw.hooklab.mcc.MccManualOperation.Stage.IDLE,com.mikeyphw.hooklab.mcc.MccManualOperation.shared().snapshot().stage);
+        }
         // R05 settings-only route: preserve the real bridge without granting permission or executing anything.
         stage="SETTINGS_LAUNCH";
         android.content.Intent settings=new android.content.Intent(instrumentation.getTargetContext(),
@@ -249,6 +316,7 @@ public final class NativeBaselineTest {
         } catch (AssertionError | Exception failure) {
             // Stable synthetic marker: host exports only the allowlisted stage, exception
             // class and source locations, never the exception message or UI/log contents.
+            if(failure instanceof AssertionError && failure.getMessage()!=null && failure.getMessage().startsWith("UXR00_STAGE_R03_"))throw (AssertionError)failure;
             throw new AssertionError("UXR00_STAGE_"+stage,failure);
         }
     }

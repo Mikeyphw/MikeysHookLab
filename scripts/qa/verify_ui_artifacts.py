@@ -8,7 +8,8 @@ import argparse,hashlib,json,re,struct,sys,zlib
 from pathlib import Path
 import reference
 
-MAP={'home':'VIS-024','hooks':'VIS-002','by-app':'VIS-003','group-detail':'VIS-004','hook-detail':'VIS-005','diagnostics':'VIS-006'}
+from visual_routes import MAP
+from visual_body import compare as compare_body
 def need(ok,msg):
     if not ok:raise ValueError(msg)
 def read(p,max_bytes=12*1024*1024):
@@ -56,6 +57,7 @@ def native(root,folder,source,tree,run,attempt):
     for row in v['cases']:
         route=row['route'];png(nat/(route+'-repeat.png'),(780,1688));h=png(nat/(route+'.png'),(780,1688));need(h not in seen and r['screenshots'][route]=={'png':h,'geometry':sha(nat/(route+'.json'))},'native screenshot/geometry drift');seen.add(h)
         need(row['reference_case']==MAP[route] and row['native_sha256']==h and row['reference_sha256']==sha(ref/'first'/(MAP[route]+'.png')) and row['triptych_sha256']==png(report/(route+'-triptych.png'),(1170,868)) and row['visual_approved'] is False and row['fixture_equivalence'] is False,'triptych/approval drift')
+        need(row.get('body_comparison')==compare_body(obj(ref/'first'/(MAP[route]+'.json')),obj(nat/(route+'.json')),route),'body comparison drift')
     return {'status':'NATIVE_CANDIDATE_EVIDENCE_REHASHED','source_sha':source,'source_tree':tree,'run_id':str(run),'run_attempt':str(attempt),'candidate_comparisons':len(MAP),'approved_cases':0,'native_visual_approved':False,'physical_device_qualified':False,'release_qualified':False,'report_sha256':sha(report/'visual-report.json')}
 
 def main():

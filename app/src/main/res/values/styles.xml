@@ -8,17 +8,25 @@
         <item name="colorOnSurface">@color/hooklab_on_surface</item>
         <item name="colorOnSurfaceVariant">@color/hooklab_secondary</item>
         <item name="colorOutline">@color/hooklab_muted</item>
+        <item name="colorOutlineVariant">@color/hooklab_divider</item>
+        <item name="colorError">@color/hooklab_error</item>
         <item name="android:windowBackground">@color/hooklab_canvas</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowActionModeOverlay">true</item>
+        <item name="actionOverflowButtonStyle">@style/Widget.HookLab.Overflow</item>
+    </style>
+    <style name="Widget.HookLab.Overflow" parent="Widget.AppCompat.ActionButton.Overflow">
+        <item name="android:minWidth">48dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:layout_width">48dp</item>
     </style>
     <style name="Theme.HookLab.Amoled" parent="Theme.HookLab">
         <item name="colorSurface">#000000</item>
-        <item name="colorSurfaceContainer">#101719</item>
-        <item name="colorSurfaceVariant">#1c2426</item>
-        <item name="colorOnSurface">#f0f4f1</item>
-        <item name="colorOnSurfaceVariant">#9ca9a7</item>
+        <item name="colorSurfaceContainer">#111718</item>
+        <item name="colorSurfaceVariant">#1c2527</item>
+        <item name="colorOnSurface">#eef3ef</item>
+        <item name="colorOnSurfaceVariant">#a5b2af</item>
         <item name="android:windowBackground">#000000</item>
     </style>
 </resources>

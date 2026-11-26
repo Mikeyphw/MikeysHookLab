@@ -13,8 +13,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /** Single background owner for LSPosed binder reads and confirmed preference writes. */
 public final class FrameworkStateStore {
@@ -23,17 +21,14 @@ public final class FrameworkStateStore {
 
     private final UiEnvironment environment;
     private final Handler main = new Handler(Looper.getMainLooper());
-    private final ExecutorService worker = Executors.newSingleThreadExecutor(task -> {
-        Thread t = new Thread(task, "hooklab-framework-state");
-        t.setDaemon(true);
-        return t;
-    });
+    private final Map<PendingFrameworkCommands.Ticket, Completion> completions=new HashMap<>();
+    private Runnable readTimeout;
     // These are touched exclusively on the main thread.
     private Observer observer;
     private volatile long generation;
     private volatile boolean closed;
     private long settledGeneration = -1;
-    private long lifecycleEpoch;
+    private volatile long lifecycleEpoch;
     private UiEnvironment.Port publishedPort;
 
     FrameworkStateStore(UiEnvironment environment) { this.environment = java.util.Objects.requireNonNull(environment); }
@@ -50,13 +45,15 @@ public final class FrameworkStateStore {
     public void stop() {
         generation++;
         lifecycleEpoch++;
+        completions.clear();
+        if(readTimeout!=null){main.removeCallbacks(readTimeout);readTimeout=null;}
         publishedPort = null;
         observer = null;
     }
     public void close() {
         stop();
         closed = true;
-        worker.shutdown(); // Never interrupt a partially committed framework preference write.
+        // The process worker stays alive to settle any already submitted command.
     }
     private void publish(FrameworkSnapshot next) {
         if (observer != null) observer.onSnapshot(next);
@@ -70,11 +67,13 @@ public final class FrameworkStateStore {
         publishedPort = null;
         publish(FrameworkSnapshot.loading());
         // A stuck framework binder must not leave the UI spinning forever.
-        main.postDelayed(() -> {
+        if(readTimeout!=null)main.removeCallbacks(readTimeout);
+        readTimeout=()-> {
             if (!closed && observer != null && ticket == generation && settledGeneration != ticket)
                 publish(FrameworkSnapshot.unavailable());
-        }, 8000L);
-        worker.execute(() -> {
+        };
+        main.postDelayed(readTimeout,8000L);
+        environment.app.frameworkTask(() -> {
             if (closed || ticket != generation) return; // skip queued stale binder work
             FrameworkSnapshot result;
             try { result = read(bound); }
@@ -89,6 +88,7 @@ public final class FrameworkStateStore {
                     return;
                 }
                 settledGeneration = ticket;
+                if(readTimeout!=null){main.removeCallbacks(readTimeout);readTimeout=null;}
                 publishedPort = resolved.ready() ? bound : null;
                 publish(resolved);
             });
@@ -144,73 +144,84 @@ public final class FrameworkStateStore {
                     && expected.getApiVersion() >= 102;
         } catch (RuntimeException | LinkageError error) { return false; }
     }
-    private void completed(UiEnvironment.Port expected, long epoch, boolean success, Completion cb) {
-        main.post(() -> {
-            if (closed || observer == null || epoch != lifecycleEpoch) return;
-            boolean current = expected == environment.currentService();
-            cb.complete(success && current);
-            refresh(); // Re-read framework truth; never optimistically flip the switch.
-        });
+    private PendingFrameworkCommands pending(){return environment.app.frameworkCommands();}
+    public boolean pendingPreference(String id){return pending().contains("pref:"+id);}
+    public boolean pendingScope(String pkg){return pending().contains("scope:"+pkg);}
+    public Set<String> pendingScope(){return pending().keys("scope:");}
+    private PendingFrameworkCommands.Ticket begin(UiEnvironment.Port expected,String key,Completion cb){
+        if(observer==null||closed||!ownsReadySnapshot(expected)){cb.complete(false);return null;}
+        PendingFrameworkCommands.Ticket ticket=pending().begin(key);
+        if(ticket!=null){completions.put(ticket,cb);environment.app.frameworkCommandsChanged();}
+        return ticket;
     }
-    private void write(UiEnvironment.Port expected, String group, String key, boolean value, Completion cb) {
-        if (observer == null || closed || !ownsReadySnapshot(expected)) { cb.complete(false); return; }
-        long epoch = lifecycleEpoch;
-        worker.execute(() -> {
-            boolean saved = false;
-            if (isReady(expected)) {
-                try {
-                    SharedPreferences prefs = expected.getRemotePreferences(group);
-                    saved = prefs != null && prefs.edit().putBoolean(key, value).commit()
-                            && prefs.getBoolean(key, !value) == value;
-                } catch (RuntimeException | LinkageError ignored) { saved = false; }
+    private void completed(UiEnvironment.Port expected,long epoch,PendingFrameworkCommands.Ticket ticket,boolean success){
+        main.post(()->{
+            if(!pending().complete(ticket))return; // stale completion cannot clear a successor
+            Completion cb=completions.remove(ticket);
+            if(!closed&&observer!=null&&epoch==lifecycleEpoch&&cb!=null){
+                boolean current=expected==environment.currentService();cb.complete(success&&current);
             }
-            completed(expected, epoch, saved, cb);
+            // Notify the currently attached Activity even when the original one was stopped.
+            environment.app.frameworkCommandsChanged();
         });
     }
-    public void writeTweak(UiEnvironment.Port expected, String id, boolean enabled, Completion cb) {
-        write(expected, TweakKeys.GROUP, TweakKeys.enabled(id), enabled, cb);
+    private boolean canStart(UiEnvironment.Port expected,long epoch){return !closed&&epoch==lifecycleEpoch&&isReady(expected);}
+    private void write(UiEnvironment.Port expected,String operation,String group,String key,boolean value,Completion cb){
+        PendingFrameworkCommands.Ticket ticket=begin(expected,"pref:"+operation,cb);if(ticket==null)return;
+        long epoch=lifecycleEpoch;
+        environment.app.frameworkTask(()->{
+            boolean saved=false;
+            if(canStart(expected,epoch))try{
+                SharedPreferences prefs=expected.getRemotePreferences(group);
+                saved=prefs!=null&&prefs.edit().putBoolean(key, value).commit()&&prefs.getBoolean(key, !value) == value;
+            }catch(RuntimeException|LinkageError error){saved=false;}
+            completed(expected,epoch,ticket,saved);
+        });
     }
-    public void writeSafetyLock(UiEnvironment.Port expected, String id, boolean locked, Completion cb) {
-        write(expected, TweakDiagnostics.GROUP, TweakDiagnostics.quarantineKey(id), locked, cb);
+    public void writeTweak(UiEnvironment.Port expected,String id,boolean enabled,Completion cb){
+        write(expected,id,TweakKeys.GROUP,TweakKeys.enabled(id),enabled,cb);
     }
-    public void writeVerbose(UiEnvironment.Port expected, boolean enabled, Completion cb) {
-        write(expected, TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb);
+    public void writeSafetyLock(UiEnvironment.Port expected, String id, boolean locked, Completion cb){
+        write(expected,"lock:"+id,TweakDiagnostics.GROUP,TweakDiagnostics.quarantineKey(id),locked,cb);
     }
-    public void requestScope(UiEnvironment.Port expected, String pkg, Completion cb) {
-        if (observer == null || closed || !ownsReadySnapshot(expected) || !environment.knowsPackage(pkg)) {
-            cb.complete(false); return;
-        }
-        long epoch = lifecycleEpoch;
-        java.util.concurrent.atomic.AtomicBoolean once = new java.util.concurrent.atomic.AtomicBoolean();
-        Completion single = success -> { if (once.compareAndSet(false, true)) completed(expected, epoch, success, cb); };
-        worker.execute(() -> {
-            if (!isReady(expected)) { single.complete(false); return; }
-            try {
-                expected.requestScope(Collections.singletonList(pkg), new UiEnvironment.ScopeListener() {
-                    @Override public void onScopeRequestApproved(List<String> approved) {
-                        single.complete(approved != null && approved.contains(pkg));
-                    }
-                    @Override public void onScopeRequestFailed(String reason) {
-                        single.complete(false);
-                    }
+    public void writeVerbose(UiEnvironment.Port expected,boolean enabled,Completion cb){
+        write(expected, "verbose", TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb);
+    }
+    public void requestScope(UiEnvironment.Port expected,String pkg,Completion cb){
+        if(!environment.knowsPackage(pkg)){cb.complete(false);return;}
+        PendingFrameworkCommands.Ticket ticket=begin(expected,"scope:"+pkg,cb);if(ticket==null)return;
+        long epoch=lifecycleEpoch;
+        java.util.concurrent.atomic.AtomicBoolean once=new java.util.concurrent.atomic.AtomicBoolean();
+        Completion single=success->{
+            if(!once.compareAndSet(false, true))return;
+            environment.app.frameworkTask(()->{
+                boolean confirmed=false;
+                if(success&&isReady(expected))try{confirmed=expected.getScope().contains(pkg);}catch(RuntimeException|LinkageError ignored){}
+                completed(expected,epoch,ticket,confirmed);
+            });
+        };
+        environment.app.frameworkTask(()->{
+            if(!canStart(expected,epoch)){single.complete(false);return;}
+            try{
+                expected.requestScope(Collections.singletonList(pkg),new UiEnvironment.ScopeListener(){
+                    @Override public void onScopeRequestApproved(List<String> approved){single.complete(approved!=null&&approved.contains(pkg));}
+                    @Override public void onScopeRequestFailed(String reason){single.complete(false);}
                 });
-            } catch (RuntimeException | LinkageError error) { single.complete(false); }
+            }catch(RuntimeException|LinkageError error){single.complete(false);}
         });
+        // No timeout releases a request whose remote effect is uncertain. It stays pending
+        // until the framework callback or process loss, never automatically resubmitted.
     }
-    public void removeScope(UiEnvironment.Port expected, String pkg, Completion cb) {
-        if (observer == null || closed || !ownsReadySnapshot(expected) || !environment.knowsPackage(pkg)) {
-            cb.complete(false); return;
-        }
-        long epoch = lifecycleEpoch;
-        worker.execute(() -> {
-            boolean requested = false;
-            if (isReady(expected)) {
-                try {
-                    expected.removeScope(Collections.singletonList(pkg));
-                    requested = true; // Request submitted; snapshot later verifies actual scope.
-                } catch (RuntimeException | LinkageError ignored) { /* request failed */ }
-            }
-            completed(expected, epoch, requested, cb);
+    public void removeScope(UiEnvironment.Port expected,String pkg,Completion cb){
+        if(!environment.knowsPackage(pkg)){cb.complete(false);return;}
+        PendingFrameworkCommands.Ticket ticket=begin(expected,"scope:"+pkg,cb);if(ticket==null)return;
+        long epoch=lifecycleEpoch;
+        environment.app.frameworkTask(()->{
+            boolean confirmed=false;
+            if(canStart(expected,epoch))try{
+                expected.removeScope(Collections.singletonList(pkg));confirmed=!expected.getScope().contains(pkg);
+            }catch(RuntimeException|LinkageError ignored){}
+            completed(expected,epoch,ticket,confirmed);
         });
     }
 }

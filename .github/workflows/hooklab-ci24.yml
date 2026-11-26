@@ -5,8 +5,14 @@ on:
   # This separate PR run qualifies the initial workflow adoption, not a release.
   pull_request:
     paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle'
+      - 'gradle.properties'
+      - 'gradlew*'
       - '.github/workflows/hooklab-ci24.yml'
       - 'scripts/qa/ci24.py'
+      - 'scripts/ci_gradle_retry.sh'
 permissions:
   contents: read
 concurrency:

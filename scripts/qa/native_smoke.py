@@ -4,13 +4,13 @@ from __future__ import annotations
 import argparse, hashlib, json, os, re, subprocess, sys, time
 from pathlib import Path
 PKG='com.mikeyphw.hooklab'; SERIAL='emulator-5554'
-ROUTES={'home':201,'hooks':202,'by-app':202,'group-detail':202,'hook-detail':202,'diagnostics':203}
+from visual_routes import NAV as ROUTES, DISCONNECTED, THEME
 TEST='com.mikeyphw.hooklab.qa.NativeBaselineTest#realActivityOfflineNavigation'
 FIXTURE='com.mikeyphw.hooklab.qa.DiagnosticFixtureTest#importedFixtureProjectionAndFilter'
 FRAMEWORK_TEST='com.mikeyphw.hooklab.ui.FrameworkFixtureTest#connectedCommandsStaleCallbackAndClock'
 TERMUX_TEST='com.mikeyphw.hooklab.termux.TermuxBridgeFixtureTest#syntheticAuthorizationAndReceipt'
 TESTS=[TEST,TEST,FIXTURE,FRAMEWORK_TEST,TERMUX_TEST]
-FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','capture_restart_same_route','health_exact_same_package_routes','health_navigation_no_writes','filtered_multi_app_route','catalog_recreate_and_return','catalog_navigation_no_writes','installed_package_icon_identity','missing_and_unknown_icon_states','no_real_framework']}
+FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','scope_pending_across_recreation','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','capture_restart_same_route','health_exact_same_package_routes','health_navigation_no_writes','filtered_multi_app_route','catalog_recreate_and_return','catalog_navigation_no_writes','installed_package_icon_identity','missing_and_unknown_icon_states','no_real_framework']}
 FIXTURE_EVIDENCE={'schema':'hooklab.diagnostics.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'framework_disconnected':True,'assertions':['three_normalized_events','actual_timeline_projection','filter_one_of_three','raw_marker_not_rendered','store_unchanged','no_framework_service','filter_cancel_preserves_applied','stable_inspector_identity_recreate','isolated_workspaces','clear_filter','single_import_sheet_cancel','unsafe_uri_refused','redaction_preview_cancel_clipboard_unchanged']}
 
 def require(ok,msg):
@@ -20,10 +20,10 @@ def adb(*args):return subprocess.check_output(['adb','-s',SERIAL,*args],timeout=
 def txt(*args):return adb(*args).decode('utf-8')
 def raw(*args):return subprocess.check_output(['adb','-s',SERIAL,*args],timeout=30)
 def git(*args):return subprocess.check_output(['git',*args],text=True,timeout=25).strip()
-def guard():
+def guard(api=36):
     require(os.getenv('GITHUB_ACTIONS')=='true' and os.getenv('RUNNER_OS')=='Linux','HOSTED_ONLY')
     devices=subprocess.check_output(['adb','devices'],text=True,timeout=20).splitlines();require([x.split() for x in devices[1:] if x.strip()]==[[SERIAL,'device']],'unexpected ADB device inventory')
-    require(txt('shell','getprop','ro.kernel.qemu')=='1' and txt('shell','getprop','ro.build.version.sdk')=='36','API36_EMULATOR_REQUIRED')
+    require(api in (29,36) and txt('shell','getprop','ro.kernel.qemu')=='1' and txt('shell','getprop','ro.build.version.sdk')==str(api),'EXPECTED_API_EMULATOR_REQUIRED')
     require(txt('shell','getprop','sys.boot_completed')=='1','EMULATOR_NOT_BOOTED')
     # Adapted from Cinderbox R48 offline gate: ConnectivityService and setting
     # readback, Wi-Fi independent, and explicit absence of default network.
@@ -99,14 +99,16 @@ def verify(out,expected):
     return receipt
 
 def validate_geometry(g,route):
-    require(set(g)=={'route','selected_menu','real_activity','disconnected','density','width_dp','font_scale','insets_px','views','semantic_controls'},'unexpected native hierarchy metadata')
-    require(g['route']==route and g['selected_menu']==ROUTES[route] and g['real_activity'] is True and g['disconnected'] is True and g['width_dp']==390 and g['density']==2 and g['font_scale']==1 and 10<len(g['views'])<=4000,'wrong native geometry')
+    require(set(g)=={'route','selected_menu','real_activity','disconnected','density','width_dp','font_scale','insets_px','views','semantic_controls','build_source','theme','framework_fixture','body_controls','palette'},'unexpected native hierarchy metadata')
+    require(g['route']==route and g['selected_menu']==ROUTES[route] and g['real_activity'] is True and g['disconnected'] is DISCONNECTED[route] and g['framework_fixture'] is (not DISCONNECTED[route]) and g['theme']==THEME[route] and re.fullmatch('[0-9a-f]{40}',g['build_source']) and g['width_dp']==390 and g['density']==2 and g['font_scale']==1 and 10<len(g['views'])<=4000,'wrong native geometry')
     insets=g['insets_px'];require(isinstance(insets,list) and len(insets)==4 and all(type(x) is int and 0<=x<=200 for x in insets),'invalid system insets')
     for row in g['views']:
         keys={'class','clickable','enabled','focusable','heading','bounds_px','width_dp','height_dp'}
         require(set(row) in (keys,keys|{'text_size_px','text_color'}),'non-allowlisted hierarchy field')
         require(re.fullmatch('[A-Za-z0-9_$]+',row['class']) and all(type(row[k]) is bool for k in ('clickable','enabled','focusable','heading')),'invalid hierarchy identity')
         b=row['bounds_px'];require(len(b)==4 and all(type(x) is int for x in b) and 0<=b[0]<b[2]<=780 and 0<=b[1]<b[3]<=1688,'invalid visible native bounds')
+    from visual_body import validate as validate_body
+    validate_body(g,route)
     from visual import native_controls
     native_controls(g,route)
 
@@ -122,7 +124,7 @@ def validate_receipt_files(out,receipt):
         seen=set();records={}
         for route in ROUTES:
             image=out/(route+suffix+'.png');geo=out/(route+suffix+'.json');require(0<image.stat().st_size<=12*1024*1024 and 0<geo.stat().st_size<=2*1024*1024,'invalid evidence size');h=digest(image);require(h not in seen,'duplicate screenshot');seen.add(h)
-            validate_geometry(json.loads(geo.read_text()),route);records[route]={'png':h,'geometry':digest(geo)}
+            geometry=json.loads(geo.read_text());validate_geometry(geometry,route);require(geometry['build_source']==receipt['source_sha'],'installed build source drift');records[route]={'png':h,'geometry':digest(geo)}
         require(records==receipt[field],'native screenshot hash drift')
     require(set(receipt['repeat_calibration'])==set(ROUTES),'repeat calibration missing')
     for result in receipt['repeat_calibration'].values():require(result['ssim']>=.99 and result['changed_pixel_ratio']<=.01,'native repeat not within strict thresholds')
@@ -207,11 +209,11 @@ def expected_identity():
     require(all(re.fullmatch('[1-9][0-9]*',os.environ.get(k,'')) for k in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT')),'invalid run identity')
     return {'schema':'hooklab.native.smoke.v1','source_sha':source,'source_tree':git('rev-parse','HEAD^{tree}'),'run_id':os.environ['GITHUB_RUN_ID'],'run_attempt':os.environ['GITHUB_RUN_ATTEMPT'],'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
 
-FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','R02_EXPAND','R02_GROUP_CAPTURE','R02_HOOK_CAPTURE','R02_BY_APP_CAPTURE','R02_CATALOG_ROUTES','R02_SINGLE_GROUP','R02_ICON_PROVIDER','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT','FRAMEWORK_SETUP','FRAMEWORK_PREFERENCES','FRAMEWORK_SCOPE','FRAMEWORK_GROUP','HEALTH_EXACT_ROUTE','CAPTURE_START','CAPTURE_ACTIVE_RENDER','CAPTURE_MARKER','CAPTURE_STOP','CAPTURE_RESTART','FRAMEWORK_RECEIPT'))
+FAILURE_STAGES=frozenset(('PRECONDITIONS','MAIN_LAUNCH','DISCONNECTED_SETTLE','HOME_CAPTURE','HOOKS_TAP','HOOKS_CAPTURE','R02_EXPAND','R02_GROUP_CAPTURE','R02_HOOK_CAPTURE','R02_BY_APP_CAPTURE','R02_CATALOG_ROUTES','R02_CATALOG_SEARCH_REVEAL','R02_CATALOG_SEARCH_EDIT','R02_CATALOG_SEARCH_IME','R02_CATALOG_SEARCH_RESULT','R02_SINGLE_GROUP','R02_ICON_PROVIDER','DIAGNOSTICS_TAP','DIAGNOSTICS_CAPTURE','HOME_TAP','HOME_RECREATE','SETTINGS_LAUNCH','SETTINGS_ASSERTIONS','SETTINGS_CLOSE','TERMUX_SETTINGS','TERMUX_RESULT','FRAMEWORK_SETUP','FRAMEWORK_PREFERENCES','FRAMEWORK_SCOPE','FRAMEWORK_GROUP','HEALTH_EXACT_ROUTE','CAPTURE_START','CAPTURE_ACTIVE_RENDER','CAPTURE_MARKER','CAPTURE_STOP','CAPTURE_RESTART','FRAMEWORK_RECEIPT','R03_CONNECTED','R03_SETTINGS','R03_SCOPE','R03_ABOUT','R03_HELP','R03_PRIVACY','R03_LIGHT','R03_MCC'))
 # Restrict exported frames to our three instrumentation classes. Raw stack/message/UI text
 # can contain private or attacker-controlled data; it is never written or printed.
 FRAME_CLASSES={t.split('#')[0]:t.split('#')[0].rsplit('.',1)[-1]+'.java' for t in TESTS}
-SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock','press','readyText','switchState','await','awaitPending','settledScreenshot','awaitCommittedFrame','captureGeometry','syntheticAuthorizationAndReceipt'))
+SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock','press','readyText','switchState','await','awaitPending','settledScreenshot','awaitCommittedFrame','captureGeometry','syntheticAuthorizationAndReceipt','captureWholeApp','bodyEvidence','bodyControl'))
 SAFE_EXCEPTION_TYPES=frozenset(('java.lang.AssertionError','java.lang.IllegalStateException','java.lang.IllegalArgumentException','java.lang.NullPointerException','java.lang.RuntimeException','java.lang.SecurityException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.AppNotIdleException','androidx.test.espresso.NoActivityResumedException','androidx.test.espresso.base.RootViewPicker$RootViewWithoutFocusException'))
 
 def failure_details(output,test_id,ordinal,completed,rc,reason):
@@ -234,10 +236,28 @@ def failure_details(output,test_id,ordinal,completed,rc,reason):
         if match and len(codes)<32:codes.append({'kind':match[1],'code':int(match[2])})
     return {'test_id':test_id,'ordinal':ordinal,'completed_tests':list(completed),'child_exit_code':rc,'reason':reason,'stage':stages[0] if len(stages)==1 else 'UNKNOWN','exception_types':exceptions,'source_frames':frames,'status_codes':codes}
 
+FAILURE_CHECKS=frozenset(('TouchTargetSizeCheck','TextContrastCheck','DuplicateSpeakableTextCheck','SpeakableTextPresentCheck','RedundantDescriptionCheck','EditableContentDescCheck','ClickableSpanCheck','ImageContrastCheck','TraversalOrderCheck','AccessibilityViewCheckException'))
+FAILURE_CAUSE_CLASS=re.compile(r'(?:java\.lang|androidx\.test\.espresso(?:\.[a-z]+)*|com\.google\.android\.apps\.common\.testing\.accessibility\.framework(?:\.[a-z]+)*)\.[A-Za-z0-9_$]+')
+FAILURE_CAUSE_FRAME=re.compile(r'com\.mikeyphw\.hooklab\.(?:qa|ui)\.[A-Za-z0-9_$]+\.[A-Za-z0-9_$]+\([A-Za-z0-9_]+\.java:[1-9][0-9]{0,4}\)')
+def clear_failure_checkpoint():
+    adb('shell','run-as',PKG,'rm','-f','files/uxr04-adaptive/failure-detail.json','files/uxr04-adaptive/failure-detail.tmp')
+def failure_checkpoint(source,test_id,phases):
+    try:
+        data=raw('exec-out','run-as',PKG,'cat','files/uxr04-adaptive/failure-detail.json')
+        if not 0<len(data)<=16384:return None
+        row=json.loads(data)
+        if set(row)!={'schema','source','test','phase','exception_classes','accessibility_checks','source_frames'} or row['schema']!='hooklab.qa.failure.v1' or row['source']!=source or row['test']!=test_id.split('#')[-1] or row['phase'] not in phases:return None
+        for key,limit,matcher in [('exception_classes',8,lambda x:FAILURE_CAUSE_CLASS.fullmatch(x)),('accessibility_checks',10,lambda x:x in FAILURE_CHECKS),('source_frames',32,lambda x:FAILURE_CAUSE_FRAME.fullmatch(x))]:
+            values=row[key]
+            if not isinstance(values,list) or len(values)>limit or any(not isinstance(x,str) or not matcher(x) for x in values) or len(set(values))!=len(values):return None
+        return row
+    except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
+
 def run_instrumentation(out,ident,test_id,completed):
     ordinal=len(completed)+1;reason='TRANSPORT_FAILED';output='';rc=None
     try:
-        result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',test_id,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=240)
+        if test_id==FRAMEWORK_TEST:clear_failure_checkpoint()
+        result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',test_id,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=480 if test_id==TEST else 240)
         rc=result.returncode;output=result.stdout
         require(rc==0,'instrumentation child failed '+test_id)
         reason='TEST_FAILED';parse_instrumentation(output,test_id)
@@ -245,6 +265,8 @@ def run_instrumentation(out,ident,test_id,completed):
         if isinstance(failure,subprocess.TimeoutExpired):reason='TIMEOUT';output=failure.stdout or ''
         elif isinstance(failure,OSError):reason='SPAWN_FAILED'
         details=failure_details(output,test_id,ordinal,completed,rc,reason)
+        details['cause_checkpoint']=failure_checkpoint(ident['source_sha'],test_id,FAILURE_STAGES) if test_id==FRAMEWORK_TEST else None
+        if details['cause_checkpoint'] is not None:details['stage']=details['cause_checkpoint']['phase']
         # Receipt is exact-source/run bound, not a success or a full visual receipt.
         record={**ident,'status':'INSTRUMENTATION_FAILED','failure':details}
         (out/'receipt.json').write_text(json.dumps(record,indent=2,sort_keys=True)+'\n')

@@ -19,7 +19,7 @@ must('getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false)' in logs
      and 'getBoolean(TweakKeys.VERBOSE_LSPOSED_LOGS, false)' in store
      and 'Boolean.TRUE.equals(snapshot.verboseLogging)' in ui,
      'default-off toggle both app and host')
-must('write(expected, TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb)' in store
+must('write(expected, "verbose", TweakKeys.GROUP, TweakKeys.VERBOSE_LSPOSED_LOGS, enabled, cb)' in store
      and 'prefs.edit().putBoolean(key, value).commit()' in store
      and 'prefs.getBoolean(key, !value) == value' in store
      and 'expected == environment.currentService()' in store

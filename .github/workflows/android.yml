@@ -50,7 +50,7 @@ jobs:
         shell: bash
         # Only HTTP 429 dependency download failures receive up to 3 attempts.
         # This script preserves live Gradle output and the exact nonzero exit.
-        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug
       - name: Verify APK and record source
         shell: bash
         run: |

@@ -4,7 +4,10 @@
     <color name="hooklab_surface_2">#dce5df</color>
     <color name="hooklab_on_surface">#182321</color>
     <color name="hooklab_secondary">#546660</color>
-    <color name="hooklab_muted">#526a61</color>
+    <color name="hooklab_muted">#546660</color>
     <color name="hooklab_accent">#295e4c</color>
     <color name="hooklab_accent_ink">#ffffff</color>
+    <color name="hooklab_warning">#80551a</color>
+    <color name="hooklab_error">#ae403f</color>
+    <color name="hooklab_divider">#c5d0c9</color>
 </resources>

@@ -53,6 +53,8 @@ public final class HomeDashboardModelTest {
             new DiagnosticTimeline());
         assertEquals(3,s.problems);assertEquals(0,s.eligibleConfigurations);
         assertEquals("neostore.obtainx.manual",s.attentionHookId);
+        assertEquals(Arrays.asList("neostore.obtainx.manual","droidify.obtainx.manual","mcc.diamond.control"),s.attentionHookIds);
+        try{s.attentionHookIds.add("bad");fail("mutable attention");}catch(UnsupportedOperationException expected){}
     }
     @Test public void voluntaryOptOutIsNotAProblem(){
         Map<String,FrameworkSnapshot.Flag> values=flags();

@@ -33,8 +33,9 @@ public final class HookLabApp extends Application implements XposedServiceHelper
     public synchronized boolean startCapture(com.mikeyphw.hooklab.diagnostics.CaptureSession next){
         if(next==null || captureImportRunning.get() || (captureSession!=null &&
                 captureSession.state()==com.mikeyphw.hooklab.diagnostics.CaptureSession.State.ACTIVE))return false;
+        // Persist the interruption marker before publishing an active session.
+        if(!getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE).edit().putBoolean("unfinished",true).commit())return false;
         captureSession=next;
-        getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE).edit().putBoolean("unfinished",true).apply();
         return true;
     }
     public void closeCapture(){
@@ -44,6 +45,14 @@ public final class HookLabApp extends Application implements XposedServiceHelper
         return captureSession==null && getSharedPreferences("hooklab.dx02.capture", MODE_PRIVATE)
                 .getBoolean("unfinished",false);
     }
+    // Serialize binder work across Activity recreation and external UI launches.
+    private final java.util.concurrent.ExecutorService frameworkWorker=java.util.concurrent.Executors.newSingleThreadExecutor(task->{
+        Thread thread=new Thread(task,"hooklab-framework-state");thread.setDaemon(true);return thread;
+    });
+    private final com.mikeyphw.hooklab.ui.PendingFrameworkCommands frameworkCommands=new com.mikeyphw.hooklab.ui.PendingFrameworkCommands();
+    public void frameworkTask(Runnable task){frameworkWorker.execute(task);}
+    public com.mikeyphw.hooklab.ui.PendingFrameworkCommands frameworkCommands(){return frameworkCommands;}
+    public void frameworkCommandsChanged(){notifyObservers();}
     private final CopyOnWriteArraySet<Runnable> observers = new CopyOnWriteArraySet<>();
     private final Handler ui = new Handler(Looper.getMainLooper());
 

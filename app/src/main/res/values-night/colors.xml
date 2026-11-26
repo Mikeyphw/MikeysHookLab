@@ -1,10 +1,13 @@
 <resources>
     <color name="hooklab_canvas">#0d1214</color>
     <color name="hooklab_surface">#151b1e</color>
-    <color name="hooklab_surface_2">#1e272a</color>
-    <color name="hooklab_on_surface">#f0f4f1</color>
-    <color name="hooklab_secondary">#9ca9a7</color>
-    <color name="hooklab_muted">#83938e</color>
+    <color name="hooklab_surface_2">#20292c</color>
+    <color name="hooklab_on_surface">#eef3ef</color>
+    <color name="hooklab_secondary">#a5b2af</color>
+    <color name="hooklab_muted">#a5b2af</color>
     <color name="hooklab_accent">#b7eccb</color>
     <color name="hooklab_accent_ink">#183229</color>
+    <color name="hooklab_warning">#f4c987</color>
+    <color name="hooklab_error">#f29d9a</color>
+    <color name="hooklab_divider">#2a3436</color>
 </resources>

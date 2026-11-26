@@ -1,0 +1,12 @@
+<resources>
+    <item name="hooklab_catalog_search" type="id" />
+    <item name="hooklab_primary_navigation" type="id" />
+    <item name="hooklab_capture_tab" type="id" />
+    <item name="hooklab_capture_target" type="id" />
+    <item name="hooklab_capture_package" type="id" />
+    <item name="hooklab_capture_stop" type="id" />
+    <item name="hooklab_capture_mark" type="id" />
+    <item name="hooklab_capture_interrupted" type="id" />
+    <item name="hooklab_capture_research" type="id" />
+    <item name="hooklab_capture_module" type="id" />
+</resources>

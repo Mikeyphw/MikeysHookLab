@@ -13,15 +13,15 @@ public final class Ui08QualityPolicyTest {
             assertTrue(content>0);assertTrue(content<=dp);
         }
         assertEquals(320,Ui08QualityPolicy.contentWidth(320));
-        assertEquals(760,Ui08QualityPolicy.contentWidth(840));
-        assertTrue(UiLayoutPolicy.useRail(840));
-        assertFalse(UiLayoutPolicy.useRail(839));
+        assertEquals(752,Ui08QualityPolicy.contentWidth(840));
+        assertTrue(UiLayoutPolicy.useRail(760));
+        assertFalse(UiLayoutPolicy.useRail(759));
     }
     @Test public void actualBundledDayAndNightTextContrastsExceed45(){
         assertTrue(Ui08QualityPolicy.readableNormalText(0x182321,0xf4f6f3));
         assertTrue(Ui08QualityPolicy.readableNormalText(0x546660,0xf4f6f3));
-        assertTrue(Ui08QualityPolicy.readableNormalText(0xf0f4f1,0x0d1214));
-        assertTrue(Ui08QualityPolicy.readableNormalText(0x9ca9a7,0x0d1214));
+        assertTrue(Ui08QualityPolicy.readableNormalText(0xeef3ef,0x0d1214));
+        assertTrue(Ui08QualityPolicy.readableNormalText(0xa5b2af,0x0d1214));
     }
     @Test public void whiteOnWhiteIsNotClaimedAccessible(){
         assertFalse(Ui08QualityPolicy.readableNormalText(0xffffff,0xffffff));

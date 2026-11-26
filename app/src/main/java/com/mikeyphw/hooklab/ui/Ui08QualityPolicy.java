@@ -7,7 +7,7 @@ public final class Ui08QualityPolicy {
     private Ui08QualityPolicy() { }
     public static final int MIN_TOUCH_DP=48;
     public static final int MIN_NORMAL_TEXT_CONTRAST_X10=45;
-    public static int contentWidth(int dp) {return UiLayoutPolicy.contentWidthDp(dp);}
+    public static int contentWidth(int dp) {return UiLayoutPolicy.contentWidthDp(dp,1f);}
     public static boolean isTouchTargetLargeEnough(int widthDp,int heightDp){
         return widthDp>=MIN_TOUCH_DP && heightDp>=MIN_TOUCH_DP;
     }
