@@ -41,7 +41,7 @@ while (( attempt <= max_attempts )); do
     # authentication and non-429 dependency errors fail immediately.
     if ! grep -Eiq "Could not (GET|HEAD) ['\"]https://repo\.maven\.apache\.org/maven2/[^'\"]+['\"].*(Received status code 429|HTTP 429|Too Many Requests)" "$log" \
        || ! grep -Eq 'Could not resolve|Could not get resource' "$log" \
-       || grep -Eiq '(^|[[:space:]])error:|[0-9]+ tests completed, [1-9][0-9]* failed|Lint found [1-9][0-9]* errors|Received status code (401|403|404|5[0-9][0-9])' "$log"; then
+       || grep -Eiq '(^|[[:space:]])error:|[0-9]+ tests completed, [1-9][0-9]* failed|Lint found [1-9][0-9]* errors|You cannot add Provider instances to the Android SourceSet API|Received status code (401|403|404|5[0-9][0-9])' "$log"; then
         echo "HOOKLAB_GRADLE_NON_429_FAILURE rc=${rc}; no retry" >&2
         exit "$rc"
     fi

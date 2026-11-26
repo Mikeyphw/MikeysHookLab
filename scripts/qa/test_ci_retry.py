@@ -61,7 +61,7 @@ exit "$rc"
         self.assertIn('RETRY_EXHAUSTED attempts=5 original_rc=19',p.stderr)
 
     def test_refuse_non_429_and_mixed_failures(self):
-        for msg in ('error: cannot find symbol', RATE+'\nerror: cannot find symbol', RATE+'\n1 tests completed, 1 failed', RATE+'\nLint found 1 errors', RATE+'\nReceived status code 403', RATE.replace('429','401').replace('Too Many Requests','Unauthorized'), RATE.replace('repo.maven.apache.org','other.example'), 'HTTP 429'):
+        for msg in ('error: cannot find symbol', RATE+'\nerror: cannot find symbol', RATE+'\n1 tests completed, 1 failed', RATE+'\nLint found 1 errors', RATE+'\nYou cannot add Provider instances to the Android SourceSet API', 'You cannot add Provider instances to the Android SourceSet API', RATE+'\nReceived status code 403', RATE.replace('429','401').replace('Too Many Requests','Unauthorized'), RATE.replace('repo.maven.apache.org','other.example'), 'HTTP 429'):
             with self.subTest(msg=msg):
                 p,n,delays=self.execute('native',[(9,msg)])
                 self.assertEqual((p.returncode,n,delays),(9,1,[]))

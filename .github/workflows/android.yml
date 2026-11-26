@@ -30,11 +30,11 @@ jobs:
           # Restore dependency caches; PR builds do not need signing credentials.
           cache: gradle
           cache-dependency-path: |
-            settings.gradle
-            build.gradle
-            app/build.gradle
-            gradle.properties
-            gradle/wrapper/gradle-wrapper.properties
+            **/*.gradle
+            **/*.gradle.kts
+            **/gradle.properties
+            **/gradle-wrapper.properties
+            **/libs.versions.toml
       - uses: android-actions/setup-android@v4.0.4
         with:
           cmdline-tools-version: '15859902'
@@ -46,6 +46,9 @@ jobs:
           sdkmanager --version
           sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'
           test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
+      - name: Verify generated probe task graph (hosted only)
+        shell: bash
+        run: bash scripts/qa/mod01_gradle_graph.sh
       - name: Assemble, test and lint
         shell: bash
         # Only HTTP 429 dependency download failures receive up to 3 attempts.
@@ -242,8 +245,11 @@ jobs:
           retention-days: 14
   ci24:
     name: ci24
-    needs: [impact, source]
-    if: ${{ needs.impact.outputs.ci24 == 'true' }}
+    # Allow the single Android job to populate the common dependency cache.
+    # CI24 is still independent and runs even when that job fails: never turn
+    # an Android failure into a skipped/accepted shard roster.
+    needs: [impact, source, android]
+    if: ${{ !cancelled() && needs.impact.result == 'success' && needs.source.result == 'success' && needs.impact.outputs.ci24 == 'true' }}
     uses: ./.github/workflows/hooklab-ci24.yml
   design:
     name: design

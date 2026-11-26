@@ -168,8 +168,8 @@
       "parent_id": "MOD-00"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Native delivery, exact-head hosted CI24 and APK verification pending. Real owned-target Vector/LSPosed remote-file feasibility and device evidence required before MOD-02; visual and release acceptance remain pending.",
+      "acceptance": "FAILED",
+      "blocker": "PR #35 head 5a3c20b0e9f954145fb57a2ae29548b43b4e88f8 run 45861027352 attempt 1 failed during Gradle evaluation (Android plus 20 CI24 shards); four shards exhausted verified Maven Central HTTP 429 backoff. MOD-01-F01 successor qualification pending; physical-device probe and visual/release acceptance remain pending.",
       "counted": true,
       "dependencies": [
         "MOD-00"
@@ -179,6 +179,19 @@
       "kind": "OVERLAY",
       "name": "Modular Core & Internal SDK",
       "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-head hosted graph, Android build, full CI24, APK, visual and adaptive verification pending. Physical-device and release acceptance remain pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01"
+      ],
+      "id": "MOD-01-F01",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Generated Probe Assets and Hosted Dependency Recovery",
+      "parent_id": "MOD-01"
     },
     {
       "acceptance": "PENDING",
@@ -328,5 +341,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01"
+  "version": "2.0-MOD-01-F01"
 }

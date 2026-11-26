@@ -1,3 +1,8 @@
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.*
+
 plugins { id 'com.android.application' }
 // Only the protected GitHub Actions environment injects stable signing inputs.
 // PR/debug jobs never receive these variables, and libxposed hooks are unchanged.
@@ -101,23 +106,66 @@ dependencies {
 }
 
 // Independent debug-only DEX fixture. SDK remains in the parent APK, never in the payload.
-// Android builds, including D8, execute only in the hosted build lane.
-def probeAssets = layout.buildDirectory.dir('generated/mod01ProbeAssets')
-def buildMod01ProbeDex = tasks.register('buildMod01ProbeDex', Exec) {
-    dependsOn ':probe-payload:jar', ':sdk:jar'
-    outputs.dir(probeAssets)
-    inputs.files(provider { [project(':probe-payload').tasks.named('jar').get().archiveFile.get().asFile, project(':sdk').tasks.named('jar').get().archiveFile.get().asFile] })
-    doFirst {
-        def out = probeAssets.get().dir('mod01-probe').asFile
-        delete(out)
-        out.mkdirs()
-        def sdkDir = androidComponents.sdkComponents.sdkDirectory.get().asFile
-        def sdkJar = project(':sdk').tasks.named('jar').get().archiveFile.get().asFile
-        def payload = project(':probe-payload').tasks.named('jar').get().archiveFile.get().asFile
-        commandLine new File(sdkDir,'build-tools/36.0.0/d8'), '--release','--min-api','29',
-            '--lib', new File(sdkDir,'platforms/android-37.0/android.jar'),
-            '--classpath', sdkJar, '--output',out,payload
+// Use the AGP generated-source API, not AndroidSourceSet.srcDir(Provider).
+// The task's output DirectoryProperty supplies the dependency to every debug
+// consumer (including lint), without wiring any release or other variant.
+abstract class BuildMod01ProbeDex extends DefaultTask {
+    @InputFiles @PathSensitive(PathSensitivity.NONE)
+    abstract ConfigurableFileCollection getPayloadJars()
+    @Classpath abstract ConfigurableFileCollection getSdkJars()
+    @InputDirectory @PathSensitive(PathSensitivity.RELATIVE)
+    abstract DirectoryProperty getBuildTools()
+    @InputFile @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getAndroidJar()
+    @OutputDirectory abstract DirectoryProperty getOutputDirectory()
+    @javax.inject.Inject abstract org.gradle.process.ExecOperations getExecOperations()
+    @javax.inject.Inject abstract org.gradle.api.file.FileSystemOperations getFileSystemOperations()
+
+    @TaskAction void generate() {
+        File root = outputDirectory.get().asFile
+        fileSystemOperations.delete { delete(root) }
+        File out = new File(root, 'mod01-probe')
+        if (!out.mkdirs() && !out.isDirectory()) {
+            throw new GradleException('Cannot create MOD-01 generated asset directory')
+        }
+        execOperations.exec {
+            commandLine buildTools.file('d8').get().asFile, '--release', '--min-api', '29',
+                '--lib', androidJar.get().asFile, '--classpath', sdkJars.singleFile,
+                '--output', out, payloadJars.singleFile
+        }
+        File dex = new File(out, 'classes.dex')
+        if (!dex.isFile() || dex.length() == 0 || dex.length() > 256 * 1024 ||
+                out.list().toSet() != ['classes.dex'].toSet()) {
+            throw new GradleException('MOD-01 probe output inventory refused')
+        }
     }
 }
-android.sourceSets.debug.assets.srcDir(probeAssets)
-tasks.matching { it.name == 'mergeDebugAssets' }.configureEach { dependsOn buildMod01ProbeDex }
+// Separate, nontransitive artifact configurations: resolve the exact Java
+// library JARs lazily and inherit their producer task dependencies. Neither is
+// an APK implementation dependency. The SDK is a D8 classpath input only.
+def probePayload = configurations.create('mod01ProbePayload') {
+    canBeConsumed = false
+    canBeResolved = true
+    transitive = false
+}
+def probeSdk = configurations.create('mod01ProbeSdk') {
+    canBeConsumed = false
+    canBeResolved = true
+    transitive = false
+}
+dependencies {
+    mod01ProbePayload project(path: ':probe-payload', configuration: 'runtimeElements')
+    mod01ProbeSdk project(path: ':sdk', configuration: 'runtimeElements')
+}
+def mod01SdkRoot = androidComponents.sdkComponents.sdkDirectory
+androidComponents {
+    onVariants(selector().withBuildType('debug')) { variant ->
+        def dexTask = tasks.register('buildMod01ProbeDex', BuildMod01ProbeDex) {
+            payloadJars.from(probePayload)
+            sdkJars.from(probeSdk)
+            buildTools.set(mod01SdkRoot.map { it.dir('build-tools/36.0.0') })
+            androidJar.set(mod01SdkRoot.map { it.file('platforms/android-37.0/android.jar') })
+        }
+        variant.sources.assets.addGeneratedSourceDirectory(dexTask) { it.outputDirectory }
+    }
+}
