@@ -81,7 +81,7 @@ runs:
     - name: Stage only dependency modules and wrapper into private Gradle home
       if: steps.restore.outputs.cache-matched-key == ''
       shell: bash
-      run: python3 -B scripts/qa/dependency_prep.py seed-standard
+      run: python3 -B scripts/qa/dependency_prep.py seed-standard --state "$HOOKLAB_DEPENDENCY_STATE"
     - name: Resolve and prove offline execution (single owner)
       id: prepare
       shell: bash

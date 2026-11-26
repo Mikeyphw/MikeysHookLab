@@ -246,8 +246,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-source Android/offline graph, full CI24, UI, physical-device and release qualification remain pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Exact PR #35 head 186e738bcac30e7b888b0bd4b3d0e2bc1284970e, run 45902345026 attempt 1: standard wrapper and historical module caches restored; seed-standard omitted --state and refused before Gradle. Source, terminal, Go and browser passed; CI24 not executed. F07 qualification pending.",
       "counted": false,
       "dependencies": [
         "MOD-01-F05"
@@ -256,6 +256,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Proven Gradle Cache Migration and Independent Qualification Identities",
+      "parent_id": "MOD-01"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-source Android/offline graph, CI24 and applicable runtime/device/release qualification pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F06"
+      ],
+      "id": "MOD-01-F07",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Hosted Dependency CLI Integration Repair",
       "parent_id": "MOD-01"
     },
     {
@@ -406,5 +419,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F06"
+  "version": "2.0-MOD-01-F07"
 }
