@@ -194,8 +194,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Exact predecessor failure reconciliation, fresh hosted producer, Android, CI24, APK, adaptive, visual and device/release proof pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Run 45872964107 attempt 2: actual DEX producer passed; 24/24 CI24 and summary passed; Android instrumentation dependency HTTP 429 exhausted. Adaptive, visual, device and release gates pending.",
       "counted": false,
       "dependencies": [
         "MOD-01-F01"
@@ -204,6 +204,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Probe DEX Inventory and Hosted Execution Repair",
+      "parent_id": "MOD-01"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "New exact-head Android, CI24, adaptive, visual and device/release evidence pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F02"
+      ],
+      "id": "MOD-01-F03",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Android Dependency Progress and Targeted Native Validation",
       "parent_id": "MOD-01"
     },
     {
@@ -354,5 +367,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F02"
+  "version": "2.0-MOD-01-F03"
 }

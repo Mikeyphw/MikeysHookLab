@@ -82,6 +82,29 @@ class GeneratedAssetGraphTest(unittest.TestCase):
         self.assertIn('scripts/qa/mod01_gradle_graph.sh', android)
         self.assertLess(android.index('scripts/qa/mod01_gradle_graph.sh'), android.index('      - name: Assemble, test and lint'))
 
+    def test_android_cache_progress_is_attempt_scoped_and_retained_on_failure(self):
+        text = (ROOT / '.github/workflows/android.yml').read_text()
+        android = text.split('  impact:\n', 1)[0]
+        restore = android.split('        uses: actions/cache/restore@v5', 1)[1].split('      - uses: android-actions/', 1)[0]
+        save = android.split('        uses: actions/cache/save@v5', 1)[1]
+        def field(chunk, name):
+            return re.search(r'^          ' + name + r': (.+)$', chunk, re.M).group(1)
+        def path(chunk):
+            return re.search(r'path: \|\n((?: {12}[^\n]+\n)+)', chunk).group(1)
+        self.assertEqual(path(restore), path(save))
+        self.assertEqual(path(restore).split(), ['~/.gradle/caches/modules-2', '!~/.gradle/caches/modules-2/**/*.lock', '!~/.gradle/caches/modules-2/**/gc.properties'])
+        self.assertEqual(field(restore,'key'), field(save,'key'))
+        self.assertEqual(field(restore,'key'), '${{ steps.android_dependency_key.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}')
+        self.assertEqual(field(restore,'restore-keys'), '${{ steps.android_dependency_key.outputs.prefix }}')
+        self.assertIn('[[ "$GRAPH_SHA" =~ ^[a-f0-9]{64}$ ]]', android)
+        self.assertIn('hooklab-android-modules-v1-%s-%s-jdk21-%s-', android)
+        self.assertIn("always() && !cancelled() && steps.android_dependency_progress.outputs.present == 'true'", android)
+        self.assertIn("always() && !cancelled() && steps.android_dependency_restore.outcome == 'success'", android)
+        self.assertLess(android.index('actions/cache/restore@v5'), android.index('scripts/qa/mod01_gradle_graph.sh'))
+        self.assertGreater(android.index('actions/cache/save@v5'), android.index('scripts/qa/shared_native_apks.py publish'))
+        self.assertIn('HOOKLAB_CI_RETRY_PROFILE: native', android)
+        self.assertNotIn('continue-on-error:', android)
+
 
 if __name__ == '__main__':
     unittest.main()

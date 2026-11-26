@@ -15,6 +15,8 @@ jobs:
     if: ${{ needs.impact.outputs.android == 'true' }}
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      # This lane resolves instrumentation and release configurations, not just JVM tests.
+      HOOKLAB_CI_RETRY_PROFILE: native
     name: Android build, unit tests and lint
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -35,6 +37,25 @@ jobs:
             **/gradle.properties
             **/gradle-wrapper.properties
             **/libs.versions.toml
+      - name: Bind Android dependency cache to the exact build graph
+        id: android_dependency_key
+        shell: bash
+        env:
+          GRAPH_SHA: ${{ hashFiles('**/*.gradle', '**/*.gradle.kts', '**/gradle.properties', '**/gradle-wrapper.properties', '**/gradle-wrapper.jar', '**/libs.versions.toml', '**/verification-metadata.xml', '**/gradle.lockfile', '**/dependency-locks/*.lockfile') }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$GRAPH_SHA" =~ ^[a-f0-9]{64}$ ]]
+          printf 'prefix=hooklab-android-modules-v1-%s-%s-jdk21-%s-\n' "$RUNNER_OS" "$RUNNER_ARCH" "$GRAPH_SHA" >> "$GITHUB_OUTPUT"
+      - name: Restore Android dependency progress (same graph only)
+        id: android_dependency_restore
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            !~/.gradle/caches/modules-2/**/*.lock
+            !~/.gradle/caches/modules-2/**/gc.properties
+          key: ${{ steps.android_dependency_key.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ${{ steps.android_dependency_key.outputs.prefix }}
       - uses: android-actions/setup-android@v4.0.4
         with:
           cmdline-tools-version: '15859902'
@@ -51,7 +72,7 @@ jobs:
         run: bash scripts/qa/mod01_gradle_graph.sh
       - name: Assemble, test and lint
         shell: bash
-        # Only HTTP 429 dependency download failures receive up to 3 attempts.
+        # Only verified HTTP 429 dependency failures receive the bounded native budget.
         # This script preserves live Gradle output and the exact nonzero exit.
         run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug :probe-target:assembleDebug :probe-target:lintDebug
       - name: Verify APK and record source
@@ -117,6 +138,26 @@ jobs:
           path: ${{ runner.temp }}/shared-release
           if-no-files-found: error
           retention-days: 14
+      - name: Check whether Android dependency progress exists
+        if: ${{ always() && !cancelled() && steps.android_dependency_restore.outcome == 'success' }}
+        id: android_dependency_progress
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [[ -d "$HOME/.gradle/caches/modules-2/files-2.1" ]]; then
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Retain resolved Android dependencies even after a failed attempt
+        if: ${{ always() && !cancelled() && steps.android_dependency_progress.outputs.present == 'true' }}
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            !~/.gradle/caches/modules-2/**/*.lock
+            !~/.gradle/caches/modules-2/**/gc.properties
+          key: ${{ steps.android_dependency_key.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
   impact:
     name: HookLab / impact plan
     runs-on: ubuntu-24.04
