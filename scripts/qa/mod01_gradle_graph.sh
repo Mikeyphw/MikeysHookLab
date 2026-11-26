@@ -12,3 +12,7 @@ trap 'rm -rf -- "$work"' EXIT
 bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:mergeDebugAssets --dry-run | tee "$work/debug"
 bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:mergeReleaseAssets --dry-run | tee "$work/release"
 python3 -B scripts/qa/mod01_gradle_graph.py "$work/debug" "$work/release"
+# The dry-run alone cannot detect failures inside a @TaskAction. Execute the
+# exact producer on the hosted runner before any dependent APK assembly.
+bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:buildMod01ProbeDex --rerun-tasks
+echo 'MOD01_GENERATED_PROBE_EXECUTION_PASS'

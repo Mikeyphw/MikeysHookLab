@@ -43,6 +43,22 @@ class GeneratedAssetGraphTest(unittest.TestCase):
         self.assertEqual(result.returncode, 64)
         self.assertIn('HOSTED_GRAPH_REFUSED', result.stderr)
 
+    def test_probe_inventory_java_array_boundary(self):
+        build = (ROOT / 'app/build.gradle').read_text()
+        self.assertNotIn('out.list().toSet()', build)
+        self.assertIn('if (!exactProbeOutput(out))', build)
+        self.assertIn('@groovy.transform.CompileStatic\n    static boolean exactProbeOutput(File out)', build)
+        self.assertIn('String[] entries = out.list()', build)
+        self.assertIn("entries == null || entries.length != 1 || !'classes.dex'.equals(entries[0])", build)
+        self.assertIn('dex.isFile() && size > 0 && size <= 256L * 1024L', build)
+
+    def test_hosted_graph_also_executes_actual_producer(self):
+        script = (ROOT / 'scripts/qa/mod01_gradle_graph.sh').read_text()
+        command = 'bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:buildMod01ProbeDex --rerun-tasks'
+        self.assertEqual(script.count(command), 1)
+        self.assertLess(script.index('scripts/qa/mod01_gradle_graph.py'), script.index(command))
+        self.assertLess(script.index(command), script.index('MOD01_GENERATED_PROBE_EXECUTION_PASS'))
+
     def test_actual_build_and_cache_wiring(self):
         build = (ROOT / 'app/build.gradle').read_text()
         self.assertNotRegex(build, r'android\.sourceSets[^\n]*\.srcDir\(')

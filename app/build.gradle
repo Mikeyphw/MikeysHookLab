@@ -133,11 +133,22 @@ abstract class BuildMod01ProbeDex extends DefaultTask {
                 '--lib', androidJar.get().asFile, '--classpath', sdkJars.singleFile,
                 '--output', out, payloadJars.singleFile
         }
-        File dex = new File(out, 'classes.dex')
-        if (!dex.isFile() || dex.length() == 0 || dex.length() > 256 * 1024 ||
-                out.list().toSet() != ['classes.dex'].toSet()) {
+        if (!exactProbeOutput(out)) {
             throw new GradleException('MOD-01 probe output inventory refused')
         }
+    }
+
+    // File.list() is a nullable Java String[], not a Groovy collection.
+    // Statically check the JDK boundary when Gradle compiles the build script.
+    @groovy.transform.CompileStatic
+    static boolean exactProbeOutput(File out) {
+        String[] entries = out.list()
+        if (entries == null || entries.length != 1 || !'classes.dex'.equals(entries[0])) {
+            return false
+        }
+        File dex = new File(out, 'classes.dex')
+        long size = dex.length()
+        return dex.isFile() && size > 0 && size <= 256L * 1024L
     }
 }
 // Separate, nontransitive artifact configurations: resolve the exact Java

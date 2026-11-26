@@ -181,8 +181,8 @@
       "parent_id": null
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-head hosted graph, Android build, full CI24, APK, visual and adaptive verification pending. Physical-device and release acceptance remain pending.",
+      "acceptance": "FAILED",
+      "blocker": "F01 run 45867249130 attempt 1: hosted graph PASS; probe DEX task failed at Java array toSet(). Native CI observation timed out; retained session must reconcile terminal failure before successor. Physical/release gates remain pending.",
       "counted": false,
       "dependencies": [
         "MOD-01"
@@ -191,6 +191,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Generated Probe Assets and Hosted Dependency Recovery",
+      "parent_id": "MOD-01"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Exact predecessor failure reconciliation, fresh hosted producer, Android, CI24, APK, adaptive, visual and device/release proof pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F01"
+      ],
+      "id": "MOD-01-F02",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Probe DEX Inventory and Hosted Execution Repair",
       "parent_id": "MOD-01"
     },
     {
@@ -341,5 +354,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F01"
+  "version": "2.0-MOD-01-F02"
 }
