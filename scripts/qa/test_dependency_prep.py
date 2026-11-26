@@ -99,7 +99,7 @@ class DependencyTest(unittest.TestCase):
         d.authenticate_repository(self.state,downloader=self.canonical)
         g=self.root/'gradle';(g/'caches/modules-2').mkdir(parents=True);(g/'wrapper/dists').mkdir(parents=True);(self.state/'locks').mkdir()
         for p in (g/'caches/modules-2/dep.jar',g/'wrapper/dists/gradle.jar',self.state/'locks/app.lockfile',self.state/'locks/probe-target.lockfile'):p.write_text('fixture')
-        ident={'repository':'Mikeyphw/MikeysHookLab','source_sha':'a'*40,'source_tree':'b'*40,'run_id':'1','run_attempt':'2'};out=self.root/'ready.json';receipt=d.seal(self.state,g,ident,'c'*64,out);d.verify_receipt(receipt,ident,'c'*64);d.verify_repository(self.state,receipt)
+        ident={'repository':'Mikeyphw/MikeysHookLab','source_sha':'a'*40,'source_tree':'b'*40,'run_id':'1','run_attempt':'2'};out=self.root/'ready.json';receipt=d.seal(self.state,g,ident,'c'*64,out,resolution='e'*64);d.verify_receipt(receipt,ident,'c'*64);d.verify_repository(self.state,receipt)
         with self.assertRaisesRegex(ValueError,'identity'):d.verify_receipt(receipt,{**ident,'run_attempt':'3'},'c'*64)
         with self.assertRaisesRegex(ValueError,'graph'):d.verify_receipt(receipt,ident,'d'*64)
         import copy
@@ -108,6 +108,45 @@ class DependencyTest(unittest.TestCase):
         (g/'caches/modules-2/dep.jar').write_text('changed');self.assertNotEqual(d.entries(d.snapshot_roots(self.state,g)),receipt['files'])
         (g/'caches/modules-2/unsafe').symlink_to(g/'wrapper/dists/gradle.jar')
         with self.assertRaisesRegex(ValueError,'symlink'):d.entries(d.snapshot_roots(self.state,g))
+    def test_reusable_resolution_does_not_rotate_for_qa_only_edits(self):
+        r=self.root/'source';r.mkdir();subprocess.run(['git','init','-q',str(r)],check=True)
+        for name,content in [('settings.gradle','repositories'),('app/build.gradle','implementation'),('gradle/ci/dependency-policy.json','policy'),('gradle/ci/locks.gradle','lock'),('scripts/qa/ci24.py','test'),('.github/workflows/android.yml','workflow')]:
+            p=r/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(content)
+        subprocess.run(['git','-C',str(r),'add','.'],check=True)
+        resolution=d.resolution_digest(r);graph=d.graph_digest(r)
+        (r/'scripts/qa/ci24.py').write_text('changed QA');(r/'.github/workflows/android.yml').write_text('changed workflow')
+        self.assertEqual(d.resolution_digest(r),resolution);self.assertNotEqual(d.graph_digest(r),graph)
+        for name in ('app/build.gradle','gradle/ci/dependency-policy.json','gradle/ci/locks.gradle'):
+            p=r/name;before=p.read_bytes();p.write_bytes(before+b' changed')
+            self.assertNotEqual(d.resolution_digest(r),resolution);p.write_bytes(before)
+        p=r/'buildSrc/src/main/groovy/Logic.groovy';p.parent.mkdir(parents=True);p.write_text('new logic');subprocess.run(['git','-C',str(r),'add',str(p)],check=True)
+        self.assertNotEqual(d.resolution_digest(r),resolution)
+
+    def test_standard_seed_isolated_and_not_readiness(self):
+        old=self.root/'old';private=self.root/'private'
+        for name in ('caches/modules-2/org/a.jar','wrapper/dists/gradle.jar','caches/build-cache-1/ignored','init.d/unsafe.gradle','caches/modules-2/metadata.lock','caches/modules-2/gc.properties'):
+            p=old/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(name)
+        self.assertEqual(d.seed_standard_gradle(old,private),['caches/modules-2','wrapper/dists'])
+        self.assertTrue((private/'caches/modules-2/org/a.jar').is_file());self.assertFalse((private/'caches/build-cache-1').exists());self.assertFalse((private/'init.d').exists());self.assertFalse((private/'caches/modules-2/metadata.lock').exists());self.assertFalse((private/'caches/modules-2/gc.properties').exists())
+        self.assertFalse((self.state/'ready.json').exists())
+        (old/'caches/modules-2/org/a.jar').write_text('other seed');self.assertEqual(d.seed_standard_gradle(old,private),[]);self.assertNotEqual((private/'caches/modules-2/org/a.jar').read_bytes(),(old/'caches/modules-2/org/a.jar').read_bytes())
+        (private/'caches/modules-2/unsafe').symlink_to(old/'init.d/unsafe.gradle')
+        with self.assertRaisesRegex(ValueError,'symlink'):d.verify_unsealed_seed(self.state,private)
+        with self.assertRaisesRegex(ValueError,'symlink'):d.seed_standard_gradle(old,private)
+        (old/'caches/modules-2/unsafe').symlink_to(old/'init.d/unsafe.gradle')
+        with self.assertRaisesRegex(ValueError,'symlink'):d.seed_standard_gradle(old,self.root/'new')
+
+    def test_prior_warm_seed_requalifies_new_graph_but_not_stale_resolution(self):
+        d.authenticate_repository(self.state,downloader=self.canonical)
+        g=self.root/'gradle';(g/'caches/modules-2').mkdir(parents=True);(g/'wrapper/dists').mkdir(parents=True);(self.state/'locks').mkdir()
+        for p in (g/'caches/modules-2/dep.jar',g/'wrapper/dists/gradle.jar',self.state/'locks/app.lockfile',self.state/'locks/probe-target.lockfile'):p.write_text('fixture')
+        prior={'repository':'Mikeyphw/MikeysHookLab','source_sha':'a'*40,'source_tree':'b'*40,'run_id':'1','run_attempt':'1'};now={**prior,'source_sha':'f'*40,'source_tree':'9'*40,'run_id':'2'}
+        receipt=d.seal(self.state,g,prior,'c'*64,self.root/'ready.json',resolution='e'*64)
+        d.verify_warm_seed(self.state,g,receipt,now,'e'*64,'full')
+        with self.assertRaisesRegex(ValueError,'identity'):d.verify_receipt(receipt,now,'d'*64,resolution='e'*64)
+        with self.assertRaisesRegex(ValueError,'resolution identity'):d.verify_warm_seed(self.state,g,receipt,now,'1'*64,'full')
+        (g/'caches/modules-2/dep.jar').write_text('tamper')
+        with self.assertRaisesRegex(ValueError,'bytes changed'):d.verify_warm_seed(self.state,g,receipt,now,'e'*64,'full')
     @unittest.skipUnless(shutil.which('gpg'),'gpg required for real signature fixture')
     def test_real_pgp_fallback_and_tamper(self):
         # A disposable test key proves the real GnuPG verification path; it is

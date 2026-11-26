@@ -13,21 +13,65 @@ ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = ROOT / 'gradle/ci/dependency-policy.json'
 POLICY = json.loads(POLICY_PATH.read_text())
 HEX = re.compile(r'[a-f0-9]{64}\Z')
-SCHEMA = 'hooklab.dependencies.v1'
+SCHEMA = 'hooklab.dependencies.v2'
 FULL_TASKS = [':app:assembleDebug', ':app:assembleDebugAndroidTest', ':app:testDebugUnitTest', ':app:lintDebug', ':probe-target:assembleDebug', ':probe-target:lintDebug', ':app:assembleRelease']
 JVM_TASKS = [':app:testDebugUnitTest']
 PROFILES = {'full': FULL_TASKS, 'jvm': JVM_TASKS}
 GROUP = 'org.jetbrains.kotlinx'
 
-def graph_digest(root):
+def _inputs_digest(root, qualification):
+    """Separate reusable resolver inputs from exact qualification machinery.
+
+    Unknown build logic under Gradle/buildSrc/build-logic is conservatively
+    included. CI changes cannot invalidate reusable dependency bytes, but
+    do invalidate the qualification identity independently.
+    """
     rows = subprocess.check_output(['git','-C',str(root),'ls-files','-z'],timeout=20).decode().strip('\0').split('\0')
     h=hashlib.sha256()
     for n in sorted(rows):
-        if n.endswith(('.gradle','.gradle.kts')) or Path(n).name in ('gradle.properties','gradle-wrapper.properties','gradle-wrapper.jar','libs.versions.toml','verification-metadata.xml','gradle.lockfile') or n.startswith(('gradle/ci/','buildSrc/','build-logic/','.github/actions/hooklab-dependenc')) or n in ('gradlew','scripts/qa/ci24.py','scripts/qa/dependency_prep.py','scripts/qa/dependency_prepare.sh','scripts/qa/mod01_gradle_graph.sh','scripts/ci_gradle_retry.sh','.github/workflows/android.yml','.github/workflows/hooklab-ci24.yml'):
+        build = (n.endswith(('.gradle','.gradle.kts','.lockfile')) or Path(n).name in ('gradle.properties','gradle-wrapper.properties','gradle-wrapper.jar','libs.versions.toml','verification-metadata.xml','versions.properties','gradle.lockfile') or n.startswith(('gradle/','buildSrc/','build-logic/')) or n == 'gradlew')
+        qa = n.startswith(('.github/actions/','.github/workflows/','scripts/qa/','config/qualification-')) or n == 'scripts/ci_gradle_retry.sh'
+        if build or (qualification and qa):
             p=root/n
             require(p.is_file() and not p.is_symlink(),'unsafe build graph path: '+n)
             h.update(n.encode()+b'\0'+digest(p).encode()+b'\n')
     return h.hexdigest()
+
+
+def resolution_digest(root):
+    return _inputs_digest(root, False)
+
+
+def graph_digest(root):
+    return _inputs_digest(root, True)
+
+
+def seed_standard_gradle(home, private):
+    """Copy only Gradle dependency/wrapper bytes into an isolated owner.
+
+    Standard cache is a download seed, never lock/readiness evidence. Do not
+    merge overlapping module stores or copy Gradle init scripts, task outputs,
+    configuration caches, credentials, receipts, or symlinked cache data.
+    """
+    require(home.resolve() != private.resolve() and not home.is_symlink() and not private.is_symlink(), 'unsafe standard seed destination')
+    seeded=[]
+    for rel in ('caches/modules-2','wrapper/dists'):
+        src=home/rel; dst=private/rel
+        require(not dst.is_symlink(), 'unsafe private seed destination: '+rel)
+        if dst.exists():
+            require(dst.is_dir() and not dst.parent.is_symlink(), 'invalid private seed destination: '+rel)
+            if any(dst.iterdir()): entries({rel:dst})
+            continue  # official setup-java private cache or existing isolated seed
+        if not src.exists() and not src.is_symlink(): continue
+        require(not src.parent.is_symlink() and not src.is_symlink(), 'unsafe standard seed root: '+rel)
+        require(src.is_dir(), 'non-directory standard seed root: '+rel)
+        if not any(src.iterdir()): continue
+        entries({rel:src})  # validate all source entries before copying
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        require(not dst.parent.is_symlink(), 'unsafe private seed parent: '+rel)
+        shutil.copytree(src,dst,ignore=shutil.ignore_patterns('*.lock','*.lck','gc.properties'))
+        seeded.append(rel)
+    return seeded
 
 
 def require(ok, message):
@@ -299,20 +343,21 @@ def lock_inventory(state, profile='full'):
     return sorted(names)
 
 
-def seal(state, gradle, identity, graph, output, profile='full', elapsed_seconds=0, reused_ready=False):
-    require(HEX.fullmatch(graph), 'invalid graph digest')
+def seal(state, gradle, identity, graph, output, profile='full', elapsed_seconds=0, reused_ready=False, resolution=None):
+    require(HEX.fullmatch(graph) and isinstance(resolution,str) and HEX.fullmatch(resolution), 'invalid graph/resolution digest')
     locks = lock_inventory(state, profile)
     mirror = json.loads((state / 'repository/.hooklab-attestation.json').read_text())
-    data = {'schema': SCHEMA, **identity, 'graph_sha256': graph, 'profile': profile, 'tasks': PROFILES[profile], 'offline_result': 'PASS', 'elapsed_seconds': elapsed_seconds, 'reused_ready': reused_ready, 'locks': locks, 'mirror': mirror, 'files': entries(snapshot_roots(state, gradle))}
-    verify_receipt(data, identity, graph, profile)
+    data = {'schema': SCHEMA, **identity, 'graph_sha256': graph, 'resolution_sha256': resolution, 'profile': profile, 'tasks': PROFILES[profile], 'offline_result': 'PASS', 'elapsed_seconds': elapsed_seconds, 'reused_ready': reused_ready, 'locks': locks, 'mirror': mirror, 'files': entries(snapshot_roots(state, gradle))}
+    verify_receipt(data, identity, graph, profile, resolution)
     verify_repository(state,data)
     dump(output, data)
     return data
 
 
-def verify_receipt(data, identity, graph=None, profile='full'):
+def verify_receipt(data, identity, graph=None, profile='full', resolution=None):
     require(data.get('schema') == SCHEMA and all(data.get(k) == v for k, v in identity.items()), 'dependency receipt identity mismatch')
     require(HEX.fullmatch(str(data.get('graph_sha256', ''))) and (graph is None or data['graph_sha256'] == graph), 'dependency graph mismatch')
+    require(HEX.fullmatch(str(data.get('resolution_sha256',''))) and (resolution is None or data['resolution_sha256']==resolution),'dependency resolution identity mismatch')
     require(data.get('offline_result') == 'PASS' and data.get('profile') == profile and data.get('tasks') == PROFILES[profile], 'offline readiness not established')
     require(type(data.get('elapsed_seconds')) is int and data['elapsed_seconds'] >= 0 and type(data.get('reused_ready')) is bool, 'invalid dependency timing evidence')
     files = data.get('files'); require(isinstance(files, dict) and files and all(isinstance(k, str) and '/' in k and not Path(k).is_absolute() and '..' not in Path(k).parts and HEX.fullmatch(str(v)) for k, v in files.items()), 'invalid file inventory')
@@ -353,26 +398,50 @@ def verify_repository(state, data):
         if bom:require((b'published-with-gradle-metadata' in (repo/bom).read_bytes())==any(r['path']==bom[:-4]+'.module' for r in mirror['files']),'BOM Gradle metadata omitted')
 
 
+def verify_warm_seed(state, gradle, data, identity, resolution, profile):
+    prior={k:data[k] for k in identity}
+    require(prior['repository']==identity['repository'], 'prior repository mismatch')
+    require(all(re.fullmatch('[0-9a-f]{40}',str(prior[k])) for k in ('source_sha','source_tree')) and all(re.fullmatch('[1-9][0-9]*',str(prior[k])) for k in ('run_id','run_attempt')), 'invalid prior identity')
+    verify_receipt(data, prior, profile=profile, resolution=resolution)
+    require(entries(snapshot_roots(state,gradle))==data['files'],'prior cache bytes changed')
+    verify_repository(state,data)
+
+
+def verify_unsealed_seed(state, gradle):
+    # Reject unsafe restored paths before executing any Gradle process.
+    # Partial cache completeness is not required; it is never readiness.
+    require(not gradle.is_symlink() and not state.is_symlink(),'unsafe seed root')
+    require(not (state/'ready.json').is_symlink(), 'unsafe readiness receipt')
+    for label, root in snapshot_roots(state,gradle).items():
+        require(not root.parent.is_symlink() and not root.is_symlink(),'unsafe seed path: '+label)
+        if root.exists():
+            require(root.is_dir(),'non-directory seed root: '+label)
+            if any(root.iterdir()): entries({label:root})
+
+
 def main():
-    p = argparse.ArgumentParser(); p.add_argument('mode', choices=['graph', 'authenticate', 'seal', 'verify', 'verify-receipt', 'warm-check']); p.add_argument('--root', type=Path, default=ROOT); p.add_argument('--state', type=Path); p.add_argument('--gradle', type=Path, default=Path(os.getenv('GRADLE_USER_HOME',str(Path.home()/'.gradle')))); p.add_argument('--graph'); p.add_argument('--profile',choices=PROFILES,default='full'); p.add_argument('--receipt', type=Path); p.add_argument('--source'); p.add_argument('--tree'); p.add_argument('--run-id', default=os.getenv('GITHUB_RUN_ID')); p.add_argument('--attempt', default=os.getenv('GITHUB_RUN_ATTEMPT')); p.add_argument('--elapsed-seconds', type=int, default=0); p.add_argument('--reused-ready', choices=('true','false'), default='false'); a = p.parse_args()
+    p = argparse.ArgumentParser(); p.add_argument('mode', choices=['graph', 'resolution', 'seed-standard', 'check-seed', 'authenticate', 'seal', 'verify', 'verify-receipt', 'warm-check']); p.add_argument('--root', type=Path, default=ROOT); p.add_argument('--state', type=Path); p.add_argument('--gradle', type=Path, default=Path(os.getenv('GRADLE_USER_HOME',str(Path.home()/'.gradle')))); p.add_argument('--graph'); p.add_argument('--profile',choices=PROFILES,default='full'); p.add_argument('--receipt', type=Path); p.add_argument('--source'); p.add_argument('--tree'); p.add_argument('--run-id', default=os.getenv('GITHUB_RUN_ID')); p.add_argument('--attempt', default=os.getenv('GITHUB_RUN_ATTEMPT')); p.add_argument('--elapsed-seconds', type=int, default=0); p.add_argument('--reused-ready', choices=('true','false'), default='false'); a = p.parse_args()
     try:
         if a.mode == 'graph':
             print(graph_digest(a.root)); return 0
+        if a.mode == 'resolution':
+            print(resolution_digest(a.root)); return 0
         if a.mode == 'verify-receipt':
-            verify_receipt(json.loads(a.receipt.read_text()), {'source_sha':a.source,'source_tree':a.tree,'run_id':str(a.run_id),'run_attempt':str(a.attempt),'repository':'Mikeyphw/MikeysHookLab'},graph_digest(a.root),a.profile); print('DEPENDENCY_RECEIPT_PASS'); return 0
+            verify_receipt(json.loads(a.receipt.read_text()), {'source_sha':a.source,'source_tree':a.tree,'run_id':str(a.run_id),'run_attempt':str(a.attempt),'repository':'Mikeyphw/MikeysHookLab'},graph_digest(a.root),a.profile,resolution_digest(a.root)); print('DEPENDENCY_RECEIPT_PASS'); return 0
         require(os.getenv('GITHUB_ACTIONS') == 'true' and os.getenv('RUNNER_OS') == 'Linux', 'HOSTED_ONLY_DEPENDENCY_PREP_REFUSED')
         identity = tracked_identity(a.root, a.run_id, a.attempt)
         require(a.state == Path(os.environ['RUNNER_TEMP']) / 'hooklab-dependencies' and not a.state.is_symlink(), 'private runner dependency state required')
         a.state.mkdir(mode=0o700, exist_ok=True)
-        if a.mode == 'authenticate': authenticate_repository(a.state,profile=a.profile)
-        elif a.mode == 'seal': seal(a.state, a.gradle, identity, a.graph, a.receipt, a.profile, a.elapsed_seconds, a.reused_ready=='true')
+        if a.mode == 'seed-standard':
+            require(a.gradle == Path(os.environ['RUNNER_TEMP']) / 'hooklab-gradle-home','private seed destination required')
+            print('DEPENDENCY_STANDARD_SEED='+','.join(seed_standard_gradle(Path.home()/'.gradle',a.gradle)), flush=True)
+        elif a.mode == 'check-seed': verify_unsealed_seed(a.state,a.gradle)
+        elif a.mode == 'authenticate': authenticate_repository(a.state,profile=a.profile)
+        elif a.mode == 'seal': seal(a.state, a.gradle, identity, a.graph, a.receipt, a.profile, a.elapsed_seconds, a.reused_ready=='true', resolution_digest(a.root))
         elif a.mode == 'warm-check':
-            data=json.loads(a.receipt.read_text()); prior={k:data[k] for k in identity}
-            require(prior['repository']==identity['repository'],'prior repository mismatch')
-            verify_receipt(data,prior,a.graph,a.profile)
-            require(entries(snapshot_roots(a.state,a.gradle))==data['files'],'prior cache bytes changed');verify_repository(a.state,data)
+            verify_warm_seed(a.state,a.gradle,json.loads(a.receipt.read_text()),identity,resolution_digest(a.root),a.profile)
         else:
-            data = json.loads(a.receipt.read_text()); verify_receipt(data, identity, a.graph, a.profile)
+            data = json.loads(a.receipt.read_text()); verify_receipt(data, identity, a.graph, a.profile, resolution_digest(a.root))
             require(entries(snapshot_roots(a.state, a.gradle)) == data['files'], 'dependency snapshot bytes changed');verify_repository(a.state,data)
         print('DEPENDENCY_'+a.mode.upper()+'_PASS', flush=True); return 0
     except (ValueError, OSError, KeyError, TypeError, subprocess.SubprocessError, urllib.error.URLError, ET.ParseError, zipfile.BadZipFile) as e:

@@ -233,8 +233,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-head hosted metadata, offline dependency, CI24 and Android qualification; physical device/release acceptance pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "PR #35 exact head 927a7aa9dd3f728e64e5ff94b0a114c652771819, run 45896260206 attempt 1: source, Go, terminal, browser and metadata admission passed; widespread Maven Central HTTP 429 blocked Android before Gradle build and CI24 did not execute. Progress cache saved; F06 requalification pending.",
       "counted": false,
       "dependencies": [
         "MOD-01-F04"
@@ -243,6 +243,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Gradle Multiplatform Metadata Admission and Readiness Diagnostics",
+      "parent_id": "MOD-01"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-source Android/offline graph, full CI24, UI, physical-device and release qualification remain pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F05"
+      ],
+      "id": "MOD-01-F06",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Proven Gradle Cache Migration and Independent Qualification Identities",
       "parent_id": "MOD-01"
     },
     {
@@ -393,5 +406,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F05"
+  "version": "2.0-MOD-01-F06"
 }

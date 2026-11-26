@@ -84,7 +84,7 @@ def parse_xml(folder, expected):
 def ready_digest(root,path,ident):
     require(path is not None and path.is_file() and not path.is_symlink(),'verified dependency receipt required')
     data=json.loads(path.read_text()); profile=data.get('profile'); require(profile in dependency_prep.PROFILES,'invalid dependency profile')
-    dependency_prep.verify_receipt(data,ident,dependency_prep.graph_digest(root),profile)
+    dependency_prep.verify_receipt(data,ident,dependency_prep.graph_digest(root),profile,dependency_prep.resolution_digest(root))
     return digest(path)
 
 def run(root,out,shard,source,run_id,attempt,dependency_receipt=None):
@@ -93,7 +93,7 @@ def run(root,out,shard,source,run_id,attempt,dependency_receipt=None):
     require(not out.exists(),'fresh shard output required');out.mkdir(parents=True)
     receipt={'schema':SCHEMA,**ident,'dependency_receipt_sha256':dependency_hash,'shard':shard,'shards':SHARDS,'classes':expected,'status':'NOT_RUN','release_qualified':False,'physical_device_qualified':False}
     dump(out/'receipt.json',receipt)
-    cmd=['bash','gradlew','--no-daemon','--console=plain','--offline','--init-script','gradle/ci/locks.gradle',':app:testDebugUnitTest']
+    cmd=['bash','gradlew','--no-daemon','--console=plain','--offline','--init-script','gradle/ci/locks.gradle','--max-workers=2',':app:testDebugUnitTest']
     for name in expected:cmd+=['--tests',name]
     print('CI24 START',shard,', '.join(expected),flush=True)
     try:

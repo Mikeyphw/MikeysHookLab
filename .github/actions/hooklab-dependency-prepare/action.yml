@@ -10,7 +10,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Bind dependency graph and private state
+    - name: Bind reusable resolver inputs and private state
       id: dependency_key
       shell: bash
       env:
@@ -18,16 +18,16 @@ runs:
       run: |
         set -Eeuo pipefail
         [[ "$PROFILE" == full || "$PROFILE" == jvm ]]
-        graph=$(python3 -B scripts/qa/dependency_prep.py graph)
-        [[ "$graph" =~ ^[a-f0-9]{64}$ ]]
-        prefix="hooklab-deps-v2-$RUNNER_OS-$RUNNER_ARCH-jdk21-$PROFILE-$graph"
+        resolution=$(python3 -B scripts/qa/dependency_prep.py resolution)
+        [[ "$resolution" =~ ^[a-f0-9]{64}$ ]]
+        prefix="hooklab-deps-v3-$RUNNER_OS-$RUNNER_ARCH-jdk21-$PROFILE-$resolution"
         echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
         echo "ready=$prefix-ready-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
         echo "progress=$prefix-progress-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
         echo "GRADLE_USER_HOME=$RUNNER_TEMP/hooklab-gradle-home" >> "$GITHUB_ENV"
         echo "HOOKLAB_DEPENDENCY_STATE=$RUNNER_TEMP/hooklab-dependencies" >> "$GITHUB_ENV"
         echo "HOOKLAB_VERIFIED_MAVEN=$RUNNER_TEMP/hooklab-dependencies/repository" >> "$GITHUB_ENV"
-    - name: Restore dependency progress or prior ready snapshot (same graph only)
+    - name: Restore reusable progress or prior ready snapshot (same resolver inputs only)
       id: restore
       uses: actions/cache/restore@v5
       with:
@@ -44,6 +44,44 @@ runs:
         restore-keys: |
           ${{ steps.dependency_key.outputs.prefix }}-ready-
           ${{ steps.dependency_key.outputs.prefix }}-progress-
+    # The standard Gradle cache is a seed only. This uses the same official
+    # setup-java caching implementation as the last green main workflow.
+    # Do not merge it over an existing private progress/ready snapshot.
+    - name: Restore standard Gradle dependency cache (cold owner only)
+      id: standard
+      if: steps.restore.outputs.cache-matched-key == ''
+      uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6, observed green main
+      with:
+        distribution: temurin
+        java-version: '21'
+        cache: gradle
+        cache-jdk: false
+        cache-path: ${{ runner.temp }}/hooklab-gradle-home/caches/modules-2
+        cache-dependency-path: |
+          **/*.gradle
+          **/*.gradle.kts
+          **/gradle.properties
+          **/gradle-wrapper.properties
+          **/*.lockfile
+          gradle/ci/dependency-policy.json
+          gradle/*.toml
+          gradle/verification-metadata.xml
+          buildSrc/**
+          build-logic/**
+    # Exact historic key/path from successful main run 45854137378. The
+    # setup-java@v6 default cache used this absolute path; the cache service
+    # includes the path in its version. No broad prefix or cross-repo restore.
+    - name: Restore last green main Gradle cache as migration seed
+      id: legacy_seed
+      if: steps.restore.outputs.cache-matched-key == '' && steps.standard.outputs.cache-hit != 'true' && runner.os == 'Linux' && runner.arch == 'X64'
+      uses: actions/cache/restore@v5
+      with:
+        path: /home/runner/.gradle/caches
+        key: setup-java-Linux-x64-gradle-07b78d0f1734fc02f27f456392a6baafd32868b9acc9b696bf89f012fde352af
+    - name: Stage only dependency modules and wrapper into private Gradle home
+      if: steps.restore.outputs.cache-matched-key == ''
+      shell: bash
+      run: python3 -B scripts/qa/dependency_prep.py seed-standard
     - name: Resolve and prove offline execution (single owner)
       id: prepare
       shell: bash

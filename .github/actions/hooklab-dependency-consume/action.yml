@@ -15,8 +15,9 @@ runs:
         set -Eeuo pipefail
         [[ "$PROFILE" == full || "$PROFILE" == jvm ]]
         graph=$(python3 -B scripts/qa/dependency_prep.py graph)
-        [[ "$graph" =~ ^[a-f0-9]{64}$ ]]
-        echo "ready=hooklab-deps-v2-$RUNNER_OS-$RUNNER_ARCH-jdk21-$PROFILE-$graph-ready-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+        resolution=$(python3 -B scripts/qa/dependency_prep.py resolution)
+        [[ "$graph" =~ ^[a-f0-9]{64}$ && "$resolution" =~ ^[a-f0-9]{64}$ ]]
+        echo "ready=hooklab-deps-v3-$RUNNER_OS-$RUNNER_ARCH-jdk21-$PROFILE-$resolution-ready-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
         echo "graph=$graph" >> "$GITHUB_OUTPUT"
         echo "GRADLE_USER_HOME=$RUNNER_TEMP/hooklab-gradle-home" >> "$GITHUB_ENV"
         echo "HOOKLAB_DEPENDENCY_STATE=$RUNNER_TEMP/hooklab-dependencies" >> "$GITHUB_ENV"

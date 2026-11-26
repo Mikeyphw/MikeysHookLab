@@ -33,7 +33,7 @@ class Ci24Test(unittest.TestCase):
         self.source=ci24.git(self.root,'rev-parse','HEAD');self.inv=ci24.inventory(self.root);self.ident=ci24.identity(self.root,self.source,'123','1')
         self.ready=Path(self.tmp.name)/'ready.json'
         h='a'*64
-        ci24.dump(self.ready,{'schema':dependency_prep.SCHEMA,**self.ident,'graph_sha256':dependency_prep.graph_digest(self.root),'profile':'jvm','tasks':dependency_prep.JVM_TASKS,'offline_result':'PASS','elapsed_seconds':0,'reused_ready':False,'locks':['app.lockfile'],'mirror':{'primary':dependency_prep.POLICY['primary_fingerprint'],'signer':dependency_prep.POLICY['signing_fingerprint'],'files':[]},'files':{'modules/a':h,'wrapper/a':h,'repository/.hooklab-attestation.json':h,'locks/app.lockfile':h}})
+        ci24.dump(self.ready,{'schema':dependency_prep.SCHEMA,**self.ident,'graph_sha256':dependency_prep.graph_digest(self.root),'resolution_sha256':dependency_prep.resolution_digest(self.root),'profile':'jvm','tasks':dependency_prep.JVM_TASKS,'offline_result':'PASS','elapsed_seconds':0,'reused_ready':False,'locks':['app.lockfile'],'mirror':{'primary':dependency_prep.POLICY['primary_fingerprint'],'signer':dependency_prep.POLICY['signing_fingerprint'],'files':[]},'files':{'modules/a':h,'wrapper/a':h,'repository/.hooklab-attestation.json':h,'locks/app.lockfile':h}})
     def seed(self):
         for i in range(1,25):
             folder=self.art/f'hooklab-ci24-123-1-shard-{i}';j=folder/'junit';j.mkdir(parents=True);expected=ci24.assignment(self.inv,i)
