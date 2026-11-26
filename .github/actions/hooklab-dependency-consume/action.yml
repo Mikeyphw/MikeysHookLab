@@ -1,0 +1,54 @@
+name: Consume verified offline dependency snapshot (read-only)
+inputs:
+  profile:
+    required: true
+    description: exact preparation profile
+runs:
+  using: composite
+  steps:
+    - name: Derive exact preparation identity
+      id: dependency_key
+      shell: bash
+      env:
+        PROFILE: ${{ inputs.profile }}
+      run: |
+        set -Eeuo pipefail
+        [[ "$PROFILE" == full || "$PROFILE" == jvm ]]
+        graph=$(python3 -B scripts/qa/dependency_prep.py graph)
+        [[ "$graph" =~ ^[a-f0-9]{64}$ ]]
+        echo "ready=hooklab-deps-v2-$RUNNER_OS-$RUNNER_ARCH-jdk21-$PROFILE-$graph-ready-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+        echo "graph=$graph" >> "$GITHUB_OUTPUT"
+        echo "GRADLE_USER_HOME=$RUNNER_TEMP/hooklab-gradle-home" >> "$GITHUB_ENV"
+        echo "HOOKLAB_DEPENDENCY_STATE=$RUNNER_TEMP/hooklab-dependencies" >> "$GITHUB_ENV"
+        echo "HOOKLAB_VERIFIED_MAVEN=$RUNNER_TEMP/hooklab-dependencies/repository" >> "$GITHUB_ENV"
+    - name: Restore exact ready snapshot only (no cache writes)
+      uses: actions/cache/restore@v5
+      with:
+        path: |
+          ${{ runner.temp }}/hooklab-gradle-home/caches/modules-2
+          ${{ runner.temp }}/hooklab-gradle-home/wrapper/dists
+          ${{ runner.temp }}/hooklab-dependencies/repository
+          ${{ runner.temp }}/hooklab-dependencies/locks
+          ${{ runner.temp }}/hooklab-dependencies/ready.json
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/*.lock
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/gc.properties
+          !${{ runner.temp }}/hooklab-gradle-home/wrapper/dists/**/*.lck
+        key: ${{ steps.dependency_key.outputs.ready }}
+        fail-on-cache-miss: true
+    - name: Download independent readiness receipt
+      uses: actions/download-artifact@v8
+      with:
+        name: hooklab-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/dependency-receipt
+    - name: Verify graph, attempt, lock coverage and every snapshot byte
+      shell: bash
+      env:
+        GRAPH: ${{ steps.dependency_key.outputs.graph }}
+        PROFILE: ${{ inputs.profile }}
+      run: |
+        set -Eeuo pipefail
+        python3 -B scripts/qa/dependency_prep.py verify --state "$HOOKLAB_DEPENDENCY_STATE" --graph "$GRAPH" --profile "$PROFILE" --receipt "$RUNNER_TEMP/dependency-receipt/ready.json"
+        if [[ "$PROFILE" == jvm ]]; then
+          echo 'HOOKLAB_VERIFIED_MAVEN=' >> "$GITHUB_ENV"
+        fi
+        echo "HOOKLAB_DEPENDENCY_RECEIPT=$RUNNER_TEMP/dependency-receipt/ready.json" >> "$GITHUB_ENV"

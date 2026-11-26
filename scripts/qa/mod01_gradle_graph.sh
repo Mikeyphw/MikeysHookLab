@@ -8,11 +8,11 @@ fi
 [[ "$(git rev-parse HEAD)" == "${SOURCE_SHA:-}" ]] || { echo 'MOD01_GRAPH_SOURCE_MISMATCH' >&2; exit 64; }
 work="$(mktemp -d "$RUNNER_TEMP/mod01-graph.XXXXXXXX")"
 trap 'rm -rf -- "$work"' EXIT
-# Use the same bounded, rate-limit-only retry policy as the real build.
-bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:mergeDebugAssets --dry-run | tee "$work/debug"
-bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:mergeReleaseAssets --dry-run | tee "$work/release"
+# Use the verified offline cache and the same strict lock state as the real build.
+bash gradlew --no-daemon --console=plain --offline --init-script gradle/ci/locks.gradle :app:mergeDebugAssets --dry-run | tee "$work/debug"
+bash gradlew --no-daemon --console=plain --offline --init-script gradle/ci/locks.gradle :app:mergeReleaseAssets --dry-run | tee "$work/release"
 python3 -B scripts/qa/mod01_gradle_graph.py "$work/debug" "$work/release"
 # The dry-run alone cannot detect failures inside a @TaskAction. Execute the
 # exact producer on the hosted runner before any dependent APK assembly.
-bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:buildMod01ProbeDex --rerun-tasks
+bash gradlew --no-daemon --console=plain --offline --init-script gradle/ci/locks.gradle :app:buildMod01ProbeDex --rerun-tasks
 echo 'MOD01_GENERATED_PROBE_EXECUTION_PASS'

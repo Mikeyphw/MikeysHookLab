@@ -5,6 +5,7 @@ Inventory and verification are read-only Python; no physical device or release c
 from __future__ import annotations
 import argparse, hashlib, json, os, re, subprocess, sys, xml.etree.ElementTree as ET
 from pathlib import Path
+import dependency_prep
 
 SHARDS=24
 SCHEMA='hooklab.ci24.shard.v1'
@@ -80,17 +81,23 @@ def parse_xml(folder, expected):
     require(actual==wanted,'test roster mismatch missing='+str(sorted(wanted-actual))+' extra='+str(sorted(actual-wanted)))
     return records, sorted([list(k) for k in actual])
 
-def run(root,out,shard,source,run_id,attempt):
+def ready_digest(root,path,ident):
+    require(path is not None and path.is_file() and not path.is_symlink(),'verified dependency receipt required')
+    data=json.loads(path.read_text()); profile=data.get('profile'); require(profile in dependency_prep.PROFILES,'invalid dependency profile')
+    dependency_prep.verify_receipt(data,ident,dependency_prep.graph_digest(root),profile)
+    return digest(path)
+
+def run(root,out,shard,source,run_id,attempt,dependency_receipt=None):
     require(os.environ.get('GITHUB_ACTIONS')=='true' and os.environ.get('RUNNER_OS')=='Linux' and os.environ.get('SOURCE_SHA')==source and os.environ.get('GITHUB_RUN_ID')==str(run_id) and os.environ.get('GITHUB_RUN_ATTEMPT')==str(attempt),'HOSTED_ONLY_GRADLE_REFUSED')
-    ident=identity(root,source,run_id,attempt); inv=inventory(root); expected=assignment(inv,shard)
+    ident=identity(root,source,run_id,attempt); dependency_hash=ready_digest(root,dependency_receipt,ident); inv=inventory(root); expected=assignment(inv,shard)
     require(not out.exists(),'fresh shard output required');out.mkdir(parents=True)
-    receipt={'schema':SCHEMA,**ident,'shard':shard,'shards':SHARDS,'classes':expected,'status':'NOT_RUN','release_qualified':False,'physical_device_qualified':False}
+    receipt={'schema':SCHEMA,**ident,'dependency_receipt_sha256':dependency_hash,'shard':shard,'shards':SHARDS,'classes':expected,'status':'NOT_RUN','release_qualified':False,'physical_device_qualified':False}
     dump(out/'receipt.json',receipt)
-    cmd=['bash','scripts/ci_gradle_retry.sh','bash','gradlew','--no-daemon','--console=plain',':app:testDebugUnitTest']
+    cmd=['bash','gradlew','--no-daemon','--console=plain','--offline','--init-script','gradle/ci/locks.gradle',':app:testDebugUnitTest']
     for name in expected:cmd+=['--tests',name]
     print('CI24 START',shard,', '.join(expected),flush=True)
     try:
-        rc=subprocess.run(cmd,cwd=root,timeout=3000,check=False,env={**os.environ,'HOOKLAB_CI_RETRY_PROFILE':'native'}).returncode
+        rc=subprocess.run(cmd,cwd=root,timeout=3000,check=False,env=os.environ.copy()).returncode
     except subprocess.TimeoutExpired:
         receipt['status']='FAIL_TIMEOUT';dump(out/'receipt.json',receipt);return 124
     receipt['gradle_exit']=rc
@@ -113,25 +120,27 @@ def run(root,out,shard,source,run_id,attempt):
     receipt.update(status='PASS',junit_sha256=files,tests=cases,test_count=len(cases))
     dump(out/'receipt.json',receipt);print('CI24 SHARD PASS',shard,len(cases),flush=True);return 0
 
-def verify_shard(folder,expected,ident,shard):
+def verify_shard(folder,expected,ident,shard,dependency_hash=None):
     p=folder/'receipt.json'; require(p.is_file() and not p.is_symlink() and p.stat().st_size<2*1024*1024,'missing/unsafe receipt')
     require({x.name for x in folder.iterdir()}=={'receipt.json','junit'},'unapproved shard evidence files')
     r=json.loads(p.read_text())
     wanted={'schema':SCHEMA,**ident,'shard':shard,'shards':SHARDS,'classes':expected,'status':'PASS','gradle_exit':0,'release_qualified':False,'physical_device_qualified':False}
     require(all(r.get(k)==v for k,v in wanted.items()),'invalid shard identity/status '+str(shard))
+    require(HEX.fullmatch(str(r.get('dependency_receipt_sha256',''))) and (dependency_hash is None or r['dependency_receipt_sha256']==dependency_hash),'shard dependency receipt drift')
     junit=folder/'junit';require(junit.is_dir() and not junit.is_symlink(),'missing junit')
     files,cases=parse_xml(junit,expected)
     require(set(x.name for x in junit.iterdir())==set(files),'unexpected JUnit files')
     require(r.get('junit_sha256')==files and r.get('tests')==cases and r.get('test_count')==len(cases),'JUnit evidence drift')
     return {'shard':shard,'receipt_sha256':digest(p),'test_count':len(cases),'classes':sorted(expected),'junit_sha256':files}
 
-def summarize(root,artifacts,out,source,run_id,attempt,verify_existing=False):
+def summarize(root,artifacts,out,source,run_id,attempt,verify_existing=False,dependency_receipt=None):
     ident=identity(root,source,run_id,attempt);inv=inventory(root);prefix=f'hooklab-ci24-{run_id}-{attempt}-shard-'
     expected_names={prefix+str(i) for i in range(1,SHARDS+1)}
     actual={p.name for p in artifacts.iterdir() if p.name.startswith('hooklab-ci24-') and '-shard-' in p.name}
     require(actual==expected_names,'missing/extra/mixed-attempt shards: '+str(sorted(expected_names-actual)))
-    rows=[verify_shard(artifacts/(prefix+str(i)),assignment(inv,i),ident,i) for i in range(1,SHARDS+1)]
-    s={'schema':SUMMARY,**ident,'overall':'PASS_CI24_VERIFIED','shard_count':SHARDS,'class_count':len(inv),'test_count':sum(x['test_count'] for x in rows),'shards':rows,'release_qualified':False,'physical_device_qualified':False,'emulator_ui_qualified':False}
+    dependency_hash=ready_digest(root,dependency_receipt,ident)
+    rows=[verify_shard(artifacts/(prefix+str(i)),assignment(inv,i),ident,i,dependency_hash) for i in range(1,SHARDS+1)]
+    s={'schema':SUMMARY,**ident,'dependency_receipt_sha256':dependency_hash,'overall':'PASS_CI24_VERIFIED','shard_count':SHARDS,'class_count':len(inv),'test_count':sum(x['test_count'] for x in rows),'shards':rows,'release_qualified':False,'physical_device_qualified':False,'emulator_ui_qualified':False}
     if verify_existing:
         require(out.is_file() and not out.is_symlink() and json.loads(out.read_text())==s,'hosted summary mismatch')
     else:dump(out,s)
@@ -151,12 +160,12 @@ def failed_summary(root,artifacts,out,source,run_id,attempt,matrix_status):
     dump(out,{'schema':SUMMARY,**ident,'overall':'FAIL_CI24_VERIFICATION','matrix_status':matrix_status if matrix_status in ('success','failure','cancelled','skipped') else 'unknown','shard_count':SHARDS,'shards':rows,'release_qualified':False,'physical_device_qualified':False,'emulator_ui_qualified':False})
 
 def main():
-    a=argparse.ArgumentParser();a.add_argument('command',choices=['inventory','run','summarize','verify']);a.add_argument('--root',type=Path,default=Path.cwd());a.add_argument('--out',type=Path);a.add_argument('--artifacts',type=Path);a.add_argument('--shard',type=int);a.add_argument('--source',default=os.getenv('GITHUB_SHA'));a.add_argument('--run-id',default=os.getenv('GITHUB_RUN_ID'));a.add_argument('--attempt',default=os.getenv('GITHUB_RUN_ATTEMPT'));a.add_argument('--matrix-status',default='success');v=a.parse_args()
+    a=argparse.ArgumentParser();a.add_argument('command',choices=['inventory','run','summarize','verify']);a.add_argument('--root',type=Path,default=Path.cwd());a.add_argument('--out',type=Path);a.add_argument('--artifacts',type=Path);a.add_argument('--shard',type=int);a.add_argument('--source',default=os.getenv('GITHUB_SHA'));a.add_argument('--run-id',default=os.getenv('GITHUB_RUN_ID'));a.add_argument('--attempt',default=os.getenv('GITHUB_RUN_ATTEMPT'));a.add_argument('--matrix-status',default='success');a.add_argument('--dependency-receipt',type=Path);v=a.parse_args()
     try:
         if v.command=='inventory':print(json.dumps(inventory(v.root),indent=2));return 0
-        if v.command=='run':return run(v.root,v.out,v.shard,v.source,v.run_id,v.attempt)
+        if v.command=='run':return run(v.root,v.out,v.shard,v.source,v.run_id,v.attempt,v.dependency_receipt)
         if v.command=='summarize':require(v.matrix_status=='success','hosted matrix unsuccessful')
-        return summarize(v.root,v.artifacts,v.out,v.source,v.run_id,v.attempt,v.command=='verify')
+        return summarize(v.root,v.artifacts,v.out,v.source,v.run_id,v.attempt,v.command=='verify',v.dependency_receipt)
     except (ValueError,OSError,TypeError,KeyError,subprocess.SubprocessError,ET.ParseError) as e:
         if v.command=='summarize' and v.artifacts is not None and v.out is not None:
             try:failed_summary(v.root,v.artifacts,v.out,v.source,v.run_id,v.attempt,v.matrix_status)

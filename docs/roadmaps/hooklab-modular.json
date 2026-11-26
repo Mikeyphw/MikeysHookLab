@@ -207,8 +207,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "New exact-head Android, CI24, adaptive, visual and device/release evidence pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Run 45882694979 attempt 1: CI24 24/24 and aggregate passed; Android instrumentation dependency HTTP 429 and second browser screenshot protocol failure; downstream gates skipped.",
       "counted": false,
       "dependencies": [
         "MOD-01-F02"
@@ -217,6 +217,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Android Dependency Progress and Targeted Native Validation",
+      "parent_id": "MOD-01"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-head hosted qualification and device/release gates pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F03"
+      ],
+      "id": "MOD-01-F04",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Verified Offline CI Dependencies and Browser Capture Recovery",
       "parent_id": "MOD-01"
     },
     {
@@ -367,5 +380,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F03"
+  "version": "2.0-MOD-01-F04"
 }

@@ -3,6 +3,21 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google(); mavenCentral()
+        // Only a hosted, authenticated, exact-version local repository is eligible.
+        // The preparation script verifies publisher signatures before activation.
+        def verified = System.getenv('HOOKLAB_VERIFIED_MAVEN')
+        if (verified) {
+            if (System.getenv('GITHUB_ACTIONS') != 'true' || !new File(verified).isDirectory()) {
+                throw new GradleException('HOOKLAB_VERIFIED_REPOSITORY_REFUSED')
+            }
+            exclusiveContent {
+                forRepository { maven { url = uri(verified); metadataSources { gradleMetadata(); mavenPom() } } }
+                filter {
+                    includeVersion 'org.jetbrains.kotlinx', 'kotlinx-coroutines-core-jvm', '1.7.1'
+                    includeVersion 'org.jetbrains.kotlinx', 'kotlinx-coroutines-bom', '1.7.1'
+                }
+            }
+        }
         exclusiveContent {
             forRepository { maven { url = uri('https://jitpack.io') } }
             filter { includeGroup 'com.github.topjohnwu.libsu' }

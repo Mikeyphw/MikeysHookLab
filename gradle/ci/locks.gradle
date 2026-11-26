@@ -1,0 +1,15 @@
+// Hosted-only dependency preparation/consumption. State is external to Git.
+import org.gradle.api.artifacts.dsl.LockMode
+
+gradle.beforeProject { project ->
+    def state = System.getenv('HOOKLAB_DEPENDENCY_STATE')
+    if (System.getenv('GITHUB_ACTIONS') != 'true' || !state) {
+        throw new GradleException('HOOKLAB_LOCKS_HOSTED_ONLY')
+    }
+    def lock = new File(state, 'locks/' + (project.path == ':' ? 'root' : project.path.substring(1).replace(':', '__')) + '.lockfile')
+    project.dependencyLocking {
+        lockAllConfigurations()
+        lockMode = LockMode.STRICT
+        lockFile.set(lock)
+    }
+}

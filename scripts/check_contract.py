@@ -43,8 +43,10 @@ wf = read('.github/workflows/android.yml')
 check('setup-android@v4.0.4' in wf and "packages: 'platform-tools'" in wf
       and "cmdline-tools-version: '15859902'" in wf and 'sdkmanager tools' not in wf,
       'no deprecated SDK tools setup')
-check(all(term in wf for term in (':app:assembleDebug',':app:testDebugUnitTest',':app:lintDebug',
-                                  'apksigner','sha256sum','source-commit.txt')),
+prep=read('scripts/qa/dependency_prepare.sh')
+check('uses: ./.github/actions/hooklab-dependency-prepare' in wf and 'profile: full' in wf
+      and all(term in prep for term in (':app:assembleDebug',':app:assembleDebugAndroidTest',':app:testDebugUnitTest',':app:lintDebug','--offline'))
+      and all(term in wf for term in ('apksigner','sha256sum','source-commit.txt')),
       'hosted build/test/lint/provenance stages')
 # AAR metadata for libxposed API 102 requires compileSdk 37. Do not upgrade targetSdk here.
 check("version '9.1.1'" in read('build.gradle') and 'version = release(37)' in read('app/build.gradle')

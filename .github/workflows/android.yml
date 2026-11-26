@@ -15,11 +15,11 @@ jobs:
     if: ${{ needs.impact.outputs.android == 'true' }}
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      # This lane resolves instrumentation and release configurations, not just JVM tests.
-      HOOKLAB_CI_RETRY_PROFILE: native
     name: Android build, unit tests and lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
+    outputs:
+      dependency_ready: ${{ steps.dependencies.outputs.ready }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,33 +29,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          # Restore dependency caches; PR builds do not need signing credentials.
-          cache: gradle
-          cache-dependency-path: |
-            **/*.gradle
-            **/*.gradle.kts
-            **/gradle.properties
-            **/gradle-wrapper.properties
-            **/libs.versions.toml
-      - name: Bind Android dependency cache to the exact build graph
-        id: android_dependency_key
-        shell: bash
-        env:
-          GRAPH_SHA: ${{ hashFiles('**/*.gradle', '**/*.gradle.kts', '**/gradle.properties', '**/gradle-wrapper.properties', '**/gradle-wrapper.jar', '**/libs.versions.toml', '**/verification-metadata.xml', '**/gradle.lockfile', '**/dependency-locks/*.lockfile') }}
-        run: |
-          set -Eeuo pipefail
-          [[ "$GRAPH_SHA" =~ ^[a-f0-9]{64}$ ]]
-          printf 'prefix=hooklab-android-modules-v1-%s-%s-jdk21-%s-\n' "$RUNNER_OS" "$RUNNER_ARCH" "$GRAPH_SHA" >> "$GITHUB_OUTPUT"
-      - name: Restore Android dependency progress (same graph only)
-        id: android_dependency_restore
-        uses: actions/cache/restore@v5
-        with:
-          path: |
-            ~/.gradle/caches/modules-2
-            !~/.gradle/caches/modules-2/**/*.lock
-            !~/.gradle/caches/modules-2/**/gc.properties
-          key: ${{ steps.android_dependency_key.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: ${{ steps.android_dependency_key.outputs.prefix }}
       - uses: android-actions/setup-android@v4.0.4
         with:
           cmdline-tools-version: '15859902'
@@ -67,14 +40,11 @@ jobs:
           sdkmanager --version
           sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'
           test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
-      - name: Verify generated probe task graph (hosted only)
-        shell: bash
-        run: bash scripts/qa/mod01_gradle_graph.sh
-      - name: Assemble, test and lint
-        shell: bash
-        # Only verified HTTP 429 dependency failures receive the bounded native budget.
-        # This script preserves live Gradle output and the exact nonzero exit.
-        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug :probe-target:assembleDebug :probe-target:lintDebug
+      - name: Prepare dependencies and execute complete offline Android graph
+        id: dependencies
+        uses: ./.github/actions/hooklab-dependency-prepare
+        with:
+          profile: full
       - name: Verify APK and record source
         shell: bash
         run: |
@@ -109,9 +79,6 @@ jobs:
           path: ${{ runner.temp }}/matrix-apks
           if-no-files-found: error
           retention-days: 14
-      - name: Build unsigned release for visual fixture-isolation check
-        if: ${{ needs.impact.outputs.visual == 'true' }}
-        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleRelease
       - name: Verify debug-only probe packaging and bind owned target
         if: ${{ needs.impact.outputs.visual == 'true' }}
         shell: bash
@@ -138,26 +105,6 @@ jobs:
           path: ${{ runner.temp }}/shared-release
           if-no-files-found: error
           retention-days: 14
-      - name: Check whether Android dependency progress exists
-        if: ${{ always() && !cancelled() && steps.android_dependency_restore.outcome == 'success' }}
-        id: android_dependency_progress
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          if [[ -d "$HOME/.gradle/caches/modules-2/files-2.1" ]]; then
-            echo 'present=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'present=false' >> "$GITHUB_OUTPUT"
-          fi
-      - name: Retain resolved Android dependencies even after a failed attempt
-        if: ${{ always() && !cancelled() && steps.android_dependency_progress.outputs.present == 'true' }}
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            ~/.gradle/caches/modules-2
-            !~/.gradle/caches/modules-2/**/*.lock
-            !~/.gradle/caches/modules-2/**/gc.properties
-          key: ${{ steps.android_dependency_key.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
   impact:
     name: HookLab / impact plan
     runs-on: ubuntu-24.04
@@ -286,12 +233,15 @@ jobs:
           retention-days: 14
   ci24:
     name: ci24
-    # Allow the single Android job to populate the common dependency cache.
-    # CI24 is still independent and runs even when that job fails: never turn
-    # an Android failure into a skipped/accepted shard roster.
+    # The Android preparation owner publishes one verified dependency snapshot.
+    # A later Android artifact-verification failure does not suppress CI24.
+    # If preparation failed, the required gate fails closed, not cold fan-out.
     needs: [impact, source, android]
     if: ${{ !cancelled() && needs.impact.result == 'success' && needs.source.result == 'success' && needs.impact.outputs.ci24 == 'true' }}
     uses: ./.github/workflows/hooklab-ci24.yml
+    with:
+      shared_dependencies: true
+      dependency_ready: ${{ needs.android.outputs.dependency_ready == 'true' }}
   design:
     name: design
     needs: [impact, source]

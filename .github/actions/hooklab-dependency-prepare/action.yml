@@ -1,0 +1,114 @@
+name: Prepare and verify exact hosted dependencies
+inputs:
+  profile:
+    required: true
+    description: full Android/CI24 or standalone JVM task graph
+outputs:
+  ready:
+    description: Current attempt offline dependency snapshot is available
+    value: ${{ steps.ready.outputs.ready }}
+runs:
+  using: composite
+  steps:
+    - name: Bind dependency graph and private state
+      id: dependency_key
+      shell: bash
+      env:
+        PROFILE: ${{ inputs.profile }}
+      run: |
+        set -Eeuo pipefail
+        [[ "$PROFILE" == full || "$PROFILE" == jvm ]]
+        graph=$(python3 -B scripts/qa/dependency_prep.py graph)
+        [[ "$graph" =~ ^[a-f0-9]{64}$ ]]
+        prefix="hooklab-deps-v2-$RUNNER_OS-$RUNNER_ARCH-jdk21-$PROFILE-$graph"
+        echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+        echo "ready=$prefix-ready-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+        echo "progress=$prefix-progress-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+        echo "GRADLE_USER_HOME=$RUNNER_TEMP/hooklab-gradle-home" >> "$GITHUB_ENV"
+        echo "HOOKLAB_DEPENDENCY_STATE=$RUNNER_TEMP/hooklab-dependencies" >> "$GITHUB_ENV"
+        echo "HOOKLAB_VERIFIED_MAVEN=$RUNNER_TEMP/hooklab-dependencies/repository" >> "$GITHUB_ENV"
+    - name: Restore dependency progress or prior ready snapshot (same graph only)
+      id: restore
+      uses: actions/cache/restore@v5
+      with:
+        path: |
+          ${{ runner.temp }}/hooklab-gradle-home/caches/modules-2
+          ${{ runner.temp }}/hooklab-gradle-home/wrapper/dists
+          ${{ runner.temp }}/hooklab-dependencies/repository
+          ${{ runner.temp }}/hooklab-dependencies/locks
+          ${{ runner.temp }}/hooklab-dependencies/ready.json
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/*.lock
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/gc.properties
+          !${{ runner.temp }}/hooklab-gradle-home/wrapper/dists/**/*.lck
+        key: ${{ steps.dependency_key.outputs.ready }}
+        restore-keys: |
+          ${{ steps.dependency_key.outputs.prefix }}-ready-
+          ${{ steps.dependency_key.outputs.prefix }}-progress-
+    - name: Resolve and prove offline execution (single owner)
+      id: prepare
+      shell: bash
+      env:
+        PROFILE: ${{ inputs.profile }}
+      run: bash scripts/qa/dependency_prepare.sh "$PROFILE"
+    - name: Save complete verified snapshot
+      uses: actions/cache/save@v5
+      with:
+        path: |
+          ${{ runner.temp }}/hooklab-gradle-home/caches/modules-2
+          ${{ runner.temp }}/hooklab-gradle-home/wrapper/dists
+          ${{ runner.temp }}/hooklab-dependencies/repository
+          ${{ runner.temp }}/hooklab-dependencies/locks
+          ${{ runner.temp }}/hooklab-dependencies/ready.json
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/*.lock
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/gc.properties
+          !${{ runner.temp }}/hooklab-gradle-home/wrapper/dists/**/*.lck
+        key: ${{ steps.dependency_key.outputs.ready }}
+    - name: Confirm exact ready snapshot exists
+      uses: actions/cache/restore@v5
+      with:
+        path: |
+          ${{ runner.temp }}/hooklab-gradle-home/caches/modules-2
+          ${{ runner.temp }}/hooklab-gradle-home/wrapper/dists
+          ${{ runner.temp }}/hooklab-dependencies/repository
+          ${{ runner.temp }}/hooklab-dependencies/locks
+          ${{ runner.temp }}/hooklab-dependencies/ready.json
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/*.lock
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/gc.properties
+          !${{ runner.temp }}/hooklab-gradle-home/wrapper/dists/**/*.lck
+        key: ${{ steps.dependency_key.outputs.ready }}
+        lookup-only: true
+        fail-on-cache-miss: true
+    - name: Publish independent source/attempt-bound readiness receipt
+      uses: actions/upload-artifact@v7.0.2
+      with:
+        name: hooklab-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/hooklab-dependencies/ready.json
+        if-no-files-found: error
+        retention-days: 14
+    - name: Report verified snapshot readiness
+      id: ready
+      shell: bash
+      run: echo 'ready=true' >> "$GITHUB_OUTPUT"
+    - name: Inspect partial cache after failure
+      if: ${{ always() && !cancelled() && steps.prepare.outcome == 'failure' }}
+      id: partial
+      shell: bash
+      run: |
+        rm -f -- "$HOOKLAB_DEPENDENCY_STATE/ready.json"
+        if [[ -d "$GRADLE_USER_HOME/caches/modules-2/files-2.1" ]]; then
+          echo 'present=true' >> "$GITHUB_OUTPUT"
+        fi
+    - name: Retain partial progress without readiness assertion
+      if: ${{ always() && !cancelled() && steps.partial.outputs.present == 'true' }}
+      uses: actions/cache/save@v5
+      with:
+        path: |
+          ${{ runner.temp }}/hooklab-gradle-home/caches/modules-2
+          ${{ runner.temp }}/hooklab-gradle-home/wrapper/dists
+          ${{ runner.temp }}/hooklab-dependencies/repository
+          ${{ runner.temp }}/hooklab-dependencies/locks
+          ${{ runner.temp }}/hooklab-dependencies/ready.json
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/*.lock
+          !${{ runner.temp }}/hooklab-gradle-home/caches/modules-2/**/gc.properties
+          !${{ runner.temp }}/hooklab-gradle-home/wrapper/dists/**/*.lck
+        key: ${{ steps.dependency_key.outputs.progress }}

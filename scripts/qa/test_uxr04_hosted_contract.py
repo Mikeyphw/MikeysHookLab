@@ -18,7 +18,9 @@ class HostedRepairTests(unittest.TestCase):
 
     def test_instrumentation_required_in_android_ci(self):
         workflow=(ROOT/'.github/workflows/android.yml').read_text()
-        task=[line for line in workflow.splitlines() if 'run: bash scripts/ci_gradle_retry.sh' in line and ':app:assembleDebug' in line]
+        self.assertIn('uses: ./.github/actions/hooklab-dependency-prepare',workflow)
+        self.assertIn('profile: full',workflow)
+        task=[line.replace('tasks=(', ' ').replace(');;', ' ') for line in (ROOT/'scripts/qa/dependency_prepare.sh').read_text().splitlines() if 'full) tasks=(' in line]
         self.assertEqual(len(task),1)
         for name in ('assembleDebug','assembleDebugAndroidTest','testDebugUnitTest','lintDebug'):
             self.assertIn(':app:'+name,task[0].split())

@@ -2,13 +2,50 @@ name: HookLab Full JVM Regression (24 Shards)
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      shared_dependencies:
+        type: boolean
+        default: false
+      dependency_ready:
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
   group: hooklab-ci24-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 jobs:
+  prepare:
+    name: Standalone dependency preparation
+    if: ${{ !inputs.shared_dependencies }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      ready: ${{ steps.dependencies.outputs.ready }}
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          cmdline-tools-version: '15859902'
+          packages: 'platform-tools'
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+      - name: Prepare dependencies for standalone CI24
+        id: dependencies
+        uses: ./.github/actions/hooklab-dependency-prepare
+        with:
+          profile: jvm
   junit:
+    needs: [prepare]
+    if: ${{ !cancelled() && ((inputs.shared_dependencies && inputs.dependency_ready && needs.prepare.result == 'skipped') || (!inputs.shared_dependencies && needs.prepare.result == 'success' && needs.prepare.outputs.ready == 'true')) }}
     name: JVM / shard ${{ matrix.shard }}/24
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -28,25 +65,22 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
-          cache-dependency-path: |
-            **/*.gradle
-            **/*.gradle.kts
-            **/gradle.properties
-            **/gradle-wrapper.properties
-            **/libs.versions.toml
       - uses: android-actions/setup-android@v4.0.4
         with:
           cmdline-tools-version: '15859902'
           packages: 'platform-tools'
       - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+      - name: Restore and verify single-owner snapshot
+        uses: ./.github/actions/hooklab-dependency-consume
+        with:
+          profile: ${{ inputs.shared_dependencies && 'full' || 'jvm' }}
       - name: Run exact selected classes on hosted runner
         env:
           SHARD: ${{ matrix.shard }}
         run: |
           set -Eeuo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          python3 -B scripts/qa/ci24.py run --source "$SOURCE_SHA" --shard "$SHARD" --out "$RUNNER_TEMP/shard-$SHARD"
+          python3 -B scripts/qa/ci24.py run --source "$SOURCE_SHA" --shard "$SHARD" --out "$RUNNER_TEMP/shard-$SHARD" --dependency-receipt "$HOOKLAB_DEPENDENCY_RECEIPT"
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
@@ -72,11 +106,15 @@ jobs:
           pattern: hooklab-ci24-${{ github.run_id }}-${{ github.run_attempt }}-shard-*
           path: artifacts
           merge-multiple: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: hooklab-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dependency-receipt
       - name: Independently verify class/method roster, source, exact attempt and XML hashes
         if: always()
         run: |
           set -Eeuo pipefail
-          python3 -B scripts/qa/ci24.py summarize --source "$SOURCE_SHA" --artifacts artifacts --out out/CI24_SUMMARY.json --matrix-status '${{ needs.junit.result }}'
+          python3 -B scripts/qa/ci24.py summarize --source "$SOURCE_SHA" --artifacts artifacts --out out/CI24_SUMMARY.json --matrix-status '${{ needs.junit.result }}' --dependency-receipt "$RUNNER_TEMP/dependency-receipt/ready.json"
           test '${{ needs.junit.result }}' = success
       - uses: actions/upload-artifact@v7.0.2
         if: always()
