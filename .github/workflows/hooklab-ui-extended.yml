@@ -1,13 +1,19 @@
 name: HookLab Extended UI Qualification
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      shared_apks:
+        type: boolean
+        required: true
+      cases:
+        type: string
+        required: true
 permissions:
   contents: read
 jobs:
   build:
+    if: ${{ !inputs.shared_apks }}
     name: Extended UI / exact shared APK build
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -50,6 +56,7 @@ jobs:
           retention-days: 14
   adaptive:
     needs: build
+    if: ${{ always() && !cancelled() && (inputs.shared_apks && needs.build.result == 'skipped' || !inputs.shared_apks && needs.build.result == 'success') }}
     name: Adaptive UI / ${{ matrix.case }}
     runs-on: ubuntu-24.04
     timeout-minutes: 75
@@ -57,27 +64,7 @@ jobs:
       fail-fast: false
       max-parallel: 5
       matrix:
-        include:
-          - case: api29-compact
-            api: 29
-          - case: api29-standard
-            api: 29
-          - case: api36-compact
-            api: 36
-          - case: api36-360
-            api: 36
-          - case: api36-390
-            api: 36
-          - case: api36-393
-            api: 36
-          - case: api36-600
-            api: 36
-          - case: api36-840
-            api: 36
-          - case: api36-landscape
-            api: 36
-          - case: api36-tablet-landscape
-            api: 36
+        include: ${{ fromJSON(inputs.cases || '[{"case":"api29-compact","api":29},{"case":"api29-standard","api":29},{"case":"api36-compact","api":36},{"case":"api36-360","api":36},{"case":"api36-390","api":36},{"case":"api36-393","api":36},{"case":"api36-600","api":36},{"case":"api36-840","api":36},{"case":"api36-landscape","api":36},{"case":"api36-tablet-landscape","api":36}]') }}
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
@@ -158,6 +145,9 @@ jobs:
           name: hooklab-matrix-apks-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/matrix-apks
       - name: Verify exact matrix roster and all evidence
+        env:
+          SELECTED_CASES: ${{ inputs.cases || '[{"case":"api29-compact","api":29},{"case":"api29-standard","api":29},{"case":"api36-compact","api":36},{"case":"api36-360","api":36},{"case":"api36-390","api":36},{"case":"api36-393","api":36},{"case":"api36-600","api":36},{"case":"api36-840","api":36},{"case":"api36-landscape","api":36},{"case":"api36-tablet-landscape","api":36}]' }}
+          SHARED_APKS: ${{ inputs.shared_apks }}
         run: |
           set -Eeuo pipefail
           mkdir -p cases
@@ -165,8 +155,8 @@ jobs:
             name="${path##*/}"
             mv -- "$path" "cases/${name#hooklab-extended-${{ github.run_id }}-${{ github.run_attempt }}-}"
           done
-          python3 -B scripts/qa/adaptive_matrix.py aggregate --out cases --apks "$RUNNER_TEMP/matrix-apks" > "$RUNNER_TEMP/extended-summary.json"
-          test '${{ needs.build.result }}' = success
+          python3 -B scripts/qa/adaptive_matrix.py aggregate --out cases --apks "$RUNNER_TEMP/matrix-apks" --selected-json "$SELECTED_CASES" > "$RUNNER_TEMP/extended-summary.json"
+          if [ "$SHARED_APKS" = true ]; then test '${{ needs.build.result }}' = skipped; else test '${{ needs.build.result }}' = success; fi
           test '${{ needs.adaptive.result }}' = success
       - uses: actions/upload-artifact@v7.0.2
         if: always()

@@ -356,25 +356,33 @@ def run(out,case,apks):
  try:validate(out,case,ident,build)
  except Exception:receipt['status']='FAIL_EXTENDED_VERIFICATION';dump(out/'receipt.json',receipt);raise
 
-def verify_all(root,expected,build=None):
- require(set(p.name for p in root.iterdir())==set(CASES),'missing or extra extended matrix shard')
- return {case:validate(root/case,case,expected,build)['performance_summary'] for case in CASES}
+def verify_all(root,expected,build=None,selected=None):
+ cases=list(CASES) if selected is None else list(selected)
+ require(cases and len(set(cases))==len(cases) and set(cases)<=set(CASES),'invalid selected case roster')
+ require(set(p.name for p in root.iterdir())==set(cases),'missing or extra extended matrix shard')
+ return {case:validate(root/case,case,expected,build)['performance_summary'] for case in cases}
 def external_identity(source,tree,run_id,attempt):
  require(re.fullmatch('[0-9a-f]{40}',source or '') and re.fullmatch('[0-9a-f]{40}',tree or '') and re.fullmatch('[1-9][0-9]*',run_id or '') and re.fullmatch('[1-9][0-9]*',attempt or ''),'invalid external evidence identity')
  require(n.git('rev-parse','HEAD')==source and n.git('rev-parse','HEAD^{tree}')==tree,'external verifier source drift')
  return {'schema':'hooklab.uxr04.case.v1','source_sha':source,'source_tree':tree,'run_id':run_id,'run_attempt':attempt,'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
 def main():
- p=argparse.ArgumentParser();p.add_argument('mode',choices=['run','verify','aggregate','publish-apks']);p.add_argument('--case',choices=CASES);p.add_argument('--out',type=Path,required=True);p.add_argument('--source');p.add_argument('--tree');p.add_argument('--run-id');p.add_argument('--attempt');p.add_argument('--summary',type=Path);p.add_argument('--apks',type=Path);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('mode',choices=['run','verify','aggregate','publish-apks','verify-apks']);p.add_argument('--case',choices=CASES);p.add_argument('--out',type=Path,required=True);p.add_argument('--source');p.add_argument('--tree');p.add_argument('--run-id');p.add_argument('--attempt');p.add_argument('--summary',type=Path);p.add_argument('--apks',type=Path);p.add_argument('--selected-json');a=p.parse_args()
  try:
+  selected=None
+  if a.selected_json is not None:
+   require(a.mode=='aggregate','selection only allowed for aggregate');rows=json.loads(a.selected_json)
+   require(isinstance(rows,list) and rows and all(isinstance(row,dict) and set(row)=={'case','api'} and row['case'] in CASES and row['api']==CASES[row['case']][0] for row in rows),'selected case configuration drift');selected=[row['case'] for row in rows]
   external=any(x is not None for x in (a.source,a.tree,a.run_id,a.attempt,a.summary))
   if a.mode=='publish-apks':require(a.case is None and a.apks is None and not external,'build publication arguments refused');publish_apks(a.out,n.expected_identity())
+  elif a.mode=='verify-apks':
+   require(a.case is None and a.apks is None and a.summary is None and external,'explicit identity required');print(json.dumps(shared_apks(a.out,external_identity(a.source,a.tree,a.run_id,a.attempt)),sort_keys=True))
   elif a.mode=='run':require(a.case is not None and a.apks is not None and not external,'case and shared APKs required; external identity forbidden in capture');run(a.out,a.case,a.apks)
   else:
    expected=external_identity(a.source,a.tree,a.run_id,a.attempt) if external else n.expected_identity();expected['schema']='hooklab.uxr04.case.v1'
    build=shared_apks(a.apks,expected)
    if a.mode=='verify':require(a.case is not None and a.summary is None,'case required');validate(a.out,a.case,expected,build)
    else:
-    result=verify_all(a.out,expected,build)
+    result=verify_all(a.out,expected,build,selected)
     if a.summary is not None:require(a.summary.is_file() and not a.summary.is_symlink() and json.loads(a.summary.read_text())==result,'hosted aggregate disagrees with independent case verification')
     print(json.dumps(result,sort_keys=True))
   return 0

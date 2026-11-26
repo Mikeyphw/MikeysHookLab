@@ -11,6 +11,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   android:
+    needs: [impact, source]
+    if: ${{ needs.impact.outputs.android == 'true' }}
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     name: Android build, unit tests and lint
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -42,10 +46,6 @@ jobs:
           sdkmanager --version
           sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'
           test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
-      - name: Validate source contract
-        run: python3 -B scripts/check_contract.py
-      - name: Audit final UI accessibility, routing and privacy
-        run: python3 -B scripts/check_ui08_qa.py
       - name: Assemble, test and lint
         shell: bash
         # Only HTTP 429 dependency download failures receive up to 3 attempts.
@@ -77,3 +77,217 @@ jobs:
             app/build/reports/
             app/build/test-results/
           if-no-files-found: warn
+      - name: Publish exact shared Android test APKs
+        run: python3 -B scripts/qa/adaptive_matrix.py publish-apks --out "$RUNNER_TEMP/matrix-apks"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-matrix-apks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/matrix-apks
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build unsigned release for visual fixture-isolation check
+        if: ${{ needs.impact.outputs.visual == 'true' }}
+        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleRelease
+      - name: Bind unsigned release to exact source and attempt
+        if: ${{ needs.impact.outputs.visual == 'true' }}
+        run: python3 -B scripts/qa/shared_native_apks.py publish --release "$RUNNER_TEMP/shared-release"
+      - uses: actions/upload-artifact@v7.0.2
+        if: ${{ needs.impact.outputs.visual == 'true' }}
+        with:
+          name: hooklab-shared-release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/shared-release
+          if-no-files-found: error
+          retention-days: 14
+  impact:
+    name: HookLab / impact plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      source: ${{ steps.plan.outputs.source }}
+      android: ${{ steps.plan.outputs.android }}
+      ci24: ${{ steps.plan.outputs.ci24 }}
+      terminal: ${{ steps.plan.outputs.terminal }}
+      design: ${{ steps.plan.outputs.design }}
+      visual: ${{ steps.plan.outputs.visual }}
+      functional: ${{ steps.plan.outputs.functional }}
+      adaptive: ${{ steps.plan.outputs.adaptive }}
+      go: ${{ steps.plan.outputs.go }}
+      adaptive_cases: ${{ steps.plan.outputs.adaptive_cases }}
+      functional_tests: ${{ steps.plan.outputs.functional_tests }}
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      EVENT_NAME: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Compute exact Git-tree impact
+        id: plan
+        run: python3 -B scripts/qa/qualification.py plan --head "$SOURCE_SHA" --base "$BASE_SHA" --event "$EVENT_NAME" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --plan "$RUNNER_TEMP/qualification/plan.json" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-impact-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qualification/plan.json
+          if-no-files-found: error
+          retention-days: 14
+  source:
+    name: HookLab / source contracts
+    needs: impact
+    if: ${{ needs.impact.outputs.source == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      EVENT_NAME: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned Python QA dependencies
+        run: python -m pip install 'playwright==1.57.0' 'Pillow==11.3.0' 'numpy==2.3.5'
+      - name: Validate source contract
+        run: python3 -B scripts/check_contract.py
+      - name: Audit final UI accessibility, routing and privacy
+        run: python3 -B scripts/check_ui08_qa.py
+      - name: Static regression and frozen reference integrity (no browser/emulator)
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          python3 -B scripts/qa/source_contract.py
+          python3 -B scripts/check_ui03_contract.py
+          python3 -B scripts/check_hl_diag_r05.py
+          python3 -B scripts/qa/reference.py verify
+          python3 -B scripts/qa/visual.py contract
+          python3 -B -m unittest discover -s scripts/qa -p 'test_*.py' -v
+          python3 -B scripts/qa/ci24.py inventory > "$RUNNER_TEMP/jvm-inventory.json"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/jvm-inventory.json
+          if-no-files-found: error
+          retention-days: 14
+  terminal:
+    name: HookLab / terminal contract
+    needs: [impact, source]
+    if: ${{ needs.impact.outputs.terminal == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      EVENT_NAME: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - run: sudo apt-get update -qq && sudo apt-get install -y zsh
+      - run: python3 -B scripts/qa/termux_session_check.py --require-zsh
+  go:
+    name: HookLab / Go qualification
+    needs: [impact, source]
+    if: ${{ needs.impact.outputs.go == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      EVENT_NAME: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/hooklabctl/go.mod
+          cache: false
+      - run: python3 -B scripts/qa/go_qualification.py --out "$RUNNER_TEMP/go-receipt.json"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-go-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/go-receipt.json
+          if-no-files-found: error
+          retention-days: 14
+  ci24:
+    name: ci24
+    needs: [impact, source]
+    if: ${{ needs.impact.outputs.ci24 == 'true' }}
+    uses: ./.github/workflows/hooklab-ci24.yml
+  design:
+    name: design
+    needs: [impact, source]
+    if: ${{ needs.impact.outputs.design == 'true' }}
+    uses: ./.github/workflows/hooklab-design-contract.yml
+  visual:
+    name: visual
+    needs: [impact, source, android, design]
+    if: ${{ needs.impact.outputs.visual == 'true' }}
+    uses: ./.github/workflows/hooklab-native-ui.yml
+    with:
+      shared_apks: true
+  functional:
+    name: functional
+    needs: [impact, source, android]
+    if: ${{ needs.impact.outputs.functional == 'true' }}
+    uses: ./.github/workflows/hooklab-functional.yml
+    with:
+      tests: ${{ needs.impact.outputs.functional_tests }}
+  adaptive:
+    name: adaptive
+    needs: [impact, source, android]
+    if: ${{ needs.impact.outputs.adaptive == 'true' }}
+    uses: ./.github/workflows/hooklab-ui-extended.yml
+    with:
+      shared_apks: true
+      cases: ${{ needs.impact.outputs.adaptive_cases }}
+  qualification:
+    name: HookLab / targeted qualification
+    needs: [impact, source, android, ci24, terminal, design, visual, functional, adaptive, go]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      EVENT_NAME: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: hooklab-impact-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qualification
+      - name: Recompute impact and verify every required or excluded gate
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          set -Eeuo pipefail
+          printf '%s' "$NEEDS_JSON" | jq -e '.impact.result == "success"' >/dev/null
+          jobs=$(printf '%s' "$NEEDS_JSON" | jq -c 'del(.impact) | map_values(.result)')
+          python3 -B scripts/qa/qualification.py aggregate --head "$SOURCE_SHA" --base "$BASE_SHA" --event "$EVENT_NAME" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --plan "$RUNNER_TEMP/qualification/plan.json" --receipt "$RUNNER_TEMP/qualification/receipt.json" --jobs "$jobs"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: hooklab-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qualification/
+          if-no-files-found: error
+          retention-days: 14

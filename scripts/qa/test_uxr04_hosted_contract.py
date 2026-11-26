@@ -4,7 +4,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[2]
 
 class HostedRepairTests(unittest.TestCase):
     def test_python_dependencies_precede_source_suite(self):
-        workflow=(ROOT/'.github/workflows/hooklab-design-contract.yml').read_text()
+        workflow=(ROOT/'.github/workflows/android.yml').read_text().split('  source:\n',1)[1].split('  terminal:\n',1)[0]
         steps=re.split(r'^      - (?=name:|uses:)',workflow,flags=re.M)[1:]
         install=[i for i,s in enumerate(steps) if "python -m pip install" in s]
         self.assertEqual(len(install),1)
@@ -18,7 +18,7 @@ class HostedRepairTests(unittest.TestCase):
 
     def test_instrumentation_required_in_android_ci(self):
         workflow=(ROOT/'.github/workflows/android.yml').read_text()
-        task=[line for line in workflow.splitlines() if 'run: bash scripts/ci_gradle_retry.sh' in line]
+        task=[line for line in workflow.splitlines() if 'run: bash scripts/ci_gradle_retry.sh' in line and ':app:assembleDebug' in line]
         self.assertEqual(len(task),1)
         for name in ('assembleDebug','assembleDebugAndroidTest','testDebugUnitTest','lintDebug'):
             self.assertIn(':app:'+name,task[0].split())

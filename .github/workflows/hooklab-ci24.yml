@@ -1,18 +1,7 @@
 name: HookLab Full JVM Regression (24 Shards)
 on:
   workflow_dispatch:
-  # Bootstrap: dispatchable workflow files must first exist on the default branch.
-  # This separate PR run qualifies the initial workflow adoption, not a release.
-  pull_request:
-    paths:
-      - 'app/**'
-      - 'gradle/**'
-      - '*.gradle'
-      - 'gradle.properties'
-      - 'gradlew*'
-      - '.github/workflows/hooklab-ci24.yml'
-      - 'scripts/qa/ci24.py'
-      - 'scripts/ci_gradle_retry.sh'
+  workflow_call:
 permissions:
   contents: read
 concurrency:

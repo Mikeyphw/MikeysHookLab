@@ -1,0 +1,62 @@
+name: HookLab Native Functional Qualification
+on:
+  workflow_call:
+    inputs:
+      tests:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  functional:
+    name: Production Activity selected fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SELECTED_TESTS: ${{ inputs.tests }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4.0.4
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'system-images;android-36;google_apis;x86_64'
+      - name: Require KVM and exact source
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - uses: actions/download-artifact@v8
+        with:
+          name: hooklab-matrix-apks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/matrix-apks
+      - name: Real Activity functional fixtures
+        id: functional
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          disk-size: 3072M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: python3 -B scripts/qa/functional_ui.py run --tests "$SELECTED_TESTS" --apks "$RUNNER_TEMP/matrix-apks" --out "$RUNNER_TEMP/functional"
+      - name: Independently verify selected fixtures
+        run: python3 -B scripts/qa/functional_ui.py verify --tests "$SELECTED_TESTS" --apks "$RUNNER_TEMP/matrix-apks" --out "$RUNNER_TEMP/functional"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always() && steps.functional.outcome != 'skipped'
+        with:
+          name: hooklab-functional-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/functional/
+          if-no-files-found: error
+          retention-days: 14

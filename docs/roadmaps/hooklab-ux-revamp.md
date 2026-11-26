@@ -5,6 +5,8 @@
 **Proposed repository path:** `docs/roadmaps/hooklab-ux-revamp.md` (retain `hooklab-flat-ux.md` and its historical acceptance matrix).  
 **Operator:** continue the existing `devop-hooklab` cumulative command; do not create an independent executable for this roadmap.  
 
+**2026-11-26 reconciliation:** PR #33 merged at `6306d05d369824ace13ce5fb746269acb4f844ef`, F05 head `424d8587efa3087c6b55f09fe2ccee3cd33b878a`; R00–R04 merged, device-inclusive acceptance pending. The combined tranche is tracked in `hooklab-modular.json`. Older status below is historical evidence, not the current dashboard.
+
 ## 1. Source identity and reconciliation
 
 | Item | Verified identity |

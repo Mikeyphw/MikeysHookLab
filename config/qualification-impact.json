@@ -1,0 +1,218 @@
+{
+  "functional_only": {
+    "app/src/main/java/com/mikeyphw/hooklab/termux/TermuxCommandPolicy.java": {
+      "cases": [
+        "api36-390"
+      ],
+      "reason": "Terminal policy is shared by bridge and hook; real PTY, fixture and compact adaptive journey required.",
+      "terminal": true,
+      "tests": [
+        "termux"
+      ]
+    },
+    "app/src/test/java/com/mikeyphw/hooklab/termux/TermuxCommandPolicyTest.java": {
+      "cases": [
+        "api36-390"
+      ],
+      "reason": "Terminal contract fixture affects bridge validation.",
+      "terminal": true,
+      "tests": [
+        "termux"
+      ]
+    }
+  },
+  "overlay_minimums": {
+    "MOD-00": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ],
+    "MOD-01": [
+      "source",
+      "android",
+      "ci24",
+      "functional",
+      "go"
+    ],
+    "MOD-02": [
+      "source",
+      "android",
+      "ci24",
+      "functional",
+      "go"
+    ],
+    "MOD-03": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ],
+    "MOD-04": [
+      "source",
+      "android",
+      "ci24",
+      "functional",
+      "go"
+    ],
+    "MOD-05": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ],
+    "UX-R00": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ],
+    "UX-R01": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ],
+    "UX-R02": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ],
+    "UX-R03": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ],
+    "UX-R04": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ],
+    "UX-R05": [
+      "source",
+      "android",
+      "ci24",
+      "terminal",
+      "design",
+      "visual",
+      "adaptive",
+      "go"
+    ]
+  },
+  "runtime_only": {
+    "app/src/main/java/com/mikeyphw/hooklab/chatgpt/AsyncCopyTrace.java": {
+      "cases": [],
+      "reason": "Target-process hook or matcher; manager routes and resources are separate. Android and full JVM regression remain mandatory.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/main/java/com/mikeyphw/hooklab/chatgpt/ChatGptCodeProbe.java": {
+      "cases": [],
+      "reason": "Target-process hook or matcher; manager routes and resources are separate. Android and full JVM regression remain mandatory.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/main/java/com/mikeyphw/hooklab/chatgpt/CodeBlockActionMatcher.java": {
+      "cases": [],
+      "reason": "Target-process hook or matcher; manager routes and resources are separate. Android and full JVM regression remain mandatory.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/main/java/com/mikeyphw/hooklab/chatgpt/CodeBlockProbeMatcher.java": {
+      "cases": [],
+      "reason": "Target-process hook or matcher; manager routes and resources are separate. Android and full JVM regression remain mandatory.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/main/java/com/mikeyphw/hooklab/chatgpt/CopyButtonCausalityTracker.java": {
+      "cases": [],
+      "reason": "Target-process hook or matcher; manager routes and resources are separate. Android and full JVM regression remain mandatory.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/main/java/com/mikeyphw/hooklab/obtainx/DroidifyHook.java": {
+      "cases": [],
+      "reason": "Target-process hook or matcher; manager routes and resources are separate. Android and full JVM regression remain mandatory.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/main/java/com/mikeyphw/hooklab/obtainx/NeoStoreHook.java": {
+      "cases": [],
+      "reason": "Target-process hook or matcher; manager routes and resources are separate. Android and full JVM regression remain mandatory.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/main/java/com/mikeyphw/hooklab/wordmaster/WordMasterNightHook.java": {
+      "cases": [],
+      "reason": "Target-process hook or matcher; manager routes and resources are separate. Android and full JVM regression remain mandatory.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/test/java/com/mikeyphw/hooklab/chatgpt/AsyncCopyTraceTest.java": {
+      "cases": [],
+      "reason": "Reviewed target-process JVM fixture; production UI unchanged.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/test/java/com/mikeyphw/hooklab/chatgpt/CodeBlockActionMatcherTest.java": {
+      "cases": [],
+      "reason": "Reviewed target-process JVM fixture; production UI unchanged.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/test/java/com/mikeyphw/hooklab/chatgpt/CodeBlockProbeMatcherTest.java": {
+      "cases": [],
+      "reason": "Reviewed target-process JVM fixture; production UI unchanged.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/test/java/com/mikeyphw/hooklab/chatgpt/CopyButtonCausalityTrackerTest.java": {
+      "cases": [],
+      "reason": "Reviewed target-process JVM fixture; production UI unchanged.",
+      "terminal": false,
+      "tests": []
+    },
+    "app/src/test/java/com/mikeyphw/hooklab/wordmaster/WordMasterNightHookTest.java": {
+      "cases": [],
+      "reason": "Reviewed target-process JVM fixture; production UI unchanged.",
+      "terminal": false,
+      "tests": []
+    }
+  },
+  "schema": "hooklab.qualification.policy.v1"
+}

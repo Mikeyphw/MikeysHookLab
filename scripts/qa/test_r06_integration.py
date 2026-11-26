@@ -45,5 +45,5 @@ class R06IntegrationTest(unittest.TestCase):
             self.assertIn(x,n)
         for x in ("'native_ssim_min':.99","'native_changed_pixel_max':.01","'NATIVE_REPEAT_FAILED'","'failed_routes':failures",'strict_regression(expected,actual,first,second,tolerances)'):
             self.assertIn(x,s)
-        self.assertIn('termux_session_check.py --require-zsh',(ROOT/'.github/workflows/hooklab-design-contract.yml').read_text())
+        self.assertIn('termux_session_check.py --require-zsh',(ROOT/'.github/workflows/android.yml').read_text().split('  terminal:\n',1)[1].split('  go:\n',1)[0])
 if __name__=='__main__':unittest.main()

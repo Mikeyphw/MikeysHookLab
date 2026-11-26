@@ -6,9 +6,12 @@ import adaptive_matrix as a
 class AdaptiveMatrixTests(unittest.TestCase):
  def test_matrix_covers_required_configurations_and_ci_paths(self):
   cases=list(a.CASES.values());self.assertEqual({x[0] for x in cases},{29,36});self.assertTrue({320,360,390,393,600,840}<={x[1] for x in cases});self.assertEqual({x[3] for x in cases},{1.,1.6,2.});self.assertEqual({x[4] for x in cases},{'dark','light','system','amoled','dynamic'});self.assertTrue(any(x[1]>x[2] for x in cases))
-  root=Path(__file__).resolve().parents[2];workflow=(root/'.github/workflows/hooklab-ui-extended.yml').read_text();self.assertEqual(workflow.count('- case:'),len(cases));self.assertIn('needs: [build, adaptive]',workflow);self.assertIn('needs: build',workflow);self.assertEqual(workflow.count(':app:assembleDebugAndroidTest'),1);self.assertIn('publish-apks',workflow);self.assertIn('if: always()',workflow)
-  self.assertIn("- 'app/**'",(root/'.github/workflows/hooklab-ci24.yml').read_text())
-  for case,api,*_ in [(k,*v) for k,v in a.CASES.items()]:self.assertIn(f'- case: {case}\n            api: {api}',workflow)
+  from qualification import CASES as selected_cases
+  import re
+  root=Path(__file__).resolve().parents[2];workflow=(root/'.github/workflows/hooklab-ui-extended.yml').read_text();self.assertIn('needs: [build, adaptive]',workflow);self.assertIn('needs: build',workflow);self.assertEqual(workflow.count(':app:assembleDebugAndroidTest'),1);self.assertIn('publish-apks',workflow);self.assertIn('if: always()',workflow)
+  matrix=json.loads(re.search(r"fromJSON\(inputs.cases \|\| '([^']+)'\)",workflow).group(1));self.assertEqual(matrix,[{'case':k,'api':v[0]} for k,v in a.CASES.items()]);self.assertEqual(selected_cases,{k:v[0] for k,v in a.CASES.items()})
+  self.assertIn('workflow_call:',(root/'.github/workflows/hooklab-ci24.yml').read_text())
+  coordinator=(root/'.github/workflows/android.yml').read_text();self.assertIn('needs.impact.outputs.ci24',coordinator);self.assertIn('uses: ./.github/workflows/hooklab-ci24.yml',coordinator);self.assertIn('--selected-json',workflow)
  @staticmethod
  def frames():
   return {'schema':'hooklab.uxr04.native-frames.v1','workload':'timeline_scroll_4000_events','requested_scroll_steps':80,'completed_scroll_steps':80,'dropped_callbacks':2,'samples':[{'intended_vsync_ns':i*16666667,'duration_ns':i*1000000} for i in range(1,21)]}
