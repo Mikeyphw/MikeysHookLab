@@ -107,7 +107,10 @@ public final class AdaptiveUiTest {
                     actions++;Rect bounds=new Rect();
                     if(v.getGlobalVisibleRect(bounds)){visible++;assertTrue(window.contains(bounds));}
                     // Explicit app controls, not framework-internal dialog descendants.
-                    if(v instanceof com.google.android.material.button.MaterialButton||v instanceof com.google.android.material.materialswitch.MaterialSwitch||v instanceof com.google.android.material.chip.Chip){
+                    if(v instanceof com.google.android.material.button.MaterialButton||v instanceof com.google.android.material.materialswitch.MaterialSwitch||v instanceof com.google.android.material.chip.Chip
+                        ||v instanceof androidx.appcompat.view.menu.ActionMenuItemView||v instanceof android.widget.ImageButton
+                        ||v.getId()==201||v.getId()==202||v.getId()==203
+                        ||(v.getTag() instanceof String&&((String)v.getTag()).startsWith("r04:action:"))){
                         assertTrue("minimum action width",v.getMeasuredWidth()>=Math.round(48*density));
                         assertTrue("minimum action height",v.getMeasuredHeight()>=Math.round(48*density));
                         AccessibilityNodeInfo node=v.createAccessibilityNodeInfo();assertTrue("action node enabled",node.isEnabled());node.recycle();
@@ -131,6 +134,40 @@ public final class AdaptiveUiTest {
         }catch(Exception failure){throw new AssertionError("ADAPTIVE_GEOMETRY_"+name,failure);}});
         assertTrue(device.takeScreenshot(new File(folder,name+".png")));
         device.dumpWindowHierarchy(new File(folder,name+".xml"));records.put(row);
+    }
+    private void homeTargetGeometry(ActivityScenario<MainActivity> scenario)throws Exception {
+        // Capture only safe numeric geometry and class/resource identities, not text.
+        // Keep this even if the real accessibility framework subsequently refuses.
+        JSONObject record=new JSONObject();
+        record.put("schema","hooklab.uxr04.home-targets.v1").put("source",InstrumentationRegistry.getArguments().getString("uxr04_source", ""));
+        JSONArray targets=new JSONArray();
+        scenario.onActivity(a->{try{
+            List<View> views=new ArrayList<>();walk(a.getWindow().getDecorView(),views);
+            int minimum=Math.round(48*a.getResources().getDisplayMetrics().density);
+            for(View v:views){
+                if(!v.isClickable()||!v.isEnabled()||v.getImportantForAccessibility()==View.IMPORTANT_FOR_ACCESSIBILITY_NO||v.getImportantForAccessibility()==View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS)continue;
+                Rect visible=new Rect();if(!v.getGlobalVisibleRect(visible))continue;
+                String kind=v.getClass().getName();if(!kind.matches("(?:android|androidx|com\\.android\\.internal|com\\.google\\.android\\.material|com\\.mikeyphw\\.hooklab)\\.[A-Za-z0-9_.$]{1,180}"))continue;
+                if(targets.length()>=128)throw new IllegalStateException("home target inventory limit");
+                targets.put(new JSONObject().put("id",v.getId()).put("class",kind).put("width_px",v.getWidth()).put("height_px",v.getHeight()).put("visible_width_px",visible.width()).put("visible_height_px",visible.height()).put("minimum_px",minimum));
+            }
+        }catch(org.json.JSONException e){throw new IllegalStateException(e);}});
+        record.put("targets",targets);Files.write(new File(folder,"home-targets.json").toPath(),record.toString().getBytes(StandardCharsets.UTF_8));
+    }
+    private void prepareMatrixOrientation() throws Exception {
+        android.os.Bundle args=InstrumentationRegistry.getArguments();
+        int width=Integer.parseInt(args.getString("uxr04_width_px","0"));
+        int height=Integer.parseInt(args.getString("uxr04_height_px","0"));
+        assertTrue("valid matrix orientation",width>0&&height>0);
+        // UiAutomation can reset rotation at instrumentation startup/teardown.
+        // Freeze from within each fresh test process before Activity creation.
+        if(width>height)device.setOrientationLeft();else device.setOrientationNatural();
+        for(int i=0;i<50;i++){
+            ins.waitForIdleSync();
+            if(device.getDisplayWidth()==width&&device.getDisplayHeight()==height)return;
+            SystemClock.sleep(200);
+        }
+        fail("matrix display rotation did not converge before Activity launch");
     }
     private void awaitInitialViewport(ActivityScenario<MainActivity> scenario)throws Exception {
         android.os.Bundle args=InstrumentationRegistry.getArguments();
@@ -200,11 +237,11 @@ public final class AdaptiveUiTest {
         int night=theme.equals("light")?AppCompatDelegate.MODE_NIGHT_NO:theme.equals("amoled")?100:theme.equals("system")?AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM:AppCompatDelegate.MODE_NIGHT_YES;
         assertTrue(app.getSharedPreferences("appearance",Context.MODE_PRIVATE).edit().clear().putInt("night",night).putBoolean("dynamicColors",theme.equals("dynamic")).commit());
         JSONArray records=new JSONArray();long started=SystemClock.elapsedRealtime();
-        phase("LAUNCH_HOME");
+        phase("LAUNCH_HOME");prepareMatrixOrientation();
         try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
             long launch=SystemClock.elapsedRealtime()-started;
             phase("VIEWPORT_READY");awaitInitialViewport(s);
-            phase("HOME_SCROLL");
+            phase("HOME_SCROLL");homeTargetGeometry(s);
             // The real shortcut row owns accessibility and the click target; its
             // decorative child text is deliberately hidden from AT. Scroll the
             // actual action, then assert it is exposed before capturing Home.
@@ -323,7 +360,7 @@ public final class AdaptiveUiTest {
         app.diagnostics().importStream(new java.io.ByteArrayInputStream(fixture.toString().getBytes(StandardCharsets.UTF_8)),"LSPOSED_MODULE");
         long importMs=SystemClock.elapsedRealtime()-start;assertEquals(4000,app.diagnostics().size());assertEquals(1,app.diagnostics().dropped());
         JSONArray durations=new JSONArray(),memory=new JSONArray();JSONObject nativeFrames;
-        phase("PERF_LAUNCH");try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
+        phase("PERF_LAUNCH");prepareMatrixOrientation();try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
             phase("VIEWPORT_READY");awaitInitialViewport(s);
             onView(withId(203)).perform(click());
             phase("PERF_PAGE");for(int page=1;page<=5;page++){

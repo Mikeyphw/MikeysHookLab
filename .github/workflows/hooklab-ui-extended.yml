@@ -7,7 +7,49 @@ on:
 permissions:
   contents: read
 jobs:
+  build:
+    name: Extended UI / exact shared APK build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          cmdline-tools-version: '15859902'
+          packages: 'platform-tools'
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+      - name: Require exact clean checkout
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
+      - name: Hosted APK build (once for all ten cases)
+        env:
+          HOOKLAB_CI_RETRY_PROFILE: native
+        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Bind built APKs to exact source and attempt
+        run: python3 -B scripts/qa/adaptive_matrix.py publish-apks --out "$RUNNER_TEMP/matrix-apks"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-matrix-apks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/matrix-apks/
+          if-no-files-found: error
+          retention-days: 14
   adaptive:
+    needs: build
     name: Adaptive UI / ${{ matrix.case }}
     runs-on: ubuntu-24.04
     timeout-minutes: 75
@@ -47,12 +89,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
       - uses: android-actions/setup-android@v4.0.4
         with:
           cmdline-tools-version: '15859902'
           packages: 'platform-tools'
-      - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'system-images;android-${{ matrix.api }};google_apis;x86_64'
+      - run: sdkmanager 'system-images;android-${{ matrix.api }};google_apis;x86_64'
       - name: Require KVM and exact source
         run: |
           set -Eeuo pipefail
@@ -60,10 +101,10 @@ jobs:
           test -c /dev/kvm
           sudo chmod a+rw /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
-      - name: Hosted APK build
-        env:
-          HOOKLAB_CI_RETRY_PROFILE: native
-        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest
+      - uses: actions/download-artifact@v8
+        with:
+          name: hooklab-matrix-apks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/matrix-apks
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -81,9 +122,9 @@ jobs:
           disk-size: 3072M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: python3 -B scripts/qa/adaptive_matrix.py run --case '${{ matrix.case }}' --out "$RUNNER_TEMP/adaptive/${{ matrix.case }}"
+          script: python3 -B scripts/qa/adaptive_matrix.py run --case '${{ matrix.case }}' --out "$RUNNER_TEMP/adaptive/${{ matrix.case }}" --apks "$RUNNER_TEMP/matrix-apks"
       - name: Independently verify the case
-        run: python3 -B scripts/qa/adaptive_matrix.py verify --case '${{ matrix.case }}' --out "$RUNNER_TEMP/adaptive/${{ matrix.case }}"
+        run: python3 -B scripts/qa/adaptive_matrix.py verify --case '${{ matrix.case }}' --out "$RUNNER_TEMP/adaptive/${{ matrix.case }}" --apks "$RUNNER_TEMP/matrix-apks"
       - uses: actions/upload-artifact@v7.0.2
         if: always() && steps.adaptive_capture.outcome != 'skipped'
         with:
@@ -93,7 +134,7 @@ jobs:
           retention-days: 14
   aggregate:
     name: Extended UI / exact matrix aggregate
-    needs: adaptive
+    needs: [build, adaptive]
     if: always()
     runs-on: ubuntu-24.04
     env:
@@ -112,6 +153,10 @@ jobs:
           pattern: hooklab-extended-${{ github.run_id }}-${{ github.run_attempt }}-*
           path: artifacts
           merge-multiple: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: hooklab-matrix-apks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/matrix-apks
       - name: Verify exact matrix roster and all evidence
         run: |
           set -Eeuo pipefail
@@ -120,7 +165,8 @@ jobs:
             name="${path##*/}"
             mv -- "$path" "cases/${name#hooklab-extended-${{ github.run_id }}-${{ github.run_attempt }}-}"
           done
-          python3 -B scripts/qa/adaptive_matrix.py aggregate --out cases > "$RUNNER_TEMP/extended-summary.json"
+          python3 -B scripts/qa/adaptive_matrix.py aggregate --out cases --apks "$RUNNER_TEMP/matrix-apks" > "$RUNNER_TEMP/extended-summary.json"
+          test '${{ needs.build.result }}' = success
           test '${{ needs.adaptive.result }}' = success
       - uses: actions/upload-artifact@v7.0.2
         if: always()

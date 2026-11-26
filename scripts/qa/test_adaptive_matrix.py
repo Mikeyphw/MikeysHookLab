@@ -6,7 +6,7 @@ import adaptive_matrix as a
 class AdaptiveMatrixTests(unittest.TestCase):
  def test_matrix_covers_required_configurations_and_ci_paths(self):
   cases=list(a.CASES.values());self.assertEqual({x[0] for x in cases},{29,36});self.assertTrue({320,360,390,393,600,840}<={x[1] for x in cases});self.assertEqual({x[3] for x in cases},{1.,1.6,2.});self.assertEqual({x[4] for x in cases},{'dark','light','system','amoled','dynamic'});self.assertTrue(any(x[1]>x[2] for x in cases))
-  root=Path(__file__).resolve().parents[2];workflow=(root/'.github/workflows/hooklab-ui-extended.yml').read_text();self.assertEqual(workflow.count('- case:'),len(cases));self.assertIn('needs: adaptive',workflow);self.assertIn('if: always()',workflow)
+  root=Path(__file__).resolve().parents[2];workflow=(root/'.github/workflows/hooklab-ui-extended.yml').read_text();self.assertEqual(workflow.count('- case:'),len(cases));self.assertIn('needs: [build, adaptive]',workflow);self.assertIn('needs: build',workflow);self.assertEqual(workflow.count(':app:assembleDebugAndroidTest'),1);self.assertIn('publish-apks',workflow);self.assertIn('if: always()',workflow)
   self.assertIn("- 'app/**'",(root/'.github/workflows/hooklab-ci24.yml').read_text())
   for case,api,*_ in [(k,*v) for k,v in a.CASES.items()]:self.assertIn(f'- case: {case}\n            api: {api}',workflow)
  @staticmethod
@@ -44,14 +44,16 @@ class AdaptiveMatrixTests(unittest.TestCase):
   from unittest.mock import patch
   from types import SimpleNamespace
   cfg=a.config('api36-landscape')
-  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',return_value='lock 1'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'parse_instrumentation'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='')):
+  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=lambda *args: 'lock 1' if args[:2]==('shell','wm') else '0' if args[-1]=='accelerometer_rotation' else '1'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'parse_instrumentation'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='')):
    for method in (a.JOURNEY,a.PERF):a.instrument(method,cfg,'a'*40,Path('.'))
    self.assertEqual([x.args for x in adb.call_args_list if x.args[:3]==('shell','wm','user-rotation')],[('shell','wm','user-rotation','lock','1')]*2)
   with patch.object(a.n,'adb'),patch.object(a.n,'txt',return_value='free'),patch.object(a.subprocess,'run') as child:
    with self.assertRaisesRegex(ValueError,'rotation lock'):a.instrument(a.PERF,cfg,'a'*40,Path('.'))
    child.assert_not_called()
-  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',return_value='lock 0'):
-   a.lock_matrix_rotation(a.config('api29-compact'));adb.assert_called_once_with('shell','wm','user-rotation','lock','0')
+  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',return_value='0') as read:
+   a.lock_matrix_rotation(a.config('api29-compact'));self.assertEqual([x.args for x in adb.call_args_list],[('shell','settings','put','system','accelerometer_rotation','0'),('shell','settings','put','system','user_rotation','0')]);self.assertEqual(read.call_count,2)
+  with patch.object(a.n,'adb'),patch.object(a.n,'txt',return_value='1'):
+   with self.assertRaisesRegex(ValueError,'rotation settings'):a.lock_matrix_rotation(a.config('api29-compact'))
  def test_home_uses_semantic_action_and_keeps_full_accessibility_gate(self):
   root=Path(__file__).resolve().parents[2];test=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text();activity=(root/'app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java').read_text()
   home=test.split('phase("HOME_SCROLL")',1)[1].split('phase("OPEN_HOOKS")',1)[0]
@@ -95,16 +97,78 @@ class AdaptiveMatrixTests(unittest.TestCase):
    a.dump(out/'journey.json',{'schema':'hooklab.uxr04.adaptive.v1','api':29,'theme':'light','source':expected['source_sha'],'framework_disconnected':True,'physical_device_qualified':False,'routes':routes,'ime_observed':True,'orientation_round_trip':True,'separate_catalog_targets':True,'scenario_launch_ms':200})
    a.dump(out/'performance.json',{'schema':'hooklab.uxr04.performance.v2','events':4000,'dropped':1,'page_size':30,'budget_enforced':False,'import_ms':23,'page_action_ms':[1,2,3,4,5],'sampled_pss_kb':[100,102,103,101,100],'native_frames':self.frames()})
    a.dump(out/'launch-performance.json',{'cold_launch_ms':[100,200,300,400,500],'cold_launch_pids':[101,102,103,104,105],'cold_launch_p95_ms':500,'frame_ms':a.frame_durations(self.frames()),'frame_p95_ms':19.,'frame_workload':'timeline_scroll_4000_events','budget_enforced':False})
-   r={**expected,'case':case,'configuration':cfg,'status':'PASS_EXTENDED_NOT_DEVICE_APPROVAL','completed_tests':a.roster(case),**{k:'a'*64 for k in ('app_apk_sha256','android_test_apk_sha256','installed_apk_sha256','installed_test_apk_sha256')},'performance_summary':{'scenario_launch_ms':200,'page_action_p95_ms':5,'sampled_peak_pss_kb':103,'cold_launch_p95_ms':500,'frame_p95_ms':19.,'budget_enforced':False}}
+   build={**a.apk_identity(expected),'apks':{'app':{'sha256':'a'*64,'size':100},'test':{'sha256':'a'*64,'size':100}}}
+   r={**expected,'case':case,'configuration':cfg,'status':'PASS_EXTENDED_NOT_DEVICE_APPROVAL','completed_tests':a.roster(case),'apk_build':build,**{k:'a'*64 for k in ('app_apk_sha256','android_test_apk_sha256','installed_apk_sha256','installed_test_apk_sha256')},'performance_summary':{'scenario_launch_ms':200,'page_action_p95_ms':5,'sampled_peak_pss_kb':103,'cold_launch_p95_ms':500,'frame_p95_ms':19.,'budget_enforced':False}}
    def receipt():
     r['files']={f.name:a.sha(f) for f in out.iterdir() if f.name!='receipt.json'};a.dump(out/'receipt.json',r)
-   receipt();self.assertEqual(a.validate(out,case,expected),r)
+   receipt();self.assertEqual(a.validate(out,case,expected,build),r)
    lp=out/'launch-performance.json';good=lp.read_bytes();bad=json.loads(good);bad['frame_ms'][0]=999.;a.dump(lp,bad);receipt()
-   with self.assertRaisesRegex(ValueError,'launch/frame evidence drift'):a.validate(out,case,expected)
+   with self.assertRaisesRegex(ValueError,'launch/frame evidence drift'):a.validate(out,case,expected,build)
    lp.write_bytes(good);receipt()
    f=out/'home.hierarchy.json';old=f.read_bytes();f.write_bytes(old+b' ')
-   with self.assertRaisesRegex(ValueError,'digest drift'):a.validate(out,case,expected)
+   with self.assertRaisesRegex(ValueError,'digest drift'):a.validate(out,case,expected,build)
    a.dump(f,[{'bounds':[0,0,9999,100],'clickable':True,'enabled':True,'focusable':True,'checked':False,'labelled':True}]);receipt()
-   with self.assertRaisesRegex(ValueError,'node bounds'):a.validate(out,case,expected)
+   with self.assertRaisesRegex(ValueError,'node bounds'):a.validate(out,case,expected,build)
    f.write_bytes(old);receipt();r['installed_test_apk_sha256']='b'*64;a.dump(out/'receipt.json',r)
-   with self.assertRaisesRegex(ValueError,'installed APK drift'):a.validate(out,case,expected)
+   with self.assertRaisesRegex(ValueError,'installed APK drift'):a.validate(out,case,expected,build)
+   r['installed_test_apk_sha256']='a'*64;receipt()
+   with self.assertRaisesRegex(ValueError,'shared APK identity'):a.validate(out,case,expected,dict(build,run_attempt='1'))
+
+ def test_shared_apk_artifact_is_source_attempt_and_byte_bound(self):
+  import zipfile
+  with tempfile.TemporaryDirectory() as t:
+   root=Path(t);expected={'source_sha':'a'*40,'source_tree':'b'*40,'run_id':'77','run_attempt':'2','repository':a.n.PKG}
+   for name in a.APK_FILES.values():
+    with zipfile.ZipFile(root/name,'w') as z:z.writestr('AndroidManifest.xml','fixture');z.writestr('classes.dex',name)
+   record={**a.apk_identity(expected),'apks':{k:a.apk_file(root/v) for k,v in a.APK_FILES.items()}}
+   a.dump(root/'apk-build.json',record);self.assertEqual(a.shared_apks(root,expected),record)
+   for key,value in [('source_sha','c'*40),('source_tree','c'*40),('run_attempt','1'),('run_id','78')]:
+    with self.assertRaisesRegex(ValueError,'identity/digest'):a.shared_apks(root,dict(expected,**{key:value}))
+   (root/'extra').touch()
+   with self.assertRaisesRegex(ValueError,'roster'):a.shared_apks(root,expected)
+   (root/'extra').unlink()
+   with zipfile.ZipFile(root/'app.apk','a') as z:z.writestr('changed','bytes')
+   with self.assertRaisesRegex(ValueError,'identity/digest'):a.shared_apks(root,expected)
+ def test_action_ownership_and_resource_identity_are_unambiguous(self):
+  def node(text='',desc='',rid='',click='false',bounds='[10,10][100,100]',children=''):
+   return f'<node package="{a.n.PKG}" text="{text}" content-desc="{desc}" resource-id="{rid}" clickable="{click}" enabled="true" bounds="{bounds}">{children}</node>'
+  label=node('Diagnostics');owner=node(desc='Diagnostics',click='true',children=label)
+  navigation=node(rid=a.CONTROL_IDS['primary_navigation'],children=owner)
+  root=a.ET.fromstring('<hierarchy>'+navigation+node('Diagnostics')+'</hierarchy>')
+  self.assertEqual(a.action_nodes(root,'Diagnostics',scope='primary_navigation'),[(10,10,100,100)])
+  root=a.ET.fromstring('<hierarchy>'+node('Choose target')+node('Choose target',rid=a.CONTROL_IDS['capture_target'],click='true')+'</hierarchy>')
+  self.assertEqual(len(a.control_nodes(root,'capture_target',action=True)),1)
+  root=a.ET.fromstring('<hierarchy>'+owner+owner+'</hierarchy>')
+  self.assertEqual(len(a.action_nodes(root,'Diagnostics')),2)
+  from unittest.mock import patch
+  with patch.object(a,'live_xml',return_value=root),patch.object(a.n,'adb') as adb:
+   with self.assertRaisesRegex(ValueError,'ambiguous.*Diagnostics'):a.tap_control('Diagnostics',a.config('api36-390'))
+   adb.assert_not_called()
+ def test_production_capture_ids_and_chrome_targets(self):
+  root=Path(__file__).resolve().parents[2];activity=(root/'app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java').read_text();flat=(root/'app/src/main/java/com/mikeyphw/hooklab/ui/FlatUi.java').read_text();test=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text();ids=(root/'app/src/main/res/values/uxr04_ids.xml').read_text()
+  for resource in a.CONTROL_IDS.values():
+   name=resource.split('/')[-1];self.assertIn('R.id.'+name,activity);self.assertIn('name="'+name+'"',ids)
+  self.assertIn('FlatUi.enforceChromeTargets(toolbar,navigation)',activity);self.assertIn('setItemMinimumHeight(dp(nav,64))',flat);self.assertIn('view.setMinimumWidth(minimum)',flat);self.assertIn('view.setMinimumHeight(minimum)',flat)
+  self.assertEqual(test.count('prepareMatrixOrientation();'),2);self.assertIn('if(width>height)device.setOrientationLeft();else device.setOrientationNatural();',test)
+  self.assertIn('AccessibilityChecks.enable().setRunChecksFromRootView(true)',test);self.assertNotIn('setSuppressingResultMatcher',test)
+
+ def test_home_geometry_checkpoint_rejects_private_and_stale_data(self):
+  from unittest.mock import patch
+  row={'schema':'hooklab.uxr04.home-targets.v1','source':'a'*40,'targets':[{'id':201,'class':'com.google.android.material.navigationrail.NavigationRailItemView','width_px':176,'height_px':128,'visible_width_px':176,'visible_height_px':128,'minimum_px':96}]}
+  with patch.object(a.n,'raw',side_effect=lambda *args:json.dumps(row).encode()):
+   self.assertEqual(a.home_geometry_checkpoint('a'*40),row)
+   self.assertIsNone(a.home_geometry_checkpoint('b'*40))
+   row['targets'][0]['text']='PRIVATE';self.assertIsNone(a.home_geometry_checkpoint('a'*40));row['targets'][0].pop('text')
+   row['targets'][0]['class']='private.arbitrary.Payload';self.assertIsNone(a.home_geometry_checkpoint('a'*40))
+ def test_publish_apks_uses_exact_built_pair_and_rejects_reuse(self):
+  import zipfile
+  from unittest.mock import patch
+  with tempfile.TemporaryDirectory() as t:
+   root=Path(t);app=root/'app-source.apk';test=root/'test-source.apk';out=root/'published'
+   for apk in (app,test):
+    with zipfile.ZipFile(apk,'w') as z:z.writestr('AndroidManifest.xml','fixture');z.writestr('classes.dex',apk.name)
+   expected={'source_sha':'a'*40,'source_tree':'b'*40,'run_id':'77','run_attempt':'2','repository':'Mikeyphw/MikeysHookLab'}
+   with patch.object(a.n,'one',side_effect=[app,test]):
+    build=a.publish_apks(out,expected)
+   self.assertEqual(build['apks']['app']['sha256'],a.sha(app));self.assertEqual(build['apks']['test']['sha256'],a.sha(test));self.assertEqual(a.shared_apks(out,expected),build)
+   with self.assertRaisesRegex(ValueError,'fresh shared APK'):a.publish_apks(out,expected)

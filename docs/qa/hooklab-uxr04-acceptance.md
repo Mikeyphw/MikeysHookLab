@@ -32,3 +32,8 @@ F01 exact head `d40521c183f43e97b6e3f14556409a3fc6ba1086` (Extended UI run 45710
 ### F03 qualification repair
 
 F02 exact source `68a9269ef41cfdfb3d24ffbd38e1b57017e7848e`: 3/5 workflows passed, 5/10 extended cases passed. The three tablet failures expose HOME_SCROLL but not the original assertion; the semantic row repair and structured cause checkpoint do not assert prior root cause or hosted acceptance. Native and primary extended fixture failed at `FrameworkFixtureTest.java:251`; the catalog mode and explicit stable search action now preserve query and independent hook identities. Landscape performance refused viewport convergence after the journey; rotation is locked/read back independently before every instrumentation and before cold launch. All previous accessibility checks, performance thresholds/evidence requirements, route rosters and source identity gates remain.
+
+
+### F04 exact F03 qualification repair
+
+Source `20724a6995b7ba8c8bd3e7c08254831fc619509a`, tree `a9bce675e4df4a4518af861bc9a4cc5ad4a238ec`. Extended 45724979860 attempt 1: 2/10 success, 6 runtime failures, 2 Maven 429 build failures. Native baseline passed. Correct API29 rotation compatibility, independently freeze display in each instrumentation, enforce actual toolbar/nav/row geometry, retain full ATF, add source-bound safe Home geometry on refusal, use real stable capture resources and actionable owner selection. Single hosted build emits one exact pair; all ten jobs independently verify installed hashes, aggregate compares against exact downloaded pair; operator independently rehashes twelve artifacts. Full rerun required if retrying the workflow. All real runtime gates pending, no physical-device/visual/release approval.

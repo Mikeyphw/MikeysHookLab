@@ -459,7 +459,7 @@ public final class MainActivity extends AppCompatActivity {
             .setItems(titles,(dialog,index) -> {
                 if(index<specs.size()) {selectCaptureSource(specs.get(index),null);return;}
                 android.widget.EditText input=new android.widget.EditText(this);
-                input.setSingleLine(true);input.setHint(R.string.dx02_package_hint);
+                input.setId(R.id.hooklab_capture_package);input.setSingleLine(true);input.setHint(R.string.dx02_package_hint);
                 new androidx.appcompat.app.AlertDialog.Builder(this)
                     .setTitle(R.string.dx02_research_target)
                     .setView(input)
@@ -513,10 +513,12 @@ public final class MainActivity extends AppCompatActivity {
         body.addView(text(getString(R.string.dx02_disclaimer),14));
         com.mikeyphw.hooklab.diagnostics.CaptureSession capture=captureApp().capture();
         if(capture==null){
-            if(captureApp().interruptedCapture())
-                card(getString(R.string.dx02_interrupted),getString(R.string.dx02_process_loss));
+            if(captureApp().interruptedCapture()){
+                LinearLayout interrupted=card(getString(R.string.dx02_interrupted),getString(R.string.dx02_process_loss));
+                interrupted.getChildAt(0).setId(R.id.hooklab_capture_interrupted);
+            }
             button(card(getString(R.string.dx02_new),getString(R.string.dx02_instruction)),
-                    R.string.dx02_choose_target,v -> selectCaptureTarget());
+                    R.string.dx02_choose_target,v -> selectCaptureTarget()).setId(R.id.hooklab_capture_target);
             return;
         }
         long now=captureClock();
@@ -535,18 +537,19 @@ public final class MainActivity extends AppCompatActivity {
                 launchDiagnosticImport(capture.source,capture);
             });
             button(header,R.string.dx02_mark_repro,v -> captureMarker(
-                com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.REPRODUCE_ACTION));
+                com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.REPRODUCE_ACTION)).setId(R.id.hooklab_capture_mark);
             button(header,R.string.dx02_mark_problem,v -> captureMarker(
                 com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.OBSERVED_PROBLEM));
             button(header,R.string.dx02_mark_restart,v -> captureMarker(
                 com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.APP_RESTARTED));
             button(header,R.string.dx02_mark_permission,v -> captureMarker(
                 com.mikeyphw.hooklab.diagnostics.CaptureSession.MarkerCode.PERMISSION_PROMPT));
-            button(header,R.string.dx02_stop,v -> {
+            MaterialButton stop=button(header,R.string.dx02_stop,v -> {
                 if(captureApp().captureImportRunning()){toast(R.string.dx02_import_pending);return;}
                 capture.stop(captureClock(),com.mikeyphw.hooklab.diagnostics.CaptureSession.latestOrdinal(diagnosticsStore()));
                 captureApp().closeCapture();render();
-            }).setEnabled(!captureApp().captureImportRunning());
+            });
+            stop.setId(R.id.hooklab_capture_stop);stop.setEnabled(!captureApp().captureImportRunning());
             button(header,R.string.dx02_cancel,v ->
                 new androidx.appcompat.app.AlertDialog.Builder(this)
                     .setTitle(R.string.dx02_cancel).setMessage(R.string.dx02_cancel_warning)
@@ -721,7 +724,7 @@ public final class MainActivity extends AppCompatActivity {
         ChipGroup tabs=new ChipGroup(this);tabs.setSingleSelection(true);tabs.setSelectionRequired(true);
         final int[] routes={DIAGNOSTICS,HEALTH,CAPTURE};final int[] labels={R.string.r01_timeline,R.string.r01_health,R.string.dx02_capture};
         for(int i=0;i<routes.length;i++){
-            int route=routes[i];Chip chip=new Chip(this);chip.setId(View.generateViewId());chip.setText(labels[i]);
+            int route=routes[i];Chip chip=new Chip(this);chip.setId(route==CAPTURE?R.id.hooklab_capture_tab:View.generateViewId());chip.setText(labels[i]);
             chip.setCheckable(true);FlatUi.chip(chip);tabs.addView(chip);chip.setChecked(current==route);
             chip.setOnClickListener(v->goTo(route));
         }
@@ -941,6 +944,7 @@ public final class MainActivity extends AppCompatActivity {
         content.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
         if (!wide) navigation = new BottomNavigationView(this);
+        navigation.setId(R.id.hooklab_primary_navigation);
         navigation.getMenu().add(Menu.NONE, NAV_HOME, 0, R.string.home).setIcon(R.drawable.ic_nav_home);
         navigation.getMenu().add(Menu.NONE, NAV_APPS, 1, R.string.ui_hooks).setIcon(R.drawable.ic_nav_apps);
         navigation.getMenu().add(Menu.NONE, NAV_DIAGNOSTICS, 2, R.string.diagnostics)
@@ -962,6 +966,7 @@ public final class MainActivity extends AppCompatActivity {
         });
         FlatUi.navigation(navigation);
         FlatUi.adaptiveNavigationLabels(navigation);
+        FlatUi.enforceChromeTargets(toolbar,navigation);
         if (!wide) content.addView(navigation, new LinearLayout.LayoutParams(-1, -2));
         setContentView(root);
         ViewCompat.requestApplyInsets(root);

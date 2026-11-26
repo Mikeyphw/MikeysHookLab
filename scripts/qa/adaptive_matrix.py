@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extended, hosted-only production-Activity matrix. No approval or device claims."""
 from __future__ import annotations
-import argparse, hashlib, json, math, os, re, subprocess, sys, time, xml.etree.ElementTree as ET
+import argparse, hashlib, json, math, os, re, shutil, subprocess, sys, time, xml.etree.ElementTree as ET, zipfile
 from pathlib import Path
 import native_smoke as n
 CASES={
@@ -57,24 +57,46 @@ def checkpoint_phase(source,test):
  except (OSError,ValueError,TypeError,subprocess.SubprocessError):pass
  return None
 
+def home_geometry_checkpoint(source):
+ try:
+  raw=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/home-targets.json')
+  if not 0<len(raw)<=65536:return None
+  row=json.loads(raw)
+  if set(row)!={'schema','source','targets'} or row['schema']!='hooklab.uxr04.home-targets.v1' or row['source']!=source:return None
+  targets=row['targets'];keys={'id','class','width_px','height_px','visible_width_px','visible_height_px','minimum_px'}
+  if not isinstance(targets,list) or not 0<len(targets)<=128:return None
+  for target in targets:
+   if not isinstance(target,dict) or set(target)!=keys or not isinstance(target['class'],str) or not re.fullmatch(r'(?:android|androidx|com\.android\.internal|com\.google\.android\.material|com\.mikeyphw\.hooklab)\.[A-Za-z0-9_.$]{1,180}',target['class']):return None
+   if type(target['id']) is not int or not -1<=target['id']<2**31 or any(type(target[k]) is not int or not 0<=target[k]<=10000 for k in keys-{'class','id'}):return None
+   if target['minimum_px']!=96:return None
+  return row
+ except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
+
 def lock_matrix_rotation(cfg):
  rotation='1' if cfg['width_px']>cfg['height_px'] else '0'
- # WindowManager lock, not merely a settings write. UiAutomation teardown
- # may unfreeze rotation when its instrumentation process exits.
- n.adb('shell','wm','user-rotation','lock',rotation)
- require(n.txt('shell','wm','user-rotation').strip()=='lock '+rotation,'matrix rotation lock not confirmed')
+ # API29 has settings-based rotation but not the newer wm user-rotation command.
+ # Both paths read back actual platform settings, while each instrumentation
+ # process independently freezes and checks its real display before launch.
+ n.adb('shell','settings','put','system','accelerometer_rotation','0')
+ n.adb('shell','settings','put','system','user_rotation',rotation)
+ if cfg['api']>=36:
+  n.adb('shell','wm','user-rotation','lock',rotation)
+  require(n.txt('shell','wm','user-rotation').strip()=='lock '+rotation,'matrix rotation lock not confirmed')
+ require(n.txt('shell','settings','get','system','accelerometer_rotation')=='0' and n.txt('shell','settings','get','system','user_rotation')==rotation,'matrix rotation settings not confirmed')
 
 def instrument(test,cfg,source,out):
  lock_matrix_rotation(cfg)
  # A checkpoint from a different invocation must never be accepted as current.
  n.clear_failure_checkpoint()
- if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp')
+ if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json')
  result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
  try:
   require(result.returncode==0,'instrument transport failed: '+test)
   n.parse_instrumentation(result.stdout,test)
  except ValueError:
-  failure=failure_info(result.stdout,test,result.returncode);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES);dump(out/'failure.json',failure)
+  failure=failure_info(result.stdout,test,result.returncode);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES)
+  if test==JOURNEY and failure['checkpoint_phase']=='HOME_SCROLL':failure['home_target_geometry']=home_geometry_checkpoint(source)
+  dump(out/'failure.json',failure)
   print('ADAPTIVE_FAILURE '+json.dumps(failure,sort_keys=True),flush=True)
   raise ValueError('instrumentation failed: '+test) from None
  print('ADAPTIVE_TEST_PASS '+test,flush=True)
@@ -108,26 +130,50 @@ def live_xml():
   raw=n.raw('exec-out','cat',path);require(0<len(raw)<=4*1024*1024,'UI dump missing');return ET.fromstring(raw)
  finally:n.adb('shell','rm','-f',path)
 
-def label_node(root,label):
- matches=[]
- for node in root.iter('node'):
-  if node.get('package') not in (n.PKG,'android'):continue
-  if node.get('text')==label or node.get('content-desc')==label:
-   m=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',node.get('bounds',''))
-   if m:
-    x,y,r,b=map(int,m.groups())
-    if x<r and y<b:matches.append((x,y,r,b))
- return sorted(set(matches))
+# Fixed resource identities for actual app controls. System dialog rows may
+# expose a text child and an actionable ancestor; deduplicate that same owner.
+CONTROL_IDS={k:n.PKG+':id/hooklab_'+v for k,v in {
+ 'primary_navigation':'primary_navigation','capture_tab':'capture_tab','capture_target':'capture_target',
+ 'capture_package':'capture_package','capture_stop':'capture_stop','capture_mark':'capture_mark',
+ 'capture_interrupted':'capture_interrupted'}.items()}
 
-def tap_label(label,cfg,*,scroll=False):
+def bounds(node):
+ m=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',node.get('bounds',''))
+ if not m:return None
+ x,y,r,b=map(int,m.groups());return (x,y,r,b) if x<r and y<b else None
+
+def control_nodes(root,resource,*,action=False):
+ return [node for node in root.iter('node') if node.get('package')==n.PKG and node.get('resource-id')==CONTROL_IDS[resource] and bounds(node) is not None and (not action or node.get('enabled')=='true' and node.get('clickable')=='true')]
+
+def action_nodes(root,label,*,scope=None):
+ if scope is not None:
+  containers=control_nodes(root,scope);require(len(containers)==1,'process-death control scope missing/ambiguous: '+scope);root=containers[0]
+ parents={child:parent for parent in root.iter() for child in parent};owners=set()
+ for node in root.iter('node'):
+  if node.get('package') not in (n.PKG,'android') or label not in (node.get('text'),node.get('content-desc')):continue
+  owner=node
+  while owner is not None:
+   # Never turn a heading or arbitrary nonactionable label into a tap on
+   # its enclosing scroll container. Require an actual enabled click owner.
+   if owner.get('scrollable')=='true':break
+   if owner.get('clickable')=='true' and owner.get('enabled')=='true' and owner.get('package') in (n.PKG,'android') and bounds(owner):owners.add(owner);break
+   owner=parents.get(owner)
+ return sorted([bounds(x) for x in owners])
+
+def tap_control(selector,cfg,*,resource=None,scope=None,scroll=False):
  for _ in range(8):
-  matches=label_node(live_xml(),label)
+  root=live_xml()
+  matches=[bounds(x) for x in control_nodes(root,resource,action=True)] if resource else action_nodes(root,selector,scope=scope)
   if len(matches)==1:
-   x,y,r,b=matches[0];n.adb('shell','input','tap',str((x+r)//2),str((y+b)//2));return
-  require(len(matches)==0,'ambiguous process-death UI control')
+   x,y,r,b=matches[0];require(0<=x<r<=cfg['width_px'] and 0<=y<b<=cfg['height_px'],'process-death control outside viewport: '+selector)
+   n.adb('shell','input','tap',str((x+r)//2),str((y+b)//2));return
+  require(len(matches)==0,'ambiguous process-death UI control: '+selector)
   if not scroll:break
-  w,h=cfg['width_px'],cfg['height_px'];n.adb('shell','input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//3),'400')
- raise ValueError('process-death control unavailable: '+label)
+  scroll_capture(cfg)
+ raise ValueError('process-death control unavailable: '+selector)
+
+def scroll_capture(cfg):
+ w,h=cfg['width_px'],cfg['height_px'];n.adb('shell','input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//3),'400')
 
 def launch():
  text=n.txt('shell','am','start','-W','-a','android.intent.action.MAIN','-c','android.intent.category.LAUNCHER','-f','0x10200000','-n',n.PKG+'/.ui.MainActivity')
@@ -137,14 +183,18 @@ def process_death(cfg):
  # Start a real import-only capture through the normal app UI, kill its actual
  # background process (not ActivityScenario.recreate), and restore its task.
  n.adb('shell','am','force-stop',n.PKG);launch()
- tap_label('Diagnostics',cfg);tap_label('Guided capture',cfg,scroll=True);tap_label('Choose target',cfg,scroll=True)
- tap_label('Unregistered package (research only)',cfg,scroll=True);n.adb('shell','input','text','com.example.fixture');tap_label('OK',cfg)
- tap_label('LSPosed module log',cfg,scroll=True)
- # Label is read from the actual resource contract, not from a fake state seam.
+ tap_control('Diagnostics',cfg,scope='primary_navigation')
+ tap_control('Guided capture',cfg,resource='capture_tab',scroll=True)
+ tap_control('Choose target',cfg,resource='capture_target',scroll=True)
+ tap_control('Unregistered package (research only)',cfg,scroll=True)
+ # Verify the specific real dialog input before using shell input.
+ field=control_nodes(live_xml(),'capture_package');require(len(field)==1,'capture package input missing/ambiguous')
+ x,y,r,b=bounds(field[0]);n.adb('shell','input','tap',str((x+r)//2),str((y+b)//2));n.adb('shell','input','text','com.example.fixture');tap_control('OK',cfg)
+ tap_control('LSPosed module log',cfg,scroll=True)
  for _ in range(8):
   root=live_xml()
-  if label_node(root,'Stop capture') or label_node(root,'Mark reproduced action'):break
-  w,h=cfg['width_px'],cfg['height_px'];n.adb('shell','input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//3),'400')
+  if control_nodes(root,'capture_stop',action=True) or control_nodes(root,'capture_mark',action=True):break
+  scroll_capture(cfg)
  else:raise ValueError('capture did not start')
  before=n.txt('shell','pidof',n.PKG);require(re.fullmatch('[1-9][0-9]*',before) is not None,'process identity ambiguous')
  n.adb('shell','input','keyevent','KEYCODE_HOME');time.sleep(2);n.adb('shell','am','kill',n.PKG)
@@ -158,10 +208,10 @@ def process_death(cfg):
  # invented live or completed capture. Do not accept a fresh Home screen.
  for _ in range(8):
   root=live_xml()
-  if label_node(root,'Previous capture interrupted'):break
+  if len(control_nodes(root,'capture_interrupted'))==1:break
   w,h=cfg['width_px'],cfg['height_px'];n.adb('shell','input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//3),'400')
  else:raise ValueError('restored capture interruption not visible')
- require(not label_node(root,'Stop capture') and not label_node(root,'Mark reproduced action'),'interrupted capture not represented truthfully')
+ require(not control_nodes(root,'capture_stop') and not control_nodes(root,'capture_mark'),'interrupted capture not represented truthfully')
  return {'old_pid':int(before),'new_pid':int(after),'background_process_killed':True,'capture_interrupted':True,'active_controls_absent':True}
 
 def frame_durations(evidence):
@@ -188,7 +238,33 @@ def launch_performance(perf):
   pid=n.txt('shell','pidof',n.PKG);require(re.fullmatch('[1-9][0-9]*',pid) is not None and int(pid) not in pids,'cold launch process identity drift');pids.append(int(pid))
  return {'cold_launch_ms':starts,'cold_launch_pids':pids,'cold_launch_p95_ms':p95(starts),'frame_ms':frames,'frame_p95_ms':p95(frames),'frame_workload':perf['native_frames']['workload'],'budget_enforced':False}
 
-def validate(out,case,expected):
+APK_FILES={'app':'app.apk','test':'android-test.apk'}
+APK_SCHEMA='hooklab.uxr04.shared-apks.v1'
+
+def apk_identity(expected):
+ return {'schema':APK_SCHEMA,**{k:expected[k] for k in ('source_sha','source_tree','repository','run_id','run_attempt')}}
+
+def apk_file(path):
+ require(path.is_file() and not path.is_symlink() and 0<path.stat().st_size<=100*1024*1024,'shared APK missing/unsafe')
+ with zipfile.ZipFile(path) as archive:
+  require('AndroidManifest.xml' in archive.namelist() and 'classes.dex' in archive.namelist(),'invalid shared APK contents')
+ return {'sha256':sha(path),'size':path.stat().st_size}
+
+def shared_apks(folder,expected):
+ require(folder is not None and folder.is_dir() and not folder.is_symlink(),'shared APK directory required')
+ require(set(x.name for x in folder.iterdir())==set(APK_FILES.values())|{'apk-build.json'},'shared APK file roster drift')
+ receipt=folder/'apk-build.json';require(receipt.is_file() and not receipt.is_symlink() and 0<receipt.stat().st_size<=16384,'shared APK manifest unsafe')
+ data=json.loads(receipt.read_text());actual={**apk_identity(expected),'apks':{name:apk_file(folder/file) for name,file in APK_FILES.items()}}
+ require(data==actual,'shared APK build identity/digest drift');return actual
+
+def publish_apks(folder,expected):
+ require(not folder.exists(),'fresh shared APK output required');folder.mkdir(parents=True)
+ for name,pattern in [('app','app/build/outputs/apk/debug/*.apk'),('test','app/build/outputs/apk/androidTest/debug/*.apk')]:
+  source=n.one(pattern);apk_file(source);shutil.copyfile(source,folder/APK_FILES[name])
+ dump(folder/'apk-build.json',{**apk_identity(expected),'apks':{name:apk_file(folder/file) for name,file in APK_FILES.items()}})
+ return shared_apks(folder,expected)
+
+def validate(out,case,expected,build=None):
  from PIL import Image
  r=json.loads((out/'receipt.json').read_text());cfg=config(case)
  require(all(r.get(k)==v for k,v in expected.items()) and r.get('case')==case and r.get('configuration')==cfg,'case identity mismatch')
@@ -196,6 +272,7 @@ def validate(out,case,expected):
  for k in ('app_apk_sha256','android_test_apk_sha256','installed_apk_sha256','installed_test_apk_sha256'):
   require(re.fullmatch('[a-f0-9]{64}',r.get(k,'')) is not None,'missing APK identity')
  require(r['app_apk_sha256']==r['installed_apk_sha256'] and r['android_test_apk_sha256']==r['installed_test_apk_sha256'],'installed APK drift')
+ require(build is not None and r.get('apk_build')==build and r['app_apk_sha256']==build['apks']['app']['sha256'] and r['android_test_apk_sha256']==build['apks']['test']['sha256'],'case shared APK identity drift')
  names={'journey.json','performance.json','launch-performance.json'}|({'process-death.json'} if case=='api36-390' else set())|{x+s for x in ROUTES for s in ('.png','.hierarchy.json')}
  require(set(p.name for p in out.iterdir())==names|{'receipt.json'} and all(p.is_file() and not p.is_symlink() for p in out.iterdir()),'case file roster drift')
  require(r.get('files')=={x:sha(out/x) for x in sorted(names)},'case file digest drift')
@@ -225,13 +302,14 @@ def validate(out,case,expected):
  require(r['performance_summary']=={'scenario_launch_ms':j['scenario_launch_ms'],'page_action_p95_ms':p95(perf['page_action_ms']),'sampled_peak_pss_kb':max(perf['sampled_pss_kb']),'cold_launch_p95_ms':launch_perf['cold_launch_p95_ms'],'frame_p95_ms':launch_perf['frame_p95_ms'],'budget_enforced':False},'performance summary drift')
  return r
 
-def run(out,case):
+def run(out,case,apks):
  cfg=config(case);ident=n.expected_identity();ident['schema']='hooklab.uxr04.case.v1';require(not out.exists(),'fresh output required');out.mkdir(parents=True)
  receipt={**ident,'case':case,'configuration':cfg,'status':'IN_PROGRESS','completed_tests':[]};dump(out/'receipt.json',receipt)
  n.guard(cfg['api']);require(not any(os.environ.get(k) for k in ('HOOKLAB_SIGNING_KEYSTORE_PATH','HOOKLAB_SIGNING_STORE_PASSWORD','HOOKLAB_SIGNING_KEY_ALIAS','HOOKLAB_SIGNING_KEY_PASSWORD')),'release credentials refused')
  for pkg in (n.PKG,n.PKG+'.test'):
   q=subprocess.run(['adb','-s',n.SERIAL,'shell','pm','path',pkg],capture_output=True,text=True,timeout=20);require(not q.stdout.strip(),'preexisting APK refused')
- app=n.one('app/build/outputs/apk/debug/*.apk');test=n.one('app/build/outputs/apk/androidTest/debug/*.apk')
+ build=shared_apks(apks,ident);receipt['apk_build']=build;dump(out/'receipt.json',receipt)
+ app=apks/APK_FILES['app'];test=apks/APK_FILES['test']
  for p in (app,test):n.install_apk(p)
  ah,th=sha(app),sha(test);receipt.update(app_apk_sha256=ah,android_test_apk_sha256=th,installed_apk_sha256=n.installed_digest(n.PKG,ah),installed_test_apk_sha256=n.installed_digest(n.PKG+'.test',th))
  # Override natural portrait size, then rotate the real display for landscape.
@@ -255,28 +333,30 @@ def run(out,case):
  if case=='api36-390':dump(out/'process-death.json',process_death(cfg))
  j=json.loads((out/'journey.json').read_text());p=json.loads((out/'performance.json').read_text())
  receipt.update(status='PASS_EXTENDED_NOT_DEVICE_APPROVAL',files={f.name:sha(f) for f in sorted(out.iterdir()) if f.name!='receipt.json'},performance_summary={'scenario_launch_ms':j['scenario_launch_ms'],'page_action_p95_ms':p95(p['page_action_ms']),'sampled_peak_pss_kb':max(p['sampled_pss_kb']),'cold_launch_p95_ms':launch_perf['cold_launch_p95_ms'],'frame_p95_ms':launch_perf['frame_p95_ms'],'budget_enforced':False});dump(out/'receipt.json',receipt)
- try:validate(out,case,ident)
+ try:validate(out,case,ident,build)
  except Exception:receipt['status']='FAIL_EXTENDED_VERIFICATION';dump(out/'receipt.json',receipt);raise
 
-def verify_all(root,expected):
+def verify_all(root,expected,build=None):
  require(set(p.name for p in root.iterdir())==set(CASES),'missing or extra extended matrix shard')
- return {case:validate(root/case,case,expected)['performance_summary'] for case in CASES}
+ return {case:validate(root/case,case,expected,build)['performance_summary'] for case in CASES}
 def external_identity(source,tree,run_id,attempt):
  require(re.fullmatch('[0-9a-f]{40}',source or '') and re.fullmatch('[0-9a-f]{40}',tree or '') and re.fullmatch('[1-9][0-9]*',run_id or '') and re.fullmatch('[1-9][0-9]*',attempt or ''),'invalid external evidence identity')
  require(n.git('rev-parse','HEAD')==source and n.git('rev-parse','HEAD^{tree}')==tree,'external verifier source drift')
  return {'schema':'hooklab.uxr04.case.v1','source_sha':source,'source_tree':tree,'run_id':run_id,'run_attempt':attempt,'repository':'Mikeyphw/MikeysHookLab','hosted_emulator_only':True,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
 def main():
- p=argparse.ArgumentParser();p.add_argument('mode',choices=['run','verify','aggregate']);p.add_argument('--case',choices=CASES);p.add_argument('--out',type=Path,required=True);p.add_argument('--source');p.add_argument('--tree');p.add_argument('--run-id');p.add_argument('--attempt');p.add_argument('--summary',type=Path);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('mode',choices=['run','verify','aggregate','publish-apks']);p.add_argument('--case',choices=CASES);p.add_argument('--out',type=Path,required=True);p.add_argument('--source');p.add_argument('--tree');p.add_argument('--run-id');p.add_argument('--attempt');p.add_argument('--summary',type=Path);p.add_argument('--apks',type=Path);a=p.parse_args()
  try:
   external=any(x is not None for x in (a.source,a.tree,a.run_id,a.attempt,a.summary))
-  if a.mode=='run':require(a.case is not None and not external,'case required; external identity forbidden in capture');run(a.out,a.case)
+  if a.mode=='publish-apks':require(a.case is None and a.apks is None and not external,'build publication arguments refused');publish_apks(a.out,n.expected_identity())
+  elif a.mode=='run':require(a.case is not None and a.apks is not None and not external,'case and shared APKs required; external identity forbidden in capture');run(a.out,a.case,a.apks)
   else:
    expected=external_identity(a.source,a.tree,a.run_id,a.attempt) if external else n.expected_identity();expected['schema']='hooklab.uxr04.case.v1'
-   if a.mode=='verify':require(a.case is not None and a.summary is None,'case required');validate(a.out,a.case,expected)
+   build=shared_apks(a.apks,expected)
+   if a.mode=='verify':require(a.case is not None and a.summary is None,'case required');validate(a.out,a.case,expected,build)
    else:
-    result=verify_all(a.out,expected)
+    result=verify_all(a.out,expected,build)
     if a.summary is not None:require(a.summary.is_file() and not a.summary.is_symlink() and json.loads(a.summary.read_text())==result,'hosted aggregate disagrees with independent case verification')
     print(json.dumps(result,sort_keys=True))
   return 0
- except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as e:print('EXTENDED_UI_REFUSED',e,file=sys.stderr);return 2
+ except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError,zipfile.BadZipFile) as e:print('EXTENDED_UI_REFUSED',e,file=sys.stderr);return 2
 if __name__=='__main__':raise SystemExit(main())

@@ -32,6 +32,8 @@ public final class FlatUi {
         bar.setMinimumHeight(dp(bar,DesignTokens.TOOLBAR_DP));
     }
     public static void section(MaterialCardView section) {
+        // Plain surface, not a separate touch target; its actual child actions own clicks.
+        section.setClickable(false);section.setFocusable(false);
         section.setRadius(dp(section, DesignTokens.PANEL_RADIUS));
         section.setCardElevation(0f);
         section.setUseCompatPadding(false);
@@ -49,6 +51,7 @@ public final class FlatUi {
         if(row.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground,value,true)&&value.resourceId!=0)
             row.setForeground(androidx.appcompat.content.res.AppCompatResources.getDrawable(row.getContext(),value.resourceId));
         row.setMinimumHeight(dp(row,Ui08QualityPolicy.MIN_TOUCH_DP));
+        row.setMinimumWidth(dp(row,Ui08QualityPolicy.MIN_TOUCH_DP));
         androidx.core.view.ViewCompat.setScreenReaderFocusable(row,true);
         row.setFocusable(true);row.setClickable(true);row.setOnClickListener(click);
     }
@@ -79,6 +82,41 @@ public final class FlatUi {
             if(label.getMaxLines()!=3){label.setSingleLine(false);label.setMaxLines(3);label.setEllipsize(null);}
         }
         if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++)wrapNavigationLabels(g.getChildAt(i));}
+    }
+    /** Ensure the actual toolbar buttons and Material navigation destinations, not
+     * their decorative icon/label children, have sufficient layout allocation. */
+    public static void enforceChromeTargets(MaterialToolbar toolbar,NavigationBarView nav){
+        if(nav instanceof com.google.android.material.navigationrail.NavigationRailView){
+            ((com.google.android.material.navigationrail.NavigationRailView)nav).setItemMinimumHeight(dp(nav,64));
+        }
+        Runnable update=()->{
+            for(int i=0;i<toolbar.getChildCount();i++){
+                View child=toolbar.getChildAt(i);
+                if(child instanceof androidx.appcompat.widget.ActionMenuView){
+                    androidx.appcompat.widget.ActionMenuView menu=(androidx.appcompat.widget.ActionMenuView)child;
+                    for(int j=0;j<menu.getChildCount();j++)ensureTarget(menu.getChildAt(j));
+                }else if(child instanceof android.widget.ImageButton&&child.isClickable())ensureTarget(child);
+            }
+            for(int i=0;i<nav.getMenu().size();i++){
+                View item=nav.findViewById(nav.getMenu().getItem(i).getItemId());
+                if(item!=null)ensureTarget(item);
+            }
+        };
+        toolbar.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->update.run());
+        nav.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->update.run());
+        toolbar.post(update);
+    }
+    private static void ensureTarget(View view){
+        int minimum=dp(view,Ui08QualityPolicy.MIN_TOUCH_DP);
+        if(view.getMinimumWidth()<minimum)view.setMinimumWidth(minimum);
+        if(view.getMinimumHeight()<minimum)view.setMinimumHeight(minimum);
+        android.view.ViewGroup.LayoutParams lp=view.getLayoutParams();
+        if(lp!=null){
+            boolean changed=false;
+            if(lp.width>0&&lp.width<minimum){lp.width=minimum;changed=true;}
+            if(lp.height>0&&lp.height<minimum){lp.height=minimum;changed=true;}
+            if(changed)view.setLayoutParams(lp);
+        }
     }
     public static void navigation(NavigationBarView nav) {
         nav.setBackgroundColor(MaterialColors.getColor(nav, R.attr.colorSurfaceContainer));
