@@ -1,319 +1,332 @@
 {
-  "repository": "Mikeyphw/MikeysHookLab",
-  "version": "2.0-MOD-00-F01",
   "coverage": "COMPLETE",
-  "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
   "overlays": [
     {
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": true,
+      "dependencies": [],
       "id": "UX-R00",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "OVERLAY",
       "name": "Design Contract & Emulator Infrastructure",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "SOURCE_COMPLETE",
-      "acceptance": "PARTIALLY_VERIFIED",
-      "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
-      "dependencies": []
+      "parent_id": null
     },
     {
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": true,
+      "dependencies": [
+        "UX-R00"
+      ],
       "id": "UX-R01",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "OVERLAY",
       "name": "Diagnostics Consolidation",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "SOURCE_COMPLETE",
-      "acceptance": "PARTIALLY_VERIFIED",
-      "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
-      "dependencies": [
-        "UX-R00"
-      ]
+      "parent_id": null
     },
     {
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": true,
+      "dependencies": [
+        "UX-R00"
+      ],
       "id": "UX-R02",
-      "name": "Navigation & Interaction Redesign",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
       "implementation": "SOURCE_COMPLETE",
-      "acceptance": "PARTIALLY_VERIFIED",
-      "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
-      "dependencies": [
-        "UX-R00"
-      ]
+      "kind": "OVERLAY",
+      "name": "Navigation & Interaction Redesign",
+      "parent_id": null
     },
     {
-      "id": "UX-R03",
-      "name": "Home & Whole-App Visual Fidelity",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": true,
       "dependencies": [
         "UX-R01",
         "UX-R02"
-      ]
+      ],
+      "id": "UX-R03",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "OVERLAY",
+      "name": "Home & Whole-App Visual Fidelity",
+      "parent_id": null
     },
     {
-      "id": "UX-R04",
-      "name": "Accessibility, Adaptive Layout & Lifecycle",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": true,
       "dependencies": [
         "UX-R03"
-      ]
+      ],
+      "id": "UX-R04",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "OVERLAY",
+      "name": "Accessibility, Adaptive Layout & Lifecycle",
+      "parent_id": null
     },
     {
-      "id": "HL-DIAG-R02",
-      "name": "ChatGPT Copy Causality & MCC Migration Parity",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": false,
-      "implementation": "PARTIAL",
       "acceptance": "FAILED",
       "blocker": "Historical reference; PR26 merged; R02 storage inaccessible; no entitlement or storage bypass authorized in R04.",
-      "dependencies": []
+      "counted": false,
+      "dependencies": [],
+      "id": "HL-DIAG-R02",
+      "implementation": "PARTIAL",
+      "kind": "OVERLAY",
+      "name": "ChatGPT Copy Causality & MCC Migration Parity",
+      "parent_id": null
     },
     {
-      "id": "HL-DIAG-R03",
-      "name": "Copy Coroutine Field Correction & Root Platform Qualification",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": false,
-      "implementation": "PARTIAL",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Historical reference; PR27 merged; required CI passed, user observed four full nine-stage Copy traces; root startup timeout, not accepted.",
+      "counted": false,
       "dependencies": [
         "HL-DIAG-R02 (merged; runtime correction)"
-      ]
+      ],
+      "id": "HL-DIAG-R03",
+      "implementation": "PARTIAL",
+      "kind": "OVERLAY",
+      "name": "Copy Coroutine Field Correction & Root Platform Qualification",
+      "parent_id": null
     },
     {
-      "id": "HL-DIAG-R04",
-      "name": "Root startup qualification & confirmed Termux handoff",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": false,
-      "implementation": "PARTIAL",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Historical reference; independent full acceptance not established.",
+      "counted": false,
       "dependencies": [
         "HL-DIAG-R03"
-      ]
+      ],
+      "id": "HL-DIAG-R04",
+      "implementation": "PARTIAL",
+      "kind": "OVERLAY",
+      "name": "Root startup qualification & confirmed Termux handoff",
+      "parent_id": null
     },
     {
-      "id": "HL-DIAG-R05",
-      "name": "Root IPC Contract & Native Inline Termux Action",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": false,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PENDING",
       "blocker": "Historical reference; PR29 merged; Android CI passed on PR head. Device acceptance not established.",
+      "counted": false,
       "dependencies": [
         "HL-DIAG-R04"
-      ]
+      ],
+      "id": "HL-DIAG-R05",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "OVERLAY",
+      "name": "Root IPC Contract & Native Inline Termux Action",
+      "parent_id": null
     },
     {
-      "id": "HL-DIAG-R06",
-      "name": "Native Terminal Action & Foreground Execution UX",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": false,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Historical reference; PR31 merged; exact hosted Android, design, UI and CI24 attempt 2 verified. Physical/release/visual acceptance pending.",
+      "counted": false,
       "dependencies": [
         "HL-DIAG-R05"
-      ]
+      ],
+      "id": "HL-DIAG-R06",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "OVERLAY",
+      "name": "Native Terminal Action & Foreground Execution UX",
+      "parent_id": null
     },
     {
-      "id": "MOD-00",
-      "name": "Impact-Based CI & Targeted Qualification Infrastructure",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "FAILED",
-      "blocker": "PR #34 exact head 468d93144f45625b822dc5fa7302712b51b20b92: attempts 1 and 2 failed adaptive qualification; F01 exact hosted requalification pending.",
+      "blocker": "Historical hosted failures retained. F01 hosted run 45834440755 attempt 1 passed; independent shared APK verification stopped on CLI alias shadowing. F02 successor qualification pending.",
+      "counted": true,
       "dependencies": [
         "UX-R04"
-      ]
+      ],
+      "id": "MOD-00",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "OVERLAY",
+      "name": "Impact-Based CI & Targeted Qualification Infrastructure",
+      "parent_id": null
     },
     {
-      "id": "MOD-00-F01",
-      "name": "Adaptive Rotation Readback and Catalog Window Readiness Repair",
-      "kind": "HOTFIX",
-      "parent_id": "MOD-00",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Hosted run 45834440755 attempt 1 passed; independent CI24 24/24 passed; shared APK verifier failed before adaptive aggregation. Physical-device, visual and release acceptance remain pending.",
       "counted": false,
+      "dependencies": [
+        "MOD-00"
+      ],
+      "id": "MOD-00-F01",
       "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Adaptive Rotation Readback and Catalog Window Readiness Repair",
+      "parent_id": "MOD-00"
+    },
+    {
       "acceptance": "PENDING",
       "blocker": "Fresh hosted full matrix and independent evidence pending",
+      "counted": false,
       "dependencies": [
-        "MOD-00"
-      ]
+        "MOD-00-F01"
+      ],
+      "id": "MOD-00-F02",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Shared APK Verification and CLI Regression Repair",
+      "parent_id": "MOD-00"
     },
     {
+      "acceptance": "PENDING",
+      "blocker": "Prerequisite overlay not accepted",
+      "counted": true,
+      "dependencies": [
+        "MOD-00"
+      ],
       "id": "MOD-01",
-      "name": "Modular Core & Internal SDK",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
       "implementation": "PLANNED",
-      "acceptance": "PENDING",
-      "blocker": "Prerequisite overlay not accepted",
-      "dependencies": [
-        "MOD-00"
-      ]
+      "kind": "OVERLAY",
+      "name": "Modular Core & Internal SDK",
+      "parent_id": null
     },
     {
-      "id": "MOD-02",
-      "name": "Hook Pack Runtime & Migration",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "PLANNED",
       "acceptance": "PENDING",
       "blocker": "Prerequisite overlay not accepted",
+      "counted": true,
       "dependencies": [
         "MOD-01"
-      ]
+      ],
+      "id": "MOD-02",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Hook Pack Runtime & Migration",
+      "parent_id": null
     },
     {
-      "id": "MOD-03",
-      "name": "Native Module UI & Configuration",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "PLANNED",
       "acceptance": "PENDING",
       "blocker": "Prerequisite overlay not accepted",
+      "counted": true,
       "dependencies": [
         "MOD-02"
-      ]
+      ],
+      "id": "MOD-03",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Native Module UI & Configuration",
+      "parent_id": null
     },
     {
-      "id": "MOD-04",
-      "name": "GitHub Distribution & Updates",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "PLANNED",
       "acceptance": "PENDING",
       "blocker": "Prerequisite overlay not accepted",
+      "counted": true,
       "dependencies": [
         "MOD-03"
-      ]
+      ],
+      "id": "MOD-04",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "GitHub Distribution & Updates",
+      "parent_id": null
     },
     {
-      "id": "MOD-05",
-      "name": "Developer Tools & Full Qualification",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "PLANNED",
       "acceptance": "PENDING",
       "blocker": "Prerequisite overlay not accepted",
+      "counted": true,
       "dependencies": [
         "MOD-04"
-      ]
+      ],
+      "id": "MOD-05",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Developer Tools & Full Qualification",
+      "parent_id": null
     },
     {
-      "id": "UX-R05",
-      "name": "Full Native Visual Acceptance & Regression Enforcement",
-      "kind": "OVERLAY",
-      "parent_id": null,
-      "counted": true,
-      "implementation": "PLANNED",
       "acceptance": "PENDING",
       "blocker": "Final full integration, approved visual baselines, device and release acceptance",
+      "counted": true,
       "dependencies": [
         "MOD-05",
         "UX-R04"
-      ]
+      ],
+      "id": "UX-R05",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Full Native Visual Acceptance & Regression Enforcement",
+      "parent_id": null
     },
     {
-      "id": "UX-R04-F01",
-      "name": "Hosted Dependency & Instrumentation Compatibility Repair",
-      "kind": "HOTFIX",
-      "parent_id": "UX-R04",
-      "counted": false,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": false,
       "dependencies": [
         "UX-R04"
-      ]
+      ],
+      "id": "UX-R04-F01",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Hosted Dependency & Instrumentation Compatibility Repair",
+      "parent_id": "UX-R04"
     },
     {
-      "id": "UX-R04-F02",
-      "name": "Adaptive Layout and Frame Evidence Repair",
-      "kind": "HOTFIX",
-      "parent_id": "UX-R04",
-      "counted": false,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": false,
       "dependencies": [
         "UX-R04-F01"
-      ]
+      ],
+      "id": "UX-R04-F02",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Adaptive Layout and Frame Evidence Repair",
+      "parent_id": "UX-R04"
     },
     {
-      "id": "UX-R04-F03",
-      "name": "Adaptive Interaction and Instrumentation Boundary Repair",
-      "kind": "HOTFIX",
-      "parent_id": "UX-R04",
-      "counted": false,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": false,
       "dependencies": [
         "UX-R04-F02"
-      ]
+      ],
+      "id": "UX-R04-F03",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Adaptive Interaction and Instrumentation Boundary Repair",
+      "parent_id": "UX-R04"
     },
     {
-      "id": "UX-R04-F04",
-      "name": "Adaptive Runtime and Shared APK Evidence Repair",
-      "kind": "HOTFIX",
-      "parent_id": "UX-R04",
-      "counted": false,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": false,
       "dependencies": [
         "UX-R04-F03"
-      ]
+      ],
+      "id": "UX-R04-F04",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Adaptive Runtime and Shared APK Evidence Repair",
+      "parent_id": "UX-R04"
     },
     {
-      "id": "UX-R04-F05",
-      "name": "Measured Chrome, Rotation and Capture Dialog Repair",
-      "kind": "HOTFIX",
-      "parent_id": "UX-R04",
-      "counted": false,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": false,
       "dependencies": [
         "UX-R04-F04"
-      ]
+      ],
+      "id": "UX-R04-F05",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Measured Chrome, Rotation and Capture Dialog Repair",
+      "parent_id": "UX-R04"
     },
     {
-      "id": "UX-R01-F01",
-      "name": "UX-R01-F01 + HL-DIAG-R06-F01 \u2014 hosted compile, persistent login and white terminal icon",
-      "kind": "HOTFIX",
-      "parent_id": "UX-R01",
-      "counted": false,
-      "implementation": "SOURCE_COMPLETE",
       "acceptance": "PARTIALLY_VERIFIED",
       "blocker": "Physical-device, release and applicable visual approval remain pending; historical failed attempts retained.",
+      "counted": false,
       "dependencies": [
         "UX-R01",
         "HL-DIAG-R06"
-      ]
+      ],
+      "id": "UX-R01-F01",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "UX-R01-F01 + HL-DIAG-R06-F01 \u2014 hosted compile, persistent login and white terminal icon",
+      "parent_id": "UX-R01"
     }
-  ]
+  ],
+  "repository": "Mikeyphw/MikeysHookLab",
+  "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
+  "version": "2.0-MOD-00-F02"
 }
