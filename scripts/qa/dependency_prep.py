@@ -150,17 +150,73 @@ def obtain_verified(rel, target, temp, policy=POLICY, downloader=fetch):
     return {'endpoint':policy['mirror'],'verification':proof}
 
 
+# Gradle 9.3.1's module parser treats component.url as ownership metadata,
+# not an executable repository redirect. See the 1.1 metadata spec and
+# GradleModuleMetadataParser.consumeComponent/consumeVariantLocation.
+# Keep the local repository's admitted coordinate roster unchanged.
+OWNER = 'kotlinx-coroutines-core'
+JVM = 'kotlinx-coroutines-core-jvm'
+BOM = 'kotlinx-coroutines-bom'
+
+
+def module_location(module, version):
+    return f'../../{module}/{version}/{module}-{version}.module'
+
+
+def strict_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        require(key not in result, 'duplicate metadata JSON key: ' + ascii(key)[:120])
+        result[key] = value
+    return result
+
+
 def validate_coordinate(rel, target):
     group = GROUP; module = Path(rel).parts[-3]; version = Path(rel).parts[-2]
+    expected = (group, module, version)
+    def check(ok, why, observed=None):
+        require(ok, f'{why}: path={rel} expected={expected!r} observed={ascii(observed)[:512]} sha256={digest(target)}' if not ok else '')
+    check(module in {JVM, BOM} and version == '1.7.1' and rel == f'{GROUP.replace(".", "/")}/{module}/{version}/{module}-{version}{target.suffix}', 'unapproved metadata path', rel)
     if rel.endswith(".pom"):
-        raw=target.read_bytes();require(b"<!DOCTYPE" not in raw and b"<!ENTITY" not in raw,"unsafe POM")
+        raw=target.read_bytes();check(len(raw)<=512*1024 and b"<!DOCTYPE" not in raw and b"<!ENTITY" not in raw,"unsafe POM")
         root=ET.fromstring(raw);ns={"m":"http://maven.apache.org/POM/4.0.0"}
-        require(root.tag=="{http://maven.apache.org/POM/4.0.0}project" and root.findtext("m:groupId",namespaces=ns)==group and root.findtext("m:artifactId",namespaces=ns)==module and root.findtext("m:version",namespaces=ns)==version,"POM coordinate mismatch")
+        observed=tuple(root.findtext('m:'+name,namespaces=ns) for name in ('groupId','artifactId','version'))
+        check(root.tag=="{http://maven.apache.org/POM/4.0.0}project" and observed==expected,"POM coordinate mismatch", observed)
     elif rel.endswith(".module"):
-        obj=json.loads(target.read_text());c=obj.get("component",{});require((c.get("group"),c.get("module"),c.get("version"))==(group,module,version),"Gradle metadata coordinate mismatch")
-        for variant in obj.get("variants",[]):
-            for file in variant.get("files",[]):
-                url=file.get("url","");require(url and not Path(url).is_absolute() and len(Path(url).parts)==1 and not urllib.parse.urlsplit(url).scheme,"nonlocal module artifact")
+        check(target.stat().st_size<=512*1024,'oversized Gradle metadata')
+        obj=json.loads(target.read_text(encoding='utf-8'),object_pairs_hook=strict_json_object)
+        check(isinstance(obj,dict) and obj.get('formatVersion') in ('1.0','1.1'),'unsupported Gradle metadata format',obj.get('formatVersion') if isinstance(obj,dict) else type(obj).__name__)
+        # component is optional in GMM. If present it is either the requested
+        # Maven module itself or the exact root owner of the known JVM variant.
+        c=obj.get('component')
+        if 'component' in obj:
+            check(isinstance(c,dict),'invalid Gradle component',c)
+            actual=tuple(c.get(k) for k in ('group','module','version'))
+            url=c.get('url')
+            direct=actual==expected and 'url' not in c
+            owned=(module==JVM and actual==(group,OWNER,version) and url==module_location(OWNER,version))
+            check(direct or owned,'Gradle metadata coordinate/owner mismatch',{'coordinate':actual,'url':url})
+        else:
+            actual=None;url=None
+        variants=obj.get('variants',[])
+        check(isinstance(variants,list),'invalid Gradle variants')
+        seen=set()
+        for variant in variants:
+            check(isinstance(variant,dict),'invalid Gradle variant')
+            name=variant.get('name');check(isinstance(name,str) and bool(name) and name not in seen,'invalid/duplicate Gradle variant name',name);seen.add(name)
+            # This repository serves only JVM/BOM artifacts. A variant in
+            # either file must not delegate resolution outside that inventory.
+            if 'available-at' in variant:
+                ref=variant['available-at'];check(isinstance(ref,dict),'invalid Gradle variant location',ref)
+                dest=tuple(ref.get(k) for k in ('group','module','version'))
+                check(dest[0]==group and dest[1] in {JVM,BOM} and dest[1]!=module and dest[2]==version and ref.get('url')==module_location(dest[1],version) and not any(k in variant for k in ('files','dependencies','dependencyConstraints')),'unapproved Gradle variant location',ref)
+            files=variant.get('files',[]);check(isinstance(files,list),'invalid Gradle file roster',name)
+            for file in files:
+                check(isinstance(file,dict),'invalid Gradle file record',name)
+                # No absolute URLs, traversal, URI encoding or query/fragment.
+                # Classifier files are metadata only; never expand mirror scope.
+                filename=file.get('url');check(isinstance(filename,str) and re.fullmatch(re.escape(module+'-'+version)+r'(?:-[A-Za-z0-9][A-Za-z0-9._-]*)?\.[A-Za-z0-9]+',filename) is not None,'nonlocal module artifact',filename)
+        return {'requested':list(expected),'component':list(actual) if actual is not None else None,'owner_url':url}
     elif rel.endswith(".jar"):
         with zipfile.ZipFile(target) as z:require(z.testzip() is None and bool(z.namelist()),"invalid JAR")
 
@@ -175,8 +231,23 @@ def authenticate_repository(state, policy=POLICY, downloader=fetch, profile="ful
         def admit(rel):
             target=staged/rel;target.parent.mkdir(parents=True,exist_ok=True)
             proof=obtain_verified(rel,target,temp,policy,downloader)
-            validate_coordinate(rel,target)
-            receipt.append({'path':rel,'sha256':digest(target),**proof})
+            try:
+                metadata=validate_coordinate(rel,target)
+            except (ValueError,TypeError,KeyError,ET.ParseError) as exc:
+                # Public, authenticated metadata only, bounded and isolated
+                # from the repository/cache. Capture the exact failing bytes.
+                if rel.endswith(('.module','.pom')) and target.stat().st_size<=512*1024:
+                    diagnostic=state/'metadata-diagnostics'
+                    require(not diagnostic.is_symlink(),'unsafe diagnostic directory')
+                    diagnostic.mkdir(mode=0o700,exist_ok=True)
+                    path=diagnostic/target.name
+                    require(not path.exists() and not path.is_symlink(),'diagnostic already exists')
+                    shutil.copyfile(target,path)
+                    dump(diagnostic/'failure.json',{'schema':'hooklab.dependency.metadata-failure.v1','path':rel,'sha256':digest(target),'source_sha':os.environ.get('SOURCE_SHA'),'run_id':os.environ.get('GITHUB_RUN_ID'),'run_attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'reason':ascii(str(exc))[:2048],**proof})
+                raise
+            row={'path':rel,'sha256':digest(target),**proof}
+            if metadata is not None:row['metadata_identity']=metadata
+            receipt.append(row)
             return target
         for rel in (coordinates(policy) if profile=="full" else ()):
             target=admit(rel)
@@ -253,6 +324,9 @@ def verify_receipt(data, identity, graph=None, profile='full'):
     require(roster==expected or roster==[x for r in expected for x in ([r,r[:-4]+'.module'] if r==bom else [r])],'mirror inventory mismatch')
     for r in rows:
         require(files.get('repository/'+r['path'])==r['sha256'],'repository artifact hash mismatch')
+        if r['path'].endswith('.module'):
+            module=Path(r['path']).parts[-3];version=Path(r['path']).parts[-2];expected=[GROUP,module,version]
+            mid=r.get('metadata_identity');require(isinstance(mid,dict) and mid.get('requested')==expected and ((mid.get('component') in (None,expected) and mid.get('owner_url') is None) or (module==JVM and mid.get('component')==[GROUP,OWNER,version] and mid.get('owner_url')==module_location(OWNER,version))),'metadata receipt identity mismatch: '+r['path'])
         v=r['verification'];method=v['method']
         if method=='CANONICAL_HTTPS':require(r['endpoint']==POLICY['central'],'canonical origin mismatch')
         elif method=='CANONICAL_CHECKSUM':
@@ -270,7 +344,7 @@ def verify_repository(state, data):
     with tempfile.TemporaryDirectory(prefix='verify-publisher-',dir=state) as t:
         home=Path(t)/'gpg'
         for r in mirror['files']:
-            target=repo/r['path'];validate_coordinate(r['path'],target);v=r['verification']
+            target=repo/r['path'];metadata=validate_coordinate(r['path'],target);require(r.get('metadata_identity')==metadata,'metadata identity projection drift: '+r['path']);v=r['verification']
             if v['method']=='CANONICAL_CHECKSUM':require(hashlib.new(v['algorithm'],target.read_bytes()).hexdigest()==v['expected'],'cached canonical checksum mismatch')
             if v['method']=='PINNED_PGP':
                 if not home.exists():home.mkdir(mode=0o700);import_certificate(home,repo/'publisher.asc')

@@ -91,7 +91,7 @@ jobs:
   summary:
     name: Summarize all 24 shards (fail closed)
     if: always()
-    needs: [junit]
+    needs: [prepare, junit]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -102,11 +102,13 @@ jobs:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
       - uses: actions/download-artifact@v8
+        if: ${{ needs.junit.result != 'skipped' && needs.junit.result != 'cancelled' }}
         with:
           pattern: hooklab-ci24-${{ github.run_id }}-${{ github.run_attempt }}-shard-*
           path: artifacts
           merge-multiple: false
       - uses: actions/download-artifact@v8
+        if: ${{ (inputs.shared_dependencies && inputs.dependency_ready) || (!inputs.shared_dependencies && needs.prepare.result == 'success' && needs.prepare.outputs.ready == 'true') }}
         with:
           name: hooklab-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/dependency-receipt

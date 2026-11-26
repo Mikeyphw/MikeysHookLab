@@ -146,7 +146,7 @@ def summarize(root,artifacts,out,source,run_id,attempt,verify_existing=False,dep
     else:dump(out,s)
     print(json.dumps(s,sort_keys=True),flush=True);return 0
 
-def failed_summary(root,artifacts,out,source,run_id,attempt,matrix_status):
+def failed_summary(root,artifacts,out,source,run_id,attempt,matrix_status,reason='CI24_VERIFICATION_FAILED'):
     ident=identity(root,source,run_id,attempt);inv=inventory(root)
     prefix=f'hooklab-ci24-{run_id}-{attempt}-shard-';rows=[]
     for shard in range(1,SHARDS+1):
@@ -157,18 +157,20 @@ def failed_summary(root,artifacts,out,source,run_id,attempt,matrix_status):
             rows.append({**row,'status':'VERIFIED_PASS'})
         except (ValueError,OSError,TypeError,KeyError,ET.ParseError):
             rows.append({'shard':shard,'status':'MISSING' if not folder.exists() else 'INVALID_OR_FAILED'})
-    dump(out,{'schema':SUMMARY,**ident,'overall':'FAIL_CI24_VERIFICATION','matrix_status':matrix_status if matrix_status in ('success','failure','cancelled','skipped') else 'unknown','shard_count':SHARDS,'shards':rows,'release_qualified':False,'physical_device_qualified':False,'emulator_ui_qualified':False})
+    dump(out,{'schema':SUMMARY,**ident,'overall':'FAIL_CI24_VERIFICATION','reason':reason,'matrix_status':matrix_status if matrix_status in ('success','failure','cancelled','skipped') else 'unknown','shard_count':SHARDS,'shards':rows,'release_qualified':False,'physical_device_qualified':False,'emulator_ui_qualified':False})
 
 def main():
     a=argparse.ArgumentParser();a.add_argument('command',choices=['inventory','run','summarize','verify']);a.add_argument('--root',type=Path,default=Path.cwd());a.add_argument('--out',type=Path);a.add_argument('--artifacts',type=Path);a.add_argument('--shard',type=int);a.add_argument('--source',default=os.getenv('GITHUB_SHA'));a.add_argument('--run-id',default=os.getenv('GITHUB_RUN_ID'));a.add_argument('--attempt',default=os.getenv('GITHUB_RUN_ATTEMPT'));a.add_argument('--matrix-status',default='success');a.add_argument('--dependency-receipt',type=Path);v=a.parse_args()
     try:
         if v.command=='inventory':print(json.dumps(inventory(v.root),indent=2));return 0
         if v.command=='run':return run(v.root,v.out,v.shard,v.source,v.run_id,v.attempt,v.dependency_receipt)
-        if v.command=='summarize':require(v.matrix_status=='success','hosted matrix unsuccessful')
+        if v.command=='summarize':
+            require(v.dependency_receipt is not None and v.dependency_receipt.is_file() and not v.dependency_receipt.is_symlink(),'DEPENDENCY_READINESS_MISSING')
+            require(v.matrix_status=='success','hosted matrix unsuccessful')
         return summarize(v.root,v.artifacts,v.out,v.source,v.run_id,v.attempt,v.command=='verify',v.dependency_receipt)
     except (ValueError,OSError,TypeError,KeyError,subprocess.SubprocessError,ET.ParseError) as e:
         if v.command=='summarize' and v.artifacts is not None and v.out is not None:
-            try:failed_summary(v.root,v.artifacts,v.out,v.source,v.run_id,v.attempt,v.matrix_status)
+            try:failed_summary(v.root,v.artifacts,v.out,v.source,v.run_id,v.attempt,v.matrix_status,'DEPENDENCY_READINESS_MISSING' if str(e)=='DEPENDENCY_READINESS_MISSING' else 'CI24_VERIFICATION_FAILED')
             except (ValueError,OSError,TypeError,KeyError,subprocess.SubprocessError,ET.ParseError):pass
         print('CI24_REFUSED',str(e),file=sys.stderr);return 2
 if __name__=='__main__':raise SystemExit(main())

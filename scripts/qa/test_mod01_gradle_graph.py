@@ -98,6 +98,17 @@ class GeneratedAssetGraphTest(unittest.TestCase):
         self.assertIn('dependency_prep.py verify',consumer)
         self.assertNotIn('continue-on-error:',owner+consumer)
 
+    def test_dependency_blocked_summary_and_diagnostic_wiring(self):
+        ci=(ROOT/'.github/workflows/hooklab-ci24.yml').read_text().split('  summary:',1)[1]
+        self.assertIn('needs: [prepare, junit]',ci)
+        self.assertIn("needs.junit.result != 'skipped' && needs.junit.result != 'cancelled'",ci)
+        self.assertIn("(inputs.shared_dependencies && inputs.dependency_ready) || (!inputs.shared_dependencies && needs.prepare.result == 'success' && needs.prepare.outputs.ready == 'true')",ci)
+        owner=(ROOT/'.github/actions/hooklab-dependency-prepare/action.yml').read_text()
+        self.assertIn("failure() && steps.prepare.outcome == 'failure'",owner)
+        self.assertIn('hooklab-dependency-metadata-refusal-${{ github.run_id }}-${{ github.run_attempt }}',owner)
+        self.assertIn('metadata-diagnostics/',owner)
+        self.assertNotIn('continue-on-error:',ci+owner)
+
 
 if __name__ == '__main__':
     unittest.main()

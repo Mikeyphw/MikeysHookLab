@@ -63,6 +63,12 @@ class Ci24Test(unittest.TestCase):
         self.seed();(self.art/'hooklab-ci24-123-1-shard-24').rename(self.art/'lost')
         out=Path(self.tmp.name)/'summary.json';ci24.failed_summary(self.root,self.art,out,self.source,'123','1','failure')
         data=json.loads(out.read_text());self.assertEqual(data['overall'],'FAIL_CI24_VERIFICATION');self.assertEqual(len(data['shards']),24);self.assertEqual(data['shards'][-1]['status'],'MISSING');self.assertEqual(data['shards'][0]['status'],'VERIFIED_PASS')
+    def test_missing_dependency_readiness_cli_reason_and_24_missing(self):
+        out=Path(self.tmp.name)/'blocked-summary.json'
+        cmd=['python3','-B',str(ROOT/'scripts/qa/ci24.py'),'summarize','--root',str(self.root),'--source',self.source,'--run-id','123','--attempt','1','--matrix-status','skipped','--artifacts',str(self.art),'--out',str(out),'--dependency-receipt',str(self.ready.with_name('absent.json'))]
+        result=subprocess.run(cmd,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,2);self.assertIn('DEPENDENCY_READINESS_MISSING',result.stderr)
+        data=json.loads(out.read_text());self.assertEqual(data['overall'],'FAIL_CI24_VERIFICATION');self.assertEqual(data['reason'],'DEPENDENCY_READINESS_MISSING');self.assertEqual(data['matrix_status'],'skipped');self.assertEqual([r['status'] for r in data['shards']],['MISSING']*24)
     def test_ci24_retry_adapter_and_timeout(self): # historical test ID; now verifies offline-only adapter
         out=Path(self.tmp.name)/'out';original=subprocess.run
         def execute(argv,*args,**kwargs):

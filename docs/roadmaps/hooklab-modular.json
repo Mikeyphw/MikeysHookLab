@@ -220,8 +220,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-head hosted qualification and device/release gates pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Exact PR #35 head 2ddffc87d39b932e491d895a5ee722205f797af5, run 45889473147 attempt 1: source, Go, terminal and hosted browser passed; dependency preparation refused Gradle metadata before Android execution; CI24 not executed. F05 successor required.",
       "counted": false,
       "dependencies": [
         "MOD-01-F03"
@@ -230,6 +230,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Verified Offline CI Dependencies and Browser Capture Recovery",
+      "parent_id": "MOD-01"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-head hosted metadata, offline dependency, CI24 and Android qualification; physical device/release acceptance pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F04"
+      ],
+      "id": "MOD-01-F05",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Gradle Multiplatform Metadata Admission and Readiness Diagnostics",
       "parent_id": "MOD-01"
     },
     {
@@ -380,5 +393,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F04"
+  "version": "2.0-MOD-01-F05"
 }

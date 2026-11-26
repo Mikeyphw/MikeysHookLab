@@ -12,7 +12,7 @@ def artifact(rel,bom_module=False):
     module=Path(rel).parts[-3];version=Path(rel).parts[-2]
     if rel.endswith('.pom'):
         return ('<project xmlns="http://maven.apache.org/POM/4.0.0"><groupId>org.jetbrains.kotlinx</groupId><artifactId>'+module+'</artifactId><version>'+version+'</version>'+('<!-- published-with-gradle-metadata -->' if bom_module and 'bom' in module else '')+'</project>').encode()
-    if rel.endswith('.module'):return json.dumps({'component':{'group':'org.jetbrains.kotlinx','module':module,'version':version},'variants':[]}).encode()
+    if rel.endswith('.module'):return json.dumps({'formatVersion':'1.1','component':{'group':'org.jetbrains.kotlinx','module':module,'version':version},'variants':[]}).encode()
     b=io.BytesIO()
     with zipfile.ZipFile(b,'w') as z:z.writestr('META-INF/MANIFEST.MF','fixture')
     return b.getvalue()
@@ -28,6 +28,40 @@ class DependencyTest(unittest.TestCase):
         self.calls.append(url);self.assertTrue(url.startswith(d.POLICY['central']));dest.write_bytes(artifact(url[len(d.POLICY['central']):],True))
     def test_canonical_does_not_fetch_mirror_or_keyserver(self):
         d.authenticate_repository(self.state,downloader=self.canonical);manifest=json.loads((self.state/'repository/.hooklab-attestation.json').read_text());self.assertEqual(len(manifest['files']),5);self.assertTrue(all(x['verification']['method']=='CANONICAL_HTTPS' for x in manifest['files']))
+    def test_gradle_mpp_ownership_on_authenticated_bytes(self):
+        module=d.JVM; rel=REL[:-4]+'.module'; raw={'formatVersion':'1.1','component':{'group':d.GROUP,'module':d.OWNER,'version':'1.7.1','url':d.module_location(d.OWNER,'1.7.1')},'variants':[{'name':'jvmRuntimeElements-published','attributes':{'org.gradle.usage':'java-runtime'},'files':[{'name':module+'-1.7.1.jar','url':module+'-1.7.1.jar'}]}]}
+        def network(url,dest,limit):
+            self.assertTrue(url.startswith(d.POLICY['central']))
+            path=url[len(d.POLICY['central']):];dest.write_bytes(json.dumps(raw).encode() if path==rel else artifact(path))
+        d.authenticate_repository(self.state,downloader=network)
+        manifest=json.loads((self.state/'repository/.hooklab-attestation.json').read_text())
+        row=next(r for r in manifest['files'] if r['path']==rel)
+        self.assertEqual(row['metadata_identity'],{'requested':[d.GROUP,module,'1.7.1'],'component':[d.GROUP,d.OWNER,'1.7.1'],'owner_url':d.module_location(d.OWNER,'1.7.1')})
+        d.verify_repository(self.state,{'mirror':manifest})
+        self.assertFalse((self.state/'repository'/d.GROUP.replace('.','/')/d.OWNER).exists())
+    def test_gradle_owner_mismatch_and_unsafe_url_refused(self):
+        rel=REL[:-4]+'.module'; target=self.root/Path(rel).name
+        base={'group':d.GROUP,'module':d.OWNER,'version':'1.7.1','url':d.module_location(d.OWNER,'1.7.1')}
+        for c in ({**base,'url':'https://evil.invalid/a.module'},{**base,'url':'../../../other.module'},{**base,'url':'../../kotlinx-coroutines-core/1.7.1/%61.module'},{**base,'url':base['url']+'?x=1'},{**base,'group':'evil'},{**base,'version':'1.7.2'},{**base,'module':'other'},{k:v for k,v in base.items() if k!='url'}):
+            target.write_text(json.dumps({'formatVersion':'1.1','component':c,'variants':[]}))
+            with self.subTest(c=c),self.assertRaisesRegex(ValueError,'coordinate/owner mismatch.*path=.*expected=.*observed=.*sha256='):d.validate_coordinate(rel,target)
+    def test_gradle_optional_component_and_variant_references(self):
+        rel=REL[:-4]+'.module';target=self.root/Path(rel).name
+        raw={'formatVersion':'1.1','variants':[]};target.write_text(json.dumps(raw));self.assertIsNone(d.validate_coordinate(rel,target)['component'])
+        raw['variants']=[{'name':'runtime','files':[{'url':'https://evil.invalid/a.jar'}]}];target.write_text(json.dumps(raw))
+        with self.assertRaisesRegex(ValueError,'nonlocal module artifact'):d.validate_coordinate(rel,target)
+        raw['variants']=[{'name':'runtime','available-at':{'group':d.GROUP,'module':d.BOM,'version':'1.7.1','url':'../../evil.module'}}];target.write_text(json.dumps(raw))
+        with self.assertRaisesRegex(ValueError,'unapproved Gradle variant location'):d.validate_coordinate(rel,target)
+        raw['variants'][0]['available-at']['url']=d.module_location(d.BOM,'1.7.1');target.write_text(json.dumps(raw));d.validate_coordinate(rel,target)
+        target.write_text('{"formatVersion":"1.1","component":{},"component":{}}')
+        with self.assertRaisesRegex(ValueError,'duplicate metadata JSON key'):d.validate_coordinate(rel,target)
+    def test_authenticated_metadata_refusal_retains_exact_bytes(self):
+        rel=REL[:-4]+'.module';bad=json.dumps({'formatVersion':'1.1','component':{'group':d.GROUP,'module':'wrong','version':'1.7.1'},'variants':[]}).encode()
+        def network(url,dest,limit):
+            path=url[len(d.POLICY['central']):];dest.write_bytes(bad if path==rel else artifact(path))
+        with self.assertRaisesRegex(ValueError,'coordinate/owner mismatch'):d.authenticate_repository(self.state,downloader=network)
+        diag=self.state/'metadata-diagnostics';self.assertEqual((diag/Path(rel).name).read_bytes(),bad)
+        row=json.loads((diag/'failure.json').read_text());self.assertEqual(row['sha256'],hashlib.sha256(bad).hexdigest());self.assertEqual(row['path'],rel);self.assertFalse((self.state/'repository').exists())
     def test_independent_checksum_429_fallback(self):
         target=self.root/'artifact.jar';data=artifact(REL)
         def network(url,dest,limit):
@@ -68,6 +102,9 @@ class DependencyTest(unittest.TestCase):
         ident={'repository':'Mikeyphw/MikeysHookLab','source_sha':'a'*40,'source_tree':'b'*40,'run_id':'1','run_attempt':'2'};out=self.root/'ready.json';receipt=d.seal(self.state,g,ident,'c'*64,out);d.verify_receipt(receipt,ident,'c'*64);d.verify_repository(self.state,receipt)
         with self.assertRaisesRegex(ValueError,'identity'):d.verify_receipt(receipt,{**ident,'run_attempt':'3'},'c'*64)
         with self.assertRaisesRegex(ValueError,'graph'):d.verify_receipt(receipt,ident,'d'*64)
+        import copy
+        wrong=copy.deepcopy(receipt);row=next(r for r in wrong['mirror']['files'] if r['path'].endswith('.module'));row['metadata_identity']['owner_url']='https://evil.invalid/module'
+        with self.assertRaisesRegex(ValueError,'metadata receipt identity mismatch'):d.verify_receipt(wrong,ident,'c'*64)
         (g/'caches/modules-2/dep.jar').write_text('changed');self.assertNotEqual(d.entries(d.snapshot_roots(self.state,g)),receipt['files'])
         (g/'caches/modules-2/unsafe').symlink_to(g/'wrapper/dists/gradle.jar')
         with self.assertRaisesRegex(ValueError,'symlink'):d.entries(d.snapshot_roots(self.state,g))

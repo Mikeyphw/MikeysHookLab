@@ -89,6 +89,14 @@ runs:
       id: ready
       shell: bash
       run: echo 'ready=true' >> "$GITHUB_OUTPUT"
+    - name: Preserve authenticated metadata refusal evidence
+      if: ${{ failure() && steps.prepare.outcome == 'failure' }}
+      uses: actions/upload-artifact@v7.0.2
+      with:
+        name: hooklab-dependency-metadata-refusal-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/hooklab-dependencies/metadata-diagnostics/
+        if-no-files-found: ignore
+        retention-days: 14
     - name: Inspect partial cache after failure
       if: ${{ always() && !cancelled() && steps.prepare.outcome == 'failure' }}
       id: partial
