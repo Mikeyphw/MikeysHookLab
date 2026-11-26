@@ -47,17 +47,62 @@ class AdaptiveMatrixTests(unittest.TestCase):
   from unittest.mock import patch
   from types import SimpleNamespace
   cfg=a.config('api36-landscape')
-  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=lambda *args: 'lock 1' if args[:2]==('shell','wm') else '0' if args[-1]=='accelerometer_rotation' else '1'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'parse_instrumentation'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='')):
+  with patch.object(a.time,'sleep'),patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=lambda *args: 'lock 1' if args[:2]==('shell','wm') else '0' if args[-1]=='accelerometer_rotation' else '1'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'parse_instrumentation'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='')):
    for method in (a.JOURNEY,a.PERF):a.instrument(method,cfg,'a'*40,Path('.'))
    self.assertEqual([x.args for x in adb.call_args_list if x.args[:3]==('shell','wm','user-rotation')],[('shell','wm','user-rotation','lock','1')]*2)
-   self.assertEqual(sum(x.args[-1]=='files/uxr04-adaptive/viewport-failure.json' for x in adb.call_args_list),2)
-  with patch.object(a.n,'adb'),patch.object(a.n,'txt',return_value='free'),patch.object(a.subprocess,'run') as child:
+   self.assertEqual(sum('files/uxr04-adaptive/viewport-failure.json' in x.args for x in adb.call_args_list),2)
+  with patch.object(a.time,'sleep'),patch.object(a.n,'adb'),patch.object(a.n,'txt',return_value='free'),patch.object(a.subprocess,'run') as child:
    with self.assertRaisesRegex(ValueError,'rotation lock'):a.instrument(a.PERF,cfg,'a'*40,Path('.'))
    child.assert_not_called()
-  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',return_value='0') as read:
-   a.lock_matrix_rotation(a.config('api29-compact'));self.assertEqual([x.args for x in adb.call_args_list],[('shell','settings','put','system','accelerometer_rotation','0'),('shell','settings','put','system','user_rotation','0')]);self.assertEqual(read.call_count,2)
-  with patch.object(a.n,'adb'),patch.object(a.n,'txt',return_value='1'):
-   with self.assertRaisesRegex(ValueError,'rotation settings'):a.lock_matrix_rotation(a.config('api29-compact'))
+  with patch.object(a.time,'sleep'),patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',return_value='0') as read:
+   a.lock_matrix_rotation(a.config('api29-compact'));self.assertEqual([x.args for x in adb.call_args_list],[('shell','settings','put','system','accelerometer_rotation','0'),('shell','settings','put','system','user_rotation','0')]);self.assertEqual(read.call_count,4)
+  with patch.object(a.time,'sleep'),patch.object(a.n,'adb'),patch.object(a.n,'txt',return_value='1'):
+   with self.assertRaisesRegex(ValueError,'rotation lock/settings'):a.lock_matrix_rotation(a.config('api29-compact'))
+ def test_rotation_settles_without_instrumentation_replay(self):
+  from unittest.mock import patch
+  cfg=a.config('api36-tablet-landscape');polls=[]
+  def read(*args):
+   if args[:2]==('shell','wm'):
+    polls.append(1);return 'free' if len(polls)<=11 else 'lock 1'
+   if args[-1]=='accelerometer_rotation':return '0'
+   return '0' if len(polls)<=12 else '1'
+  with patch.object(a.time,'sleep'),patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=read):
+   a.lock_matrix_rotation(cfg);self.assertEqual(len(polls),14)
+   self.assertEqual([x.args for x in adb.call_args_list if x.args[:3]==('shell','wm','user-rotation')],[('shell','wm','user-rotation','lock','1')]*2)
+ def test_rotation_never_accepts_one_sample_or_wrong_orientation(self):
+  from unittest.mock import patch
+  cfg=a.config('api36-tablet-landscape');count=[0]
+  def read(*args):
+   if args[:2]==('shell','wm'):
+    count[0]+=1;return 'lock 1' if count[0]%2 else 'lock 0'
+   return '0' if args[-1]=='accelerometer_rotation' else '1'
+  with patch.object(a.time,'sleep'),patch.object(a.n,'adb'),patch.object(a.n,'txt',side_effect=read):
+   with self.assertRaisesRegex(ValueError,'not stably confirmed'):a.lock_matrix_rotation(cfg)
+   self.assertEqual(count[0],a.ROTATION_OBSERVATIONS)
+ def test_rotation_transport_failure_not_retried(self):
+  from unittest.mock import patch
+  with patch.object(a.time,'sleep'),patch.object(a.n,'adb',side_effect=OSError('transport')) as adb:
+   with self.assertRaises(OSError):a.lock_matrix_rotation(a.config('api36-tablet-landscape'))
+   adb.assert_called_once()
+ def test_search_real_route_window_binding(self):
+  root=Path(__file__).resolve().parents[2];source=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text()
+  helper=source.split('private View awaitCatalogRoot(',1)[1].split('private void awaitSearch(',1)[0]
+  for check in ('root.hasWindowFocus()','nav.getSelectedItemId()==202','R.string.ui_hooks','field.isAttachedToWindow()','field.getHeight()','i<50'):
+   self.assertIn(check,helper)
+  for prohibited in ('.perform(','.requestFocus(','.setText(','.setSelectedItemId(','.setRotation('):self.assertNotIn(prohibited,helper)
+  journey=source.split('phase("OPEN_HOOKS")',1)[1].split('phase("SEARCH_TYPE")',1)[0]
+  self.assertIn('isDescendantOfA(withId(R.id.hooklab_primary_navigation))',journey);self.assertIn('awaitCatalogRoot(s);capture(s,"hooks",records)',journey);self.assertIn('RootMatchers.withDecorView',journey);self.assertIn('.perform(scrollTo(),click())',journey);self.assertIn('awaitSearch(s,true,"")',journey)
+ def test_catalog_readiness_is_source_phase_bound_and_safe(self):
+  from unittest.mock import patch
+  row={'schema':'hooklab.uxr04.catalog-readiness.v1','source':'a'*40,'test':'adaptiveJourney','phase':'SEARCH_OPEN','window_focused':True,'hooks_selected':True,'hooks_title':True,'search_attached':False,'search_laid_out':False}
+  with patch.object(a.n,'raw',side_effect=lambda *args:json.dumps(row).encode()):
+   self.assertEqual(a.catalog_readiness('a'*40,a.JOURNEY,'SEARCH_OPEN'),row)
+   self.assertIsNone(a.catalog_readiness('b'*40,a.JOURNEY,'SEARCH_OPEN'))
+   self.assertIsNone(a.catalog_readiness('a'*40,a.JOURNEY,'OPEN_HOOKS'))
+   self.assertIsNone(a.catalog_readiness('a'*40,a.PERF,'SEARCH_OPEN'))
+   row['search_attached']='private hierarchy';self.assertIsNone(a.catalog_readiness('a'*40,a.JOURNEY,'SEARCH_OPEN'))
+   row['search_attached']=True;row['search_laid_out']=True;self.assertIsNone(a.catalog_readiness('a'*40,a.JOURNEY,'SEARCH_OPEN'))
+   row['search_laid_out']=False;row['raw']='private hierarchy';self.assertIsNone(a.catalog_readiness('a'*40,a.JOURNEY,'SEARCH_OPEN'))
  def test_home_uses_semantic_action_and_keeps_full_accessibility_gate(self):
   root=Path(__file__).resolve().parents[2];test=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text();activity=(root/'app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java').read_text()
   home=test.split('phase("HOME_SCROLL")',1)[1].split('phase("OPEN_HOOKS")',1)[0]

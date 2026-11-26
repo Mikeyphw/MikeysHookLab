@@ -82,23 +82,50 @@ def viewport_failure(source,test):
   return row
  except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
 
+def catalog_readiness(source,test,phase):
+ if test!=JOURNEY or phase not in ('OPEN_HOOKS','SEARCH_OPEN'):return None
+ try:
+  raw=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/catalog-readiness.json')
+  if not 0<len(raw)<=4096:return None
+  row=json.loads(raw);flags={'window_focused','hooks_selected','hooks_title','search_attached','search_laid_out'}
+  if set(row)!=flags|{'schema','source','test','phase'} or row['schema']!='hooklab.uxr04.catalog-readiness.v1' or row['source']!=source or row['test']!='adaptiveJourney' or row['phase']!=phase:return None
+  if not all(type(row[k]) is bool for k in flags) or all(row[k] for k in flags):return None
+  return row
+ except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
+
+ROTATION_OBSERVATIONS=40
+ROTATION_REASSERT_AT=10
+ROTATION_POLL_SECONDS=.25
+
 def lock_matrix_rotation(cfg):
  rotation='1' if cfg['width_px']>cfg['height_px'] else '0'
- # API29 has settings-based rotation but not the newer wm user-rotation command.
- # Both paths read back actual platform settings, while each instrumentation
- # process independently freezes rotation and checks the resumed real Activity display.
- n.adb('shell','settings','put','system','accelerometer_rotation','0')
- n.adb('shell','settings','put','system','user_rotation',rotation)
- if cfg['api']>=36:
-  n.adb('shell','wm','user-rotation','lock',rotation)
-  require(n.txt('shell','wm','user-rotation').strip()=='lock '+rotation,'matrix rotation lock not confirmed')
- require(n.txt('shell','settings','get','system','accelerometer_rotation')=='0' and n.txt('shell','settings','get','system','user_rotation')==rotation,'matrix rotation settings not confirmed')
+ # Android's settings and WindowManager readbacks may settle on different
+ # ticks after wm size/density changes or a preceding UiAutomation session.
+ # Reassert only this exact requested lock once; never rerun instrumentation,
+ # select a different orientation, accept "free", or swallow ADB errors.
+ def request():
+  n.adb('shell','settings','put','system','accelerometer_rotation','0')
+  n.adb('shell','settings','put','system','user_rotation',rotation)
+  if cfg['api']>=36:n.adb('shell','wm','user-rotation','lock',rotation)
+ request();stable=0;wm_ok=False;settings_ok=False
+ for poll in range(ROTATION_OBSERVATIONS):
+  if poll==ROTATION_REASSERT_AT:request();stable=0
+  wm_ok=cfg['api']<36 or n.txt('shell','wm','user-rotation').strip()=='lock '+rotation
+  sensor=n.txt('shell','settings','get','system','accelerometer_rotation').strip()
+  user=n.txt('shell','settings','get','system','user_rotation').strip()
+  settings_ok=sensor=='0' and user==rotation
+  stable=stable+1 if wm_ok and settings_ok else 0
+  if stable==2:return
+  if poll+1<ROTATION_OBSERVATIONS:time.sleep(ROTATION_POLL_SECONDS)
+ # Fixed booleans only; raw platform output never becomes exported evidence.
+ print('ROTATION_LOCK_REFUSED '+json.dumps({'api':cfg['api'],'requested':int(rotation),'wm_confirmed':wm_ok,'settings_confirmed':settings_ok,'stable_samples':stable,'observations':ROTATION_OBSERVATIONS},sort_keys=True),flush=True)
+ require(wm_ok and settings_ok and stable==2,'matrix rotation lock/settings not stably confirmed')
 
 def instrument(test,cfg,source,out):
  lock_matrix_rotation(cfg)
  # A checkpoint from a different invocation must never be accepted as current.
  n.clear_failure_checkpoint()
- if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json')
+ if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json')
  result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
  try:
   require(result.returncode==0,'instrument transport failed: '+test)
@@ -107,6 +134,7 @@ def instrument(test,cfg,source,out):
   failure=failure_info(result.stdout,test,result.returncode);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES)
   if test==JOURNEY and failure['checkpoint_phase']=='HOME_SCROLL':failure['home_target_geometry']=home_geometry_checkpoint(source)
   if failure['checkpoint_phase']=='VIEWPORT_READY':failure['viewport_geometry']=viewport_failure(source,test)
+  if failure['checkpoint_phase'] in ('OPEN_HOOKS','SEARCH_OPEN'):failure['catalog_readiness']=catalog_readiness(source,test,failure['checkpoint_phase'])
   dump(out/'failure.json',failure)
   print('ADAPTIVE_FAILURE '+json.dumps(failure,sort_keys=True),flush=True)
   raise ValueError('instrumentation failed: '+test) from None

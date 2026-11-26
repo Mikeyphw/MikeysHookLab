@@ -1,6 +1,6 @@
 {
   "repository": "Mikeyphw/MikeysHookLab",
-  "version": "2.0-MOD-00",
+  "version": "2.0-MOD-00-F01",
   "coverage": "COMPLETE",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
   "overlays": [
@@ -138,10 +138,23 @@
       "parent_id": null,
       "counted": true,
       "implementation": "SOURCE_COMPLETE",
-      "acceptance": "PENDING",
-      "blocker": "Hosted/native qualification pending",
+      "acceptance": "FAILED",
+      "blocker": "PR #34 exact head 468d93144f45625b822dc5fa7302712b51b20b92: attempts 1 and 2 failed adaptive qualification; F01 exact hosted requalification pending.",
       "dependencies": [
         "UX-R04"
+      ]
+    },
+    {
+      "id": "MOD-00-F01",
+      "name": "Adaptive Rotation Readback and Catalog Window Readiness Repair",
+      "kind": "HOTFIX",
+      "parent_id": "MOD-00",
+      "counted": false,
+      "implementation": "SOURCE_COMPLETE",
+      "acceptance": "PENDING",
+      "blocker": "Fresh hosted full matrix and independent evidence pending",
+      "dependencies": [
+        "MOD-00"
       ]
     },
     {
@@ -290,7 +303,7 @@
     },
     {
       "id": "UX-R01-F01",
-      "name": "UX-R01-F01 + HL-DIAG-R06-F01 — hosted compile, persistent login and white terminal icon",
+      "name": "UX-R01-F01 + HL-DIAG-R06-F01 \u2014 hosted compile, persistent login and white terminal icon",
       "kind": "HOTFIX",
       "parent_id": "UX-R01",
       "counted": false,

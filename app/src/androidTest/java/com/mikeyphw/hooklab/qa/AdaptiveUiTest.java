@@ -204,6 +204,39 @@ public final class AdaptiveUiTest {
         }
         fail("actual Activity orientation did not change");
     }
+    private View awaitCatalogRoot(ActivityScenario<MainActivity> scenario)throws Exception {
+        // A successful click or screenshot is not proof that the destination
+        // Activity window is current. Wait for the real Hooks selection and a
+        // laid-out, attached search field, then bind Espresso to that decor.
+        // Never perform navigation, focus, text entry or IME actions here.
+        final boolean[] sample=new boolean[5];
+        for(int i=0;i<50;i++){
+            ins.waitForIdleSync();final View[] observed={null};
+            scenario.onActivity(a->{
+                View root=a.getWindow().getDecorView();
+                NavigationBarView nav=root.findViewById(R.id.hooklab_primary_navigation);
+                MaterialToolbar toolbar=find(root,MaterialToolbar.class);
+                View field=root.findViewById(R.id.hooklab_catalog_search);
+                sample[0]=root.isAttachedToWindow()&&root.hasWindowFocus();
+                sample[1]=nav!=null&&nav.getSelectedItemId()==202;
+                sample[2]=toolbar!=null&&a.getString(R.string.ui_hooks).contentEquals(toolbar.getTitle()==null?"":toolbar.getTitle());
+                sample[3]=field instanceof android.widget.EditText&&field.isAttachedToWindow()&&field.isShown();
+                sample[4]=sample[3]&&field.isEnabled()&&field.getWidth()>0&&field.getHeight()>=Math.round(48*a.getResources().getDisplayMetrics().density);
+                if(sample[0]&&sample[1]&&sample[2]&&sample[3]&&sample[4])observed[0]=root;
+            });
+            if(observed[0]!=null)return observed[0];
+            SystemClock.sleep(200);
+        }
+        // Preserve only source-bound booleans. Raw view dumps never leave the test.
+        JSONObject evidence=new JSONObject().put("schema","hooklab.uxr04.catalog-readiness.v1")
+            .put("source",InstrumentationRegistry.getArguments().getString("uxr04_source",""))
+            .put("test",activeTest).put("phase",phase).put("window_focused",sample[0])
+            .put("hooks_selected",sample[1]).put("hooks_title",sample[2])
+            .put("search_attached",sample[3]).put("search_laid_out",sample[4]);
+        Files.write(new File(folder,"catalog-readiness.json").toPath(),evidence.toString().getBytes(StandardCharsets.UTF_8));
+        fail("Hooks catalog readiness missing");
+        throw new AssertionError("unreachable");
+    }
     private void awaitSearch(ActivityScenario<MainActivity> scenario,boolean imeExpected,String query)throws Exception {
         // Insets and focus are asynchronous across real keyboard transitions.
         // Wait for all observable conditions, never manufacture focus in the test.
@@ -278,8 +311,10 @@ public final class AdaptiveUiTest {
                 assertNotNull(target);assertTrue(target.isEnabled()&&target.isClickable()&&target.isFocusable());
                 assertTrue(target.getContentDescription()!=null&&target.getContentDescription().length()>0);
             });capture(s,"home",records);
-            phase("OPEN_HOOKS");onView(withId(202)).perform(click());capture(s,"hooks",records);
-            phase("SEARCH_OPEN");onView(withId(R.id.hooklab_catalog_search)).perform(scrollTo(),click());
+            phase("OPEN_HOOKS");onView(org.hamcrest.Matchers.allOf(withId(202),isDescendantOfA(withId(R.id.hooklab_primary_navigation)),isDisplayed())).perform(click());
+            awaitCatalogRoot(s);capture(s,"hooks",records);
+            phase("SEARCH_OPEN");View catalogRoot=awaitCatalogRoot(s);
+            onView(withId(R.id.hooklab_catalog_search)).inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.is(catalogRoot))).perform(scrollTo(),click());
             awaitSearch(s,true,"");
             phase("SEARCH_TYPE");onView(withId(R.id.hooklab_catalog_search)).perform(replaceText("Neo"));awaitSearch(s,true,"Neo");
             phase("SEARCH_CLOSE_IME");onView(withId(R.id.hooklab_catalog_search)).perform(closeSoftKeyboard());awaitSearch(s,false,"Neo");
