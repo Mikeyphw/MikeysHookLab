@@ -1,16 +1,16 @@
 package com.mikeyphw.hooklab.core;
 
+import com.mikeyphw.hooklab.runtime.BuiltinRegistry;
+import com.mikeyphw.hooklab.sdk.HookSdk.HookDescriptor;
+import com.mikeyphw.hooklab.sdk.HookSdk.ModuleDescriptor;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /** UI-only grouping: the native TweakCatalog remains the single hook registry and
  * LSPosed preferences/scope remain independently keyed by TweakSpec.id/packageName.
@@ -33,31 +33,6 @@ public final class HookGroupCatalog {
             this.packages = Collections.unmodifiableList(new ArrayList<>(pkgs));
         }
     }
-    private static final class Definition {
-        final String id, title, description;
-        final List<String> hookIds;
-        Definition(String id, String title, String description, String... hookIds) {
-            this.id = id;
-            this.title = title;
-            this.description = description;
-            this.hookIds = Collections.unmodifiableList(Arrays.asList(hookIds));
-        }
-    }
-    private static final List<Definition> DEFINITIONS = Collections.unmodifiableList(Arrays.asList(
-        new Definition("group.obtainx", "ObtainX Integration",
-            "Independent Neo Store and Droid-ify actions; imports are always manual.",
-            "neostore.obtainx.manual", "droidify.obtainx.manual"),
-        new Definition("group.chatgpt_termux", "ChatGPT → Termux",
-            "Independent Copy diagnostic and native Run action with companion review; no automatic execution.",
-            "chatgpt.codeblock.copy.probe", "chatgpt.codeblock.termux.handoff"),
-        new Definition("group.mcc", "MCC Diamond Control",
-            "Manual button with explicit confirmation for root-sensitive control.",
-            "mcc.diamond.control"),
-        new Definition("group.wordmaster", "Word Master Night Filter",
-            "Experimental dimming; not a full Unity dark theme.",
-            "wordmaster.night.filter")
-    ));
-
     /** Exact grouping of *registered* hooks, with explicit reviewed IDs only.
      * Fail closed on omitted, duplicate or unexpectedly reassigned IDs: an
      * unreviewed hook must not silently appear under an unrelated module.
@@ -70,23 +45,18 @@ public final class HookGroupCatalog {
             if (byId.putIfAbsent(spec.id, spec) != null)
                 throw new IllegalArgumentException("Duplicate hook ID: " + spec.id);
         }
+        BuiltinRegistry registry = BuiltinRegistry.current();
         List<Group> groups = new ArrayList<>();
-        Set<String> assigned = new HashSet<>();
-        for (Definition definition : DEFINITIONS) {
+        for (ModuleDescriptor module : registry.modules()) {
             List<TweakSpec> members = new ArrayList<>();
-            for (String hookId : definition.hookIds) {
-                if (!assigned.add(hookId))
-                    throw new IllegalStateException("Hook mapped to multiple groups: " + hookId);
-                TweakSpec spec = byId.get(hookId);
+            for (HookDescriptor hook : registry.hooks()) {
+                if (!module.id.equals(hook.moduleId)) continue;
+                TweakSpec spec = byId.remove(hook.id);
                 if (spec != null) members.add(spec);
             }
-            // Do not advertise groups whose hooks are not registered in the app.
-            if (!members.isEmpty())
-                groups.add(new Group(definition.id, definition.title, definition.description, members));
+            if (!members.isEmpty()) groups.add(new Group(module.groupId,module.title,module.description,members));
         }
-        for (String id : byId.keySet())
-            if (!assigned.contains(id))
-                throw new IllegalStateException("Registered hook without reviewed group: " + id);
+        if (!byId.isEmpty()) throw new IllegalStateException("Registered hook without reviewed group");
         return Collections.unmodifiableList(groups);
     }
 

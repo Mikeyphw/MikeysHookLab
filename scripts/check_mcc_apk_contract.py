@@ -284,7 +284,7 @@ def source_contract(root: Path) -> list[str]:
           and 'LAST_MANUALLY_TESTED = "' + EXPECTED_VERSION_NAME + '"' in ids,
           'MCC_SOURCE_IDENTITY_MATCHES_APK')
     check(catalog.count('MccDiamondUi::install') == 1
-          and catalog.count('MccIds.DIAMOND_MANUAL') == 1
+          and catalog.count('case MccIds.DIAMOND_MANUAL: return MccDiamondUi::install;') == 1
           and 'MccIds.VIP' not in catalog and 'MccIds.DIAMOND_AUTO' not in catalog
           and 'MccIds.BANNER_HIDE' not in catalog,
           'MCC_ONLY_REVIEWED_MANUAL_INSTALLER')

@@ -41,7 +41,8 @@ assert re.search(r'FILTER\s*=\s*0x64010712;', source)
 assert 'WordMasterNightHook::install' in catalog
 assert 'WordMasterNightHook.TWEAK_ID' in catalog
 assert 'WordMasterNightHook.VERSION_CODE, WordMasterNightHook.VERSION_CODE' in catalog
-assert 'Night filter' in catalog and 'Unity' in catalog
+registry=read('runtime/src/main/resources/META-INF/hooklab/builtin-registry.json')
+assert 'Night filter' in registry and 'Unity' in registry
 assert 'dev.bikram.obtainx' not in catalog
 assert 'staticScope=false' in read("app/src/main/resources/META-INF/xposed/module.prop")
 assert [p.get(ns+"name") for p in root.findall("uses-permission")]==["com.termux.permission.RUN_COMMAND"]

@@ -101,6 +101,9 @@ public final class FrameworkStateStore {
         try { api = bound.getApiVersion(); }
         catch (RuntimeException | LinkageError error) { return FrameworkSnapshot.unavailable(); }
         if (api < 102) return FrameworkSnapshot.unsupported(api);
+        // This is metadata reconciliation, not a hook/scope change. No host-side writes.
+        if (bound != environment.currentService() || !environment.publishRegistry(bound))
+            return FrameworkSnapshot.unavailable();
         String name = null, version = null;
         try {
             name = bound.getFrameworkName();

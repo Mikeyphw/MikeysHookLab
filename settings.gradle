@@ -11,3 +11,7 @@ dependencyResolutionManagement {
 }
 rootProject.name = 'MikeysHookLab'
 include ':app'
+
+include ':sdk', ':runtime'
+include ':probe-target', ':probe-payload'
+project(':probe-payload').projectDir = file('modules/transport-probe')

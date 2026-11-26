@@ -85,7 +85,7 @@ catalog = read('app/src/main/java/com/mikeyphw/hooklab/core/TweakCatalog.java')
 check('MccIds.DIAMOND_MANUAL' in catalog and
       all(x not in catalog for x in ('MccIds.VIP','MccIds.DIAMOND_AUTO','MccIds.BANNER_HIDE')) and
       'MccDiamondUi::install' in catalog and 'NeoStoreHook::install' in catalog
-      and 'DroidifyHook::install' in catalog and 'Arrays.<TweakEngine.Entry' in catalog,
+      and 'DroidifyHook::install' in catalog and 'BuiltinRegistry.current()' in catalog and 'TweakEngine.immutableCatalog(entries)' in catalog and 'adapterCompatible(hook)' in catalog,
       'manual MCC and two independent ObtainX adapters; no active VIP/auto/banner')
 ui = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 
@@ -265,7 +265,8 @@ check('MaterialColors.getColor(nav, androidx.appcompat.R.attr.colorPrimary)' in 
 
 # UI-04 catalog: every registered stable ID must have a reviewed grouping;
 # no UI-only view switch may call LSPosed preference or scope mutation.
-group_source = read('app/src/main/java/com/mikeyphw/hooklab/core/HookGroupCatalog.java')
+group_source = read('runtime/src/main/resources/META-INF/hooklab/builtin-registry.json')
+check('BuiltinRegistry.current()' in read('app/src/main/java/com/mikeyphw/hooklab/core/HookGroupCatalog.java'), 'UI grouping reads registry authority')
 main_source = read('app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java')
 check(all(hook in group_source for hook in (
     'mcc.diamond.control', 'neostore.obtainx.manual', 'droidify.obtainx.manual',

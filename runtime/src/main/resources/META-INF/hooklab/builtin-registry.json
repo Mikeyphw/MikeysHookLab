@@ -1,0 +1,87 @@
+{
+  "schema": "hooklab.builtin.registry.v1",
+  "sdk_min": 1,
+  "sdk_max": 1,
+  "modules": [
+    {
+      "id": "obtainx",
+      "group": "group.obtainx",
+      "title": "ObtainX Integration",
+      "description": "Independent Neo Store and Droid-ify actions; imports are always manual."
+    },
+    {
+      "id": "chatgpt",
+      "group": "group.chatgpt_termux",
+      "title": "ChatGPT → Termux",
+      "description": "Independent Copy diagnostic and native Run action with companion review; no automatic execution."
+    },
+    {
+      "id": "mcc",
+      "group": "group.mcc",
+      "title": "MCC Diamond Control",
+      "description": "Manual button with explicit confirmation for root-sensitive control."
+    },
+    {
+      "id": "wordmaster",
+      "group": "group.wordmaster",
+      "title": "Word Master Night Filter",
+      "description": "Experimental dimming; not a full Unity dark theme."
+    }
+  ],
+  "hooks": [
+    {
+      "id": "mcc.diamond.control",
+      "module": "mcc",
+      "package": "br.art.code.meucronogramacapilar",
+      "min_version": 1,
+      "max_version": 9223372036854775807,
+      "title": "MCC · Manual diamond button",
+      "description": "Tap ♦ 9 inside MCC to open manual control; confirmed root only in HookLab. No VIP, banner or automatic refills."
+    },
+    {
+      "id": "neostore.obtainx.manual",
+      "module": "obtainx",
+      "package": "com.machiav3lli.fdroid",
+      "min_version": 1304,
+      "max_version": 1304,
+      "title": "Neo Store · Open in ObtainX",
+      "description": "Neo Store 1.3.3/1304 only. Show ObtainX-branded header icon on a verified app page; tap to open ObtainX import preview. No auto imports."
+    },
+    {
+      "id": "droidify.obtainx.manual",
+      "module": "obtainx",
+      "package": "com.looker.droidify",
+      "min_version": 780,
+      "max_version": 780,
+      "title": "Droid-ify · Add to ObtainX",
+      "description": "Droid-ify 0.7.8/780 only. Adds one native toolbar action after validating the current app and repository. No host data writes."
+    },
+    {
+      "id": "wordmaster.night.filter",
+      "module": "wordmaster",
+      "package": "com.fugo.wowsolitaire",
+      "min_version": 56240403,
+      "max_version": 56240403,
+      "title": "Word Master · Night filter (experimental)",
+      "description": "Word Master 0.6.10 only. Dims the Unity gameplay view without recoloring in-game textures. Fully opt-in; restart the game to apply or remove."
+    },
+    {
+      "id": "chatgpt.codeblock.copy.probe",
+      "module": "chatgpt",
+      "package": "com.openai.chatgpt",
+      "min_version": 2632128,
+      "max_version": 2632128,
+      "title": "ChatGPT · Code-block action diagnostic (experimental)",
+      "description": "Read-only, opt-in diagnostics for ChatGPT 1.2026.321/2632128. Observes native CodeBlock/CopyButton renders and callback/clipboard parity; no command execution, message storage, Termux dispatch or raw text logs."
+    },
+    {
+      "id": "chatgpt.codeblock.termux.handoff",
+      "module": "chatgpt",
+      "package": "com.openai.chatgpt",
+      "min_version": 2632128,
+      "max_version": 2632128,
+      "title": "ChatGPT · Run code in Termux (experimental)",
+      "description": "Adds a separate native Run action beside Copy; review and confirm in HookLab. No clipboard dependency or automatic execution."
+    }
+  ]
+}

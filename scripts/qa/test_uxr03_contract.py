@@ -32,7 +32,7 @@ class R03Contract(unittest.TestCase):
         self.assertNotRegex(body,r'requestScope\(|saveTweak\(|removeScope\(|Runtime\.getRuntime')
     def test_production_geometry_and_home_model(self):
         names=('TweakSpec','HookGroupCatalog','TweakCompatibility','FrameworkSnapshot','DiagnosticTimeline','HomeDashboardModel','DesignTokens','UiLayoutPolicy','PendingFrameworkCommands')
-        paths=[p for p in JAVA.rglob('*.java') if p.stem in names]
+        paths=[p for p in JAVA.rglob('*.java') if p.stem in names]+sorted(ROOT.glob('sdk/src/main/java/**/*.java'))+sorted(ROOT.glob('runtime/src/main/java/**/*.java'))
         tests=ROOT/'app/src/test/java/com/mikeyphw/hooklab/ui'
         with tempfile.TemporaryDirectory() as tmp:
             t=pathlib.Path(tmp);j=t/'org/junit';j.mkdir(parents=True)
@@ -40,4 +40,4 @@ class R03Contract(unittest.TestCase):
             (j/'Assert.java').write_text('package org.junit; public class Assert { public static void fail(String s){throw new AssertionError(s);} public static void assertTrue(boolean b){if(!b)fail("false");} public static void assertFalse(boolean b){assertTrue(!b);} public static void assertNull(Object a){assertEquals(null,a);} public static void assertEquals(Object a,Object b){if(!java.util.Objects.equals(a,b))fail(a+" != "+b);} public static void assertEquals(long a,long b){if(a!=b)fail(a+" != "+b);} }')
             runner=t/'Run.java';runner.write_text('public class Run { public static void main(String[] a)throws Exception{int n=0;for(String c:a){Object o=Class.forName(c).getConstructor().newInstance();for(var m:o.getClass().getMethods())if(m.isAnnotationPresent(org.junit.Test.class)){m.invoke(o);n++;}}if(n!=17)throw new AssertionError(n);System.out.println("R03_JVM_TESTS="+n);}}')
             subprocess.run(['javac','--release','17','-d',tmp,*map(str,paths),str(tests/'HomeDashboardModelTest.java'),str(tests/'UiLayoutPolicyTest.java'),str(tests/'PendingFrameworkCommandsTest.java'),*map(str,j.glob('*.java')),str(runner)],check=True,timeout=30)
-            subprocess.run(['java','-cp',tmp,'Run','com.mikeyphw.hooklab.ui.HomeDashboardModelTest','com.mikeyphw.hooklab.ui.UiLayoutPolicyTest','com.mikeyphw.hooklab.ui.PendingFrameworkCommandsTest'],check=True,timeout=30)
+            subprocess.run(['java','-cp',str(t)+':'+str(ROOT/'runtime/src/main/resources'),'Run','com.mikeyphw.hooklab.ui.HomeDashboardModelTest','com.mikeyphw.hooklab.ui.UiLayoutPolicyTest','com.mikeyphw.hooklab.ui.PendingFrameworkCommandsTest'],check=True,timeout=30)

@@ -129,8 +129,8 @@
       "parent_id": null
     },
     {
-      "acceptance": "FAILED",
-      "blocker": "Historical hosted failures retained. F01 hosted run 45834440755 attempt 1 passed; independent shared APK verification stopped on CLI alias shadowing. F02 successor qualification pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "PR #34 merged at 84ecd37ca573ad4ea937e1fcef51dfaaa91b2c04. Exact successor 5b793e9044adf8986744c64afd315383db638a44, run 45849030030 attempt 1, hosted adaptive 10/10 and independent CI24 24/24 passed; prior failed evidence retained. Physical-device, visual approval and release acceptance pending.",
       "counted": true,
       "dependencies": [
         "UX-R04"
@@ -155,8 +155,8 @@
       "parent_id": "MOD-00"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh hosted full matrix and independent evidence pending",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "PR #34 merged at 84ecd37ca573ad4ea937e1fcef51dfaaa91b2c04. Exact successor 5b793e9044adf8986744c64afd315383db638a44, run 45849030030 attempt 1, hosted adaptive 10/10 and independent CI24 24/24 passed; prior failed evidence retained. Physical-device, visual approval and release acceptance pending.",
       "counted": false,
       "dependencies": [
         "MOD-00-F01"
@@ -169,13 +169,13 @@
     },
     {
       "acceptance": "PENDING",
-      "blocker": "Prerequisite overlay not accepted",
+      "blocker": "Native delivery, exact-head hosted CI24 and APK verification pending. Real owned-target Vector/LSPosed remote-file feasibility and device evidence required before MOD-02; visual and release acceptance remain pending.",
       "counted": true,
       "dependencies": [
         "MOD-00"
       ],
       "id": "MOD-01",
-      "implementation": "PLANNED",
+      "implementation": "SOURCE_COMPLETE",
       "kind": "OVERLAY",
       "name": "Modular Core & Internal SDK",
       "parent_id": null
@@ -328,5 +328,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-00-F02"
+  "version": "2.0-MOD-01"
 }

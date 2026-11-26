@@ -80,6 +80,7 @@ android {
     lint { abortOnError true; checkReleaseBuilds true }
 }
 dependencies {
+    implementation project(':runtime')
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.core:core:1.16.0'
     implementation 'com.google.android.material:material:1.13.0'
@@ -98,3 +99,25 @@ dependencies {
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
     androidTestImplementation 'androidx.test.espresso:espresso-accessibility:3.6.1'
 }
+
+// Independent debug-only DEX fixture. SDK remains in the parent APK, never in the payload.
+// Android builds, including D8, execute only in the hosted build lane.
+def probeAssets = layout.buildDirectory.dir('generated/mod01ProbeAssets')
+def buildMod01ProbeDex = tasks.register('buildMod01ProbeDex', Exec) {
+    dependsOn ':probe-payload:jar', ':sdk:jar'
+    outputs.dir(probeAssets)
+    inputs.files(provider { [project(':probe-payload').tasks.named('jar').get().archiveFile.get().asFile, project(':sdk').tasks.named('jar').get().archiveFile.get().asFile] })
+    doFirst {
+        def out = probeAssets.get().dir('mod01-probe').asFile
+        delete(out)
+        out.mkdirs()
+        def sdkDir = androidComponents.sdkComponents.sdkDirectory.get().asFile
+        def sdkJar = project(':sdk').tasks.named('jar').get().archiveFile.get().asFile
+        def payload = project(':probe-payload').tasks.named('jar').get().archiveFile.get().asFile
+        commandLine new File(sdkDir,'build-tools/36.0.0/d8'), '--release','--min-api','29',
+            '--lib', new File(sdkDir,'platforms/android-37.0/android.jar'),
+            '--classpath', sdkJar, '--output',out,payload
+    }
+}
+android.sourceSets.debug.assets.srcDir(probeAssets)
+tasks.matching { it.name == 'mergeDebugAssets' }.configureEach { dependsOn buildMod01ProbeDex }

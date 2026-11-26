@@ -8,8 +8,9 @@ class NavigationContract(unittest.TestCase):
         self.assertIsNotNone(shutil.which('javac'),'JDK required for pure navigation checks')
         with tempfile.TemporaryDirectory() as t:
             files=[JAVA/x for x in ('core/TweakSpec.java','core/HookGroupCatalog.java','core/HookDetailRoute.java','core/CatalogRoutes.java','ui/RouteTrail.java','ui/IconStateCache.java')]
+            files += list((ROOT/'sdk/src/main/java').rglob('*.java')) + list((ROOT/'runtime/src/main/java').rglob('*.java'))
             subprocess.run(['javac','--release','17','-d',t,*map(str,files),str(ROOT/'scripts/qa/NavigationChecks.java')],check=True,timeout=30)
-            result=subprocess.check_output(['java','-cp',t,'com.mikeyphw.hooklab.ui.NavigationChecks'],text=True,timeout=30)
+            result=subprocess.check_output(['java','-cp',t+__import__('os').pathsep+str(ROOT/'runtime/src/main/resources'),'com.mikeyphw.hooklab.ui.NavigationChecks'],text=True,timeout=30)
             self.assertIn('TOTAL=22',result);self.assertEqual(sum(l.startswith('PASS ') for l in result.splitlines()),22)
     def test_navigation_boundaries(self):
         s=(JAVA/'ui/MainActivity.java').read_text()
