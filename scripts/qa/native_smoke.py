@@ -216,8 +216,9 @@ FRAME_CLASSES={t.split('#')[0]:t.split('#')[0].rsplit('.',1)[-1]+'.java' for t i
 SAFE_FRAME_METHODS=frozenset(('realActivityOfflineNavigation','capture','semantic','project','label','find','containsText','importedFixtureProjectionAndFilter','connectedCommandsStaleCallbackAndClock','press','readyText','switchState','await','awaitPending','settledScreenshot','awaitCommittedFrame','captureGeometry','syntheticAuthorizationAndReceipt','captureWholeApp','bodyEvidence','bodyControl'))
 SAFE_EXCEPTION_TYPES=frozenset(('java.lang.AssertionError','java.lang.IllegalStateException','java.lang.IllegalArgumentException','java.lang.NullPointerException','java.lang.RuntimeException','java.lang.SecurityException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.AppNotIdleException','androidx.test.espresso.NoActivityResumedException','androidx.test.espresso.base.RootViewPicker$RootViewWithoutFocusException'))
 
-def failure_details(output,test_id,ordinal,completed,rc,reason):
-    require(test_id in TESTS and ordinal==len(completed)+1 and list(completed)==TESTS[:ordinal-1] and ordinal<=len(TESTS) and TESTS[ordinal-1]==test_id,'failure roster drift')
+def failure_details(output,test_id,ordinal,completed,rc,reason,roster=None):
+    tests=TESTS if roster is None else roster
+    require(test_id in TESTS and test_id in tests and ordinal==len(completed)+1 and list(completed)==tests[:ordinal-1] and ordinal<=len(tests) and tests[ordinal-1]==test_id,'failure roster drift')
     require(reason in ('TEST_FAILED','TRANSPORT_FAILED','TIMEOUT','SPAWN_FAILED'),'invalid failure reason')
     if isinstance(output,bytes):output=output.decode('utf-8','replace')
     stages=[];frames=[];exceptions=[];codes=[]
@@ -253,7 +254,7 @@ def failure_checkpoint(source,test_id,phases):
         return row
     except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
 
-def run_instrumentation(out,ident,test_id,completed):
+def run_instrumentation(out,ident,test_id,completed,roster=None):
     ordinal=len(completed)+1;reason='TRANSPORT_FAILED';output='';rc=None
     try:
         if test_id==FRAMEWORK_TEST:clear_failure_checkpoint()
@@ -264,7 +265,7 @@ def run_instrumentation(out,ident,test_id,completed):
     except (ValueError,OSError,subprocess.SubprocessError) as failure:
         if isinstance(failure,subprocess.TimeoutExpired):reason='TIMEOUT';output=failure.stdout or ''
         elif isinstance(failure,OSError):reason='SPAWN_FAILED'
-        details=failure_details(output,test_id,ordinal,completed,rc,reason)
+        details=failure_details(output,test_id,ordinal,completed,rc,reason,roster)
         details['cause_checkpoint']=failure_checkpoint(ident['source_sha'],test_id,FAILURE_STAGES) if test_id==FRAMEWORK_TEST else None
         if details['cause_checkpoint'] is not None:details['stage']=details['cause_checkpoint']['phase']
         # Receipt is exact-source/run bound, not a success or a full visual receipt.

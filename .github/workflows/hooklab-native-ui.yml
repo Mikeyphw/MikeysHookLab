@@ -1,10 +1,11 @@
 name: HookLab Native UI Baseline
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
   workflow_call:
+    inputs:
+      shared_apks:
+        type: boolean
+        required: true
 permissions:
   contents: read
 jobs:
@@ -39,12 +40,26 @@ jobs:
           mkdir -p "${ANDROID_AVD_HOME:-$HOME/.android/avd}"
           test "$(df -Pk "${ANDROID_AVD_HOME:-$HOME/.android/avd}" | awk 'END {print $4}')" -ge 4194304
       - name: Debug and instrumentation APKs (hosted only)
+        if: ${{ !inputs.shared_apks }}
         env:
           HOOKLAB_CI_RETRY_PROFILE: native
         run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - uses: actions/download-artifact@v8
+        if: ${{ inputs.shared_apks }}
+        with:
+          name: hooklab-matrix-apks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/matrix-apks
+      - uses: actions/download-artifact@v8
+        if: ${{ inputs.shared_apks }}
+        with:
+          name: hooklab-shared-release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/shared-release
+      - name: Verify exact shared APKs and restore native input paths
+        if: ${{ inputs.shared_apks }}
+        run: python3 -B scripts/qa/shared_native_apks.py restore --apks "$RUNNER_TEMP/matrix-apks" --release "$RUNNER_TEMP/shared-release"
       - name: Pinned reference renderer (same source and workflow attempt)
         run: |
           sudo apt-get update -qq

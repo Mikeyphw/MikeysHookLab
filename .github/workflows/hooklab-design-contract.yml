@@ -1,9 +1,7 @@
 name: HookLab Design Contract
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -27,24 +25,13 @@ jobs:
           python-version: '3.12'
       - name: Install pinned Python QA dependencies
         run: python -m pip install 'playwright==1.57.0' 'Pillow==11.3.0' 'numpy==2.3.5'
-      - name: Local source gates (hosted, no Gradle)
-        run: |
-          set -Eeuo pipefail
-          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          python3 -B scripts/qa/source_contract.py
-          python3 -B scripts/qa/reference.py verify
-          python3 -B scripts/qa/visual.py contract
-          python3 -B -m unittest discover -s scripts/qa -p 'test_*.py' -v
-          python3 -B scripts/qa/ci24.py inventory > "$RUNNER_TEMP/jvm-inventory.json"
       - name: Install deterministic browser and font dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y fonts-roboto zsh
+          sudo apt-get install -y fonts-roboto
           fc-cache -f
           fc-match Roboto -f '%{family}\n' | grep -F Roboto
           python -m playwright install --with-deps chromium
-      - name: Verify actual persistent Zsh session in isolated PTY
-        run: python3 -B scripts/qa/termux_session_check.py --require-zsh
       - name: Repeat all 24 exact browser reference states
         id: browser_reference
         run: |
