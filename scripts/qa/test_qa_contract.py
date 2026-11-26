@@ -3,7 +3,7 @@ import copy, hashlib, json, os, subprocess, tempfile, unittest
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from unittest.mock import patch
-import ci24, reference
+import ci24, reference, dependency_prep
 
 ROOT=Path(__file__).resolve().parents[2]
 class ReferenceTest(unittest.TestCase):
@@ -31,6 +31,9 @@ class Ci24Test(unittest.TestCase):
             p=self.root/f'app/src/test/java/example/T{i:02}Test.java';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(f'package example; public class T{i:02}Test {{ @Test public void a() {{}} @Test(expected=IllegalArgumentException.class) public void b() {{}} }}')
         subprocess.run(['git','-C',str(self.root),'add','.'],check=True);subprocess.run(['git','-C',str(self.root),'-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-qm','test fixtures'],check=True)
         self.source=ci24.git(self.root,'rev-parse','HEAD');self.inv=ci24.inventory(self.root);self.ident=ci24.identity(self.root,self.source,'123','1')
+        self.ready=Path(self.tmp.name)/'ready.json'
+        h='a'*64
+        ci24.dump(self.ready,{'schema':dependency_prep.SCHEMA,**self.ident,'graph_sha256':dependency_prep.graph_digest(self.root),'resolution_sha256':dependency_prep.resolution_digest(self.root),'profile':'jvm','tasks':dependency_prep.JVM_TASKS,'offline_result':'PASS','elapsed_seconds':0,'reused_ready':False,'locks':['app.lockfile'],'mirror':{'primary':dependency_prep.POLICY['primary_fingerprint'],'signer':dependency_prep.POLICY['signing_fingerprint'],'files':[]},'files':{'modules/a':h,'wrapper/a':h,'repository/.hooklab-attestation.json':h,'locks/app.lockfile':h}})
     def seed(self):
         for i in range(1,25):
             folder=self.art/f'hooklab-ci24-123-1-shard-{i}';j=folder/'junit';j.mkdir(parents=True);expected=ci24.assignment(self.inv,i)
@@ -39,35 +42,44 @@ class Ci24Test(unittest.TestCase):
                 for m in v['methods']:ET.SubElement(e,'testcase',{'classname':name,'name':m})
                 ET.ElementTree(e).write(j/('TEST-'+name+'.xml'))
             hashes,cases=ci24.parse_xml(j,expected)
-            ci24.dump(folder/'receipt.json',{'schema':ci24.SCHEMA,**self.ident,'shard':i,'shards':24,'classes':expected,'status':'PASS','gradle_exit':0,'release_qualified':False,'physical_device_qualified':False,'junit_sha256':hashes,'tests':cases,'test_count':len(cases)})
+            ci24.dump(folder/'receipt.json',{'schema':ci24.SCHEMA,**self.ident,'dependency_receipt_sha256':ci24.digest(self.ready),'shard':i,'shards':24,'classes':expected,'status':'PASS','gradle_exit':0,'release_qualified':False,'physical_device_qualified':False,'junit_sha256':hashes,'tests':cases,'test_count':len(cases)})
     def test_assignment_partition(self):
         rows=[ci24.assignment(self.inv,i) for i in range(1,25)];self.assertTrue(all(rows));self.assertEqual(sum(map(len,rows)),28);self.assertEqual(set().union(*map(set,rows)),set(self.inv))
     def test_complete_summary_and_verify(self):
-        self.seed();out=Path(self.tmp.name)/'summary.json';self.assertEqual(ci24.summarize(self.root,self.art,out,self.source,'123','1'),0);self.assertEqual(json.loads(out.read_text())['test_count'],56);self.assertEqual(ci24.summarize(self.root,self.art,out,self.source,'123','1',True),0)
+        self.seed();out=Path(self.tmp.name)/'summary.json';self.assertEqual(ci24.summarize(self.root,self.art,out,self.source,'123','1',dependency_receipt=self.ready),0);self.assertEqual(json.loads(out.read_text())['test_count'],56);self.assertEqual(ci24.summarize(self.root,self.art,out,self.source,'123','1',True,self.ready),0)
     def test_missing_shard_refused(self):
         self.seed();(self.art/'hooklab-ci24-123-1-shard-24').rename(self.art/'lost')
-        with self.assertRaisesRegex(ValueError,'missing/extra'):ci24.summarize(self.root,self.art,Path(self.tmp.name)/'s.json',self.source,'123','1')
+        with self.assertRaisesRegex(ValueError,'missing/extra'):ci24.summarize(self.root,self.art,Path(self.tmp.name)/'s.json',self.source,'123','1',dependency_receipt=self.ready)
     def test_wrong_attempt_refused(self):
         self.seed();p=self.art/'hooklab-ci24-123-1-shard-1'/'receipt.json';r=json.loads(p.read_text());r['run_attempt']='2';p.write_text(json.dumps(r))
-        with self.assertRaisesRegex(ValueError,'invalid shard'):ci24.summarize(self.root,self.art,Path(self.tmp.name)/'s.json',self.source,'123','1')
+        with self.assertRaisesRegex(ValueError,'invalid shard'):ci24.summarize(self.root,self.art,Path(self.tmp.name)/'s.json',self.source,'123','1',dependency_receipt=self.ready)
     def test_skipped_or_missing_test_refused(self):
         self.seed();f=self.art/'hooklab-ci24-123-1-shard-1'/'junit';p=next(f.glob('*.xml'));e=ET.parse(p);e.getroot().set('skipped','1');e.write(p)
-        with self.assertRaisesRegex(ValueError,'failed/skipped'):ci24.summarize(self.root,self.art,Path(self.tmp.name)/'s.json',self.source,'123','1')
+        with self.assertRaisesRegex(ValueError,'failed/skipped'):ci24.summarize(self.root,self.art,Path(self.tmp.name)/'s.json',self.source,'123','1',dependency_receipt=self.ready)
     def test_no_local_gradle(self):
         with patch.dict(os.environ,{'GITHUB_ACTIONS':'false'},clear=True):
-            with self.assertRaisesRegex(ValueError,'HOSTED_ONLY'):ci24.run(self.root,Path(self.tmp.name)/'out',1,self.source,'123','1')
+            with self.assertRaisesRegex(ValueError,'HOSTED_ONLY'):ci24.run(self.root,Path(self.tmp.name)/'out',1,self.source,'123','1',dependency_receipt=self.ready)
     def test_failed_summary_preserves_verified_shards(self):
         self.seed();(self.art/'hooklab-ci24-123-1-shard-24').rename(self.art/'lost')
         out=Path(self.tmp.name)/'summary.json';ci24.failed_summary(self.root,self.art,out,self.source,'123','1','failure')
         data=json.loads(out.read_text());self.assertEqual(data['overall'],'FAIL_CI24_VERIFICATION');self.assertEqual(len(data['shards']),24);self.assertEqual(data['shards'][-1]['status'],'MISSING');self.assertEqual(data['shards'][0]['status'],'VERIFIED_PASS')
-    def test_ci24_retry_adapter_and_timeout(self):
+    def test_missing_dependency_readiness_cli_reason_and_24_missing(self):
+        out=Path(self.tmp.name)/'blocked-summary.json'
+        cmd=['python3','-B',str(ROOT/'scripts/qa/ci24.py'),'summarize','--root',str(self.root),'--source',self.source,'--run-id','123','--attempt','1','--matrix-status','skipped','--artifacts',str(self.art),'--out',str(out),'--dependency-receipt',str(self.ready.with_name('absent.json'))]
+        result=subprocess.run(cmd,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,2);self.assertIn('DEPENDENCY_READINESS_MISSING',result.stderr)
+        data=json.loads(out.read_text());self.assertEqual(data['overall'],'FAIL_CI24_VERIFICATION');self.assertEqual(data['reason'],'DEPENDENCY_READINESS_MISSING');self.assertEqual(data['matrix_status'],'skipped');self.assertEqual([r['status'] for r in data['shards']],['MISSING']*24)
+    def test_ci24_retry_adapter_and_timeout(self): # historical test ID; now verifies offline-only adapter
         out=Path(self.tmp.name)/'out';original=subprocess.run
         def execute(argv,*args,**kwargs):
             if argv[0]=='git':return original(argv,*args,**kwargs)
-            self.assertEqual(argv[:3],['bash','scripts/ci_gradle_retry.sh','bash']);self.assertEqual(kwargs['env']['HOOKLAB_CI_RETRY_PROFILE'],'native');raise subprocess.TimeoutExpired(argv,3000)
+            self.assertEqual(argv[:2],['bash','gradlew']);self.assertIn('--offline',argv);self.assertIn('gradle/ci/locks.gradle',argv);self.assertNotIn('scripts/ci_gradle_retry.sh',argv);raise subprocess.TimeoutExpired(argv,3000)
         with patch.dict(os.environ,{'GITHUB_ACTIONS':'true','RUNNER_OS':'Linux','SOURCE_SHA':self.source,'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1'}),patch.object(ci24.subprocess,'run',side_effect=execute):
-            self.assertEqual(ci24.run(self.root,out,1,self.source,'123','1'),124)
+            self.assertEqual(ci24.run(self.root,out,1,self.source,'123','1',self.ready),124)
         self.assertEqual(json.loads((out/'receipt.json').read_text())['status'],'FAIL_TIMEOUT')
+    def test_mixed_dependency_receipt_refused(self):
+        self.seed();p=self.art/'hooklab-ci24-123-1-shard-3'/'receipt.json';r=json.loads(p.read_text());r['dependency_receipt_sha256']='b'*64;p.write_text(json.dumps(r))
+        with self.assertRaisesRegex(ValueError,'dependency receipt drift'):ci24.summarize(self.root,self.art,Path(self.tmp.name)/'s.json',self.source,'123','1',dependency_receipt=self.ready)
     def test_source_drift(self):
         with self.assertRaisesRegex(ValueError,'source drift'):ci24.identity(self.root,'1'*40,'123','1')
 if __name__=='__main__':unittest.main()

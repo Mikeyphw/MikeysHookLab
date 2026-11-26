@@ -1,0 +1,28 @@
+# HookLab CI stabilization engineering supplement — LRN-33–40
+
+Project-specific implementation supplement to the existing hash-pinned cross-repository LRN-01–32 catalog, not a replacement or amendment of the operating contract. Source-bound to MOD-01-F04; external gates remain pending. Historical failures: runs 45867249130 (AGP array operation), 45872964107 attempts 1–2 (HTTP 429), 45882694979 attempt 1 (HTTP 429 and browser capture protocol error). Native CI recovery is observation, never replay. No local Gradle.
+
+| Control | Required maintained regression and failure behavior |
+|---|---|
+| LRN-33 | Actual full hosted tasks, strict lock inventory, clean offline rebuild; `test_dependency_prep.py` rejects missing, stale, changed readiness and unsafe snapshots. Cache hit alone is not readiness. |
+| LRN-34 | Narrow exact coordinates, original repository first, independently verified alternate bytes, fail closed on wrong checksum, invalid signature or unapproved response. `test_dependency_prep.py` uses real GnuPG with a disposable signing key; hosted publisher proof remains separate. |
+| LRN-35 | Single preparation writer, distinct progress and ready cache keys, exact attempt-only read consumers; `test_mod01_gradle_graph.py`, `test_qa_contract.py` assert no cold fan-out or overlapping writer. |
+| LRN-36 | Actual AGP producer execution and full offline tasks before artifact validation, not only dry-run; hosted `mod01_gradle_graph.sh` and APK boundary gates retained. |
+| LRN-37 | `test_reference_recovery.py` covers classified capture failure recovery, exhausted budget, state drift and non-transient refusal; actual browser repeat still requires both full 24-case sets with strict equality. |
+| LRN-38 | Retry only known transient infrastructure failures; `test_ci_retry.py` preserves deterministic and mixed failure refusal, `test_dependency_prep.py` covers authorization and integrity errors. |
+| LRN-39 | Measured targeted native validation, separate full source suite, timed hosted readiness and warm/cold status. Host measurements are not Termux speed claims. |
+| LRN-40 | Both independent observed root causes in the same successor; retained PR, predecessor attempt and history; no new PR or reapply. Native operator qualification and hosted/device acceptance remain independent. |
+
+References: [Sonatype Central rate limits](https://central.sonatype.org/faq/429-error/), [Google Cloud Central mirror](https://cloud.google.com/artifact-registry/docs/repositories/remote-repo), [Gradle dependency locking](https://docs.gradle.org/current/userguide/dependency_locking.html), [Gradle dependency verification](https://docs.gradle.org/current/userguide/dependency_verification.html), [GitHub dependency caching](https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows), [Playwright retry model](https://playwright.dev/docs/test-retries). Pinned publisher evidence: Gradle v9.3.1 `gradle/verification-metadata.xml`, Apache JMeter rel/v5.6.2 `checksum.xml` and cached certificate identity; these establish the scoped trust choice, not proof that the live keyserver or signatures are available. Do not enable arbitrary mirror fallback or import mirror-provided untrusted keys. A managed repository proxy and independently reviewed full graph verification metadata are future infrastructure/governance work, not claimed by this overlay.
+
+## F05 follow-up: publication metadata is not a coordinate tuple
+
+F04 hosted run 45889473147 attempt 1 stopped in the agent-owned coordinate validator before Gradle ran. Gradle 9.3.1 documents optional component metadata and platform variants owned by a root component; its parser uses component attributes, while available-at resolves typed coordinates. Preserve authenticated bytes; restrict exact allowed ownership and relative references. Test equivalent specification fixture, adversarial owner/URL and receipt drift, retain exact public authenticated metadata on refusal, and distinguish this evidence from actual publisher bytes. A new CI run is still required. CI24 readiness failure must have a distinct structured reason and cannot count unexecuted shards as passes.
+
+## F06 follow-up: reusable bytes are not acceptance evidence
+
+The exact F05 run `45896260206` attempt 1 passed metadata admission and then failed classpath resolution on multiple new Maven Central 429s; CI24 did not execute. Last green main Android job `140028322616` restored the official setup-java Gradle cache. F06 adopts standard caching as a seed with a scoped exact historical restore and separates resolver digest from qualification graph. The `hooklab.dependencies.v2` receipt requires both; stale source, attempt, resolution or bytes refuse. The complete offline tasks, exact consumer snapshot, narrow publisher authentication, 24-shard roster and all UI/APK acceptance controls remain required. Tests cover standard cache isolation, no QA-only key churn, changed resolver inputs, stale/tampered prior receipts, and symlink rejection. No new broad mirror, no claim of actual cache availability before a hosted run.
+
+## F07 follow-up: execute the actual workflow CLI boundary
+
+F06 run `45902345026` attempt 1 restored both historical Gradle caches, then the composite `seed-standard` invocation omitted the mandatory explicit `--state` argument. The library function regression did not cover this production entrypoint. `test_dependency_cli.py` executes the actual composite run commands with isolated fixture caches, checks owner/consumer/shell argument rosters, and verifies rejection on missing or unsafe state and source drift. The fixture is not a Gradle build or a hosted qualification receipt. Preserve resolver digest and readiness rules.

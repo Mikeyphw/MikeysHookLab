@@ -61,7 +61,7 @@ exit "$rc"
         self.assertIn('RETRY_EXHAUSTED attempts=5 original_rc=19',p.stderr)
 
     def test_refuse_non_429_and_mixed_failures(self):
-        for msg in ('error: cannot find symbol', RATE+'\nerror: cannot find symbol', RATE+'\n1 tests completed, 1 failed', RATE+'\nLint found 1 errors', RATE+'\nReceived status code 403', RATE.replace('429','401').replace('Too Many Requests','Unauthorized'), RATE.replace('repo.maven.apache.org','other.example'), 'HTTP 429'):
+        for msg in ('error: cannot find symbol', RATE+'\nerror: cannot find symbol', RATE+'\n1 tests completed, 1 failed', RATE+'\nLint found 1 errors', RATE+'\nYou cannot add Provider instances to the Android SourceSet API', 'You cannot add Provider instances to the Android SourceSet API', RATE+'\nReceived status code 403', RATE.replace('429','401').replace('Too Many Requests','Unauthorized'), RATE.replace('repo.maven.apache.org','other.example'), 'HTTP 429'):
             with self.subTest(msg=msg):
                 p,n,delays=self.execute('native',[(9,msg)])
                 self.assertEqual((p.returncode,n,delays),(9,1,[]))
@@ -78,7 +78,11 @@ exit "$rc"
         fixture=(ROOT/'scripts/qa/termux_session_check.py').read_text()
         policy=(ROOT/'app/src/main/java/com/mikeyphw/hooklab/termux/TermuxCommandPolicy.java').read_text()
         self.assertIn('HOOKLAB_CI_RETRY_PROFILE: native',native)
-        self.assertNotIn('HOOKLAB_CI_RETRY_PROFILE',android)
+        self.assertNotIn('HOOKLAB_CI_RETRY_PROFILE: native',android.split('  impact:\n',1)[0])
+        prep=(ROOT/'scripts/qa/dependency_prepare.sh').read_text()
+        self.assertEqual(prep.count('HOOKLAB_CI_RETRY_PROFILE=standard bash scripts/ci_gradle_retry.sh'),1)
+        self.assertIn('bash gradlew --no-daemon --console=plain --offline --init-script gradle/ci/locks.gradle',prep)
+        self.assertNotIn('HOOKLAB_CI_RETRY_PROFILE',android.split('  impact:\n',1)[1])
         self.assertIn("(dot/'.zshenv').write_text('unsetopt GLOBAL_RCS\\n",fixture)
         self.assertNotIn('GLOBAL_RCS',policy)
         self.assertIn('termux_session_check.py --require-zsh',android.split('  terminal:\n',1)[1].split('  go:\n',1)[0])

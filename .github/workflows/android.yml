@@ -17,7 +17,9 @@ jobs:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     name: Android build, unit tests and lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
+    outputs:
+      dependency_ready: ${{ steps.dependencies.outputs.ready }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -27,14 +29,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          # Restore dependency caches; PR builds do not need signing credentials.
-          cache: gradle
-          cache-dependency-path: |
-            settings.gradle
-            build.gradle
-            app/build.gradle
-            gradle.properties
-            gradle/wrapper/gradle-wrapper.properties
       - uses: android-actions/setup-android@v4.0.4
         with:
           cmdline-tools-version: '15859902'
@@ -46,11 +40,11 @@ jobs:
           sdkmanager --version
           sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'
           test -f "$ANDROID_HOME/platforms/android-37.0/android.jar"
-      - name: Assemble, test and lint
-        shell: bash
-        # Only HTTP 429 dependency download failures receive up to 3 attempts.
-        # This script preserves live Gradle output and the exact nonzero exit.
-        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug
+      - name: Prepare dependencies and execute complete offline Android graph
+        id: dependencies
+        uses: ./.github/actions/hooklab-dependency-prepare
+        with:
+          profile: full
       - name: Verify APK and record source
         shell: bash
         run: |
@@ -85,9 +79,22 @@ jobs:
           path: ${{ runner.temp }}/matrix-apks
           if-no-files-found: error
           retention-days: 14
-      - name: Build unsigned release for visual fixture-isolation check
+      - name: Verify debug-only probe packaging and bind owned target
         if: ${{ needs.impact.outputs.visual == 'true' }}
-        run: bash scripts/ci_gradle_retry.sh bash gradlew --no-daemon --console=plain :app:assembleRelease
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$RUNNER_TEMP/mod01-probe"
+          cp probe-target/build/outputs/apk/debug/probe-target-debug.apk "$RUNNER_TEMP/mod01-probe/target.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$RUNNER_TEMP/mod01-probe/target.apk"
+          python3 -B scripts/qa/mod01_probe_apk.py publish --debug evidence/app-debug.apk --release app/build/outputs/apk/release/app-release-unsigned.apk --target "$RUNNER_TEMP/mod01-probe/target.apk" --receipt "$RUNNER_TEMP/mod01-probe/probe-receipt.json"
+      - uses: actions/upload-artifact@v7.0.2
+        if: ${{ needs.impact.outputs.visual == 'true' }}
+        with:
+          name: hooklab-mod01-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mod01-probe
+          if-no-files-found: error
+          retention-days: 14
       - name: Bind unsigned release to exact source and attempt
         if: ${{ needs.impact.outputs.visual == 'true' }}
         run: python3 -B scripts/qa/shared_native_apks.py publish --release "$RUNNER_TEMP/shared-release"
@@ -226,9 +233,15 @@ jobs:
           retention-days: 14
   ci24:
     name: ci24
-    needs: [impact, source]
-    if: ${{ needs.impact.outputs.ci24 == 'true' }}
+    # The Android preparation owner publishes one verified dependency snapshot.
+    # A later Android artifact-verification failure does not suppress CI24.
+    # If preparation failed, the required gate fails closed, not cold fan-out.
+    needs: [impact, source, android]
+    if: ${{ !cancelled() && needs.impact.result == 'success' && needs.source.result == 'success' && needs.impact.outputs.ci24 == 'true' }}
     uses: ./.github/workflows/hooklab-ci24.yml
+    with:
+      shared_dependencies: true
+      dependency_ready: ${{ needs.android.outputs.dependency_ready == 'true' }}
   design:
     name: design
     needs: [impact, source]

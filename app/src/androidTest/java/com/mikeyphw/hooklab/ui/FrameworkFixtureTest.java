@@ -42,7 +42,7 @@ public final class FrameworkFixtureTest {
     private static final String PKG="com.machiav3lli.fdroid";
     private static final String[] ASSERTIONS={"connected_actual_activity","confirmed_write_readback","denied_write_no_optimism","scope_denial","scope_pending_across_recreation","stale_callback_rejected","scope_approval_readback","same_package_independent_hooks","injected_clock_capture_marker","capture_restart_same_route","health_exact_same_package_routes","health_navigation_no_writes","filtered_multi_app_route","catalog_recreate_and_return","catalog_navigation_no_writes","installed_package_icon_identity","missing_and_unknown_icon_states","no_real_framework"};
     private static final class FakePort implements UiEnvironment.Port {
-        final SharedPreferences flags,safety;
+        final SharedPreferences flags,safety,registry;
         final Set<String> scope=ConcurrentHashMap.newKeySet();
         final AtomicReference<UiEnvironment.ScopeListener> pending=new AtomicReference<>();
         final AtomicInteger writes=new AtomicInteger();
@@ -52,6 +52,9 @@ public final class FrameworkFixtureTest {
         FakePort(HookLabApp app,String name){
             flags=app.getSharedPreferences("uxr00.fixture."+name+".flags",Context.MODE_PRIVATE);
             safety=app.getSharedPreferences("uxr00.fixture."+name+".safety",Context.MODE_PRIVATE);
+            registry=app.getSharedPreferences("uxr00.fixture."+name+".registry",Context.MODE_PRIVATE);
+            assertTrue(registry.edit().clear().putString(com.mikeyphw.hooklab.runtime.BuiltinRegistry.RegistryGeneration.KEY,
+                    com.mikeyphw.hooklab.runtime.BuiltinRegistry.current().generation).commit());
             assertTrue(flags.edit().clear().commit());assertTrue(safety.edit().clear().commit());
         }
         @Override public int getApiVersion(){return 102;}
@@ -62,7 +65,7 @@ public final class FrameworkFixtureTest {
             try{return method.invoke(instance,args);}catch(InvocationTargetException e){throw e.getCause();}
         }
         @Override public SharedPreferences getRemotePreferences(String group){
-            SharedPreferences backing=TweakKeys.GROUP.equals(group)?flags:safety;
+            SharedPreferences backing=TweakKeys.GROUP.equals(group)?flags:com.mikeyphw.hooklab.runtime.BuiltinRegistry.RegistryGeneration.GROUP.equals(group)?registry:safety;
             return (SharedPreferences)Proxy.newProxyInstance(SharedPreferences.class.getClassLoader(),new Class<?>[]{SharedPreferences.class},(proxy,m,args)->{
                 if(!m.getName().equals("edit"))return call(backing,m,args);
                 writes.incrementAndGet();

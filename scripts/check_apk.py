@@ -21,6 +21,8 @@ EXPECTED_PROPS = {
     "exceptionMode": "protective",
     "autoHotReload": "false",
 }
+REGISTRY_MEMBER = "META-INF/hooklab/builtin-registry.json"
+REGISTRY_PATH = Path(__file__).resolve().parents[1] / "runtime/src/main/resources" / REGISTRY_MEMBER
 ENTRY = "com.mikeyphw.hooklab.hook.HookLabModule"
 
 
@@ -39,6 +41,7 @@ def verify(apk: Path) -> None:
         assert z.read(PREFIX + "scope.list") == EXPECTED_SCOPE, "Unexpected recommended scope"
         assert "assets/xposed_init" not in names, "Legacy Xposed entry forbidden"
         assert "classes.dex" in names, "DEX missing"
+        assert REGISTRY_MEMBER in names and z.read(REGISTRY_MEMBER) == REGISTRY_PATH.read_bytes(), "Immutable registry missing or changed"
 
 
 if __name__ == "__main__":

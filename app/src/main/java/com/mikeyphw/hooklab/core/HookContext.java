@@ -10,9 +10,10 @@ public final class HookContext {
     public final ClassLoader classLoader;
     private final Object framework;
     private final Object applicationContext;
+    private final com.mikeyphw.hooklab.sdk.HookSdk.Diagnostics diagnostics;
 
     public HookContext(String pkg, String process, long version, ClassLoader loader,
-                       Object framework, Object applicationContext) {
+                       Object framework, Object applicationContext, com.mikeyphw.hooklab.sdk.HookSdk.Diagnostics diagnostics) {
         this.packageName = Objects.requireNonNull(pkg);
         this.processName = Objects.requireNonNull(process);
         if (version < 1) throw new IllegalArgumentException("Unverified version");
@@ -20,6 +21,14 @@ public final class HookContext {
         this.classLoader = Objects.requireNonNull(loader);
         this.framework = Objects.requireNonNull(framework);
         this.applicationContext = Objects.requireNonNull(applicationContext);
+        this.diagnostics = Objects.requireNonNull(diagnostics);
+    }
+    /** Built-in adapters bridge to the stable SDK only after dispatch authorizes the hook. */
+    public com.mikeyphw.hooklab.sdk.HookSdk.Context sdk(String id) {
+        return new com.mikeyphw.hooklab.sdk.HookSdk.Context(packageName,processName,versionCode,
+                com.mikeyphw.hooklab.runtime.BuiltinRegistry.current().generation,classLoader,
+                new com.mikeyphw.hooklab.sdk.HookSdk.Settings(java.util.Collections.singletonMap(id,true)),
+                diagnostics,(hook,marker) -> { throw new IllegalStateException("probe port unavailable in built-ins"); });
     }
     public <T> T framework(Class<T> type) { return type.cast(framework); }
     public <T> T appContext(Class<T> type) { return type.cast(applicationContext); }

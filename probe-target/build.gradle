@@ -1,0 +1,23 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.mikeyphw.hooklab.probetarget'
+    compileSdk { version = release(37) { minorApiLevel = 0 } }
+    buildToolsVersion '36.0.0'
+    defaultConfig {
+        applicationId 'com.mikeyphw.hooklab.probetarget'
+        minSdk 29
+        targetSdk 36
+        versionCode 1
+        versionName '1.0'
+        resValue 'string','not_run','Not run'
+        resValue 'string','run_marker','Run benign marker'
+        resValue 'string','refused','Probe refused'
+        resValue 'string','app_name','HookLab owned probe target'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildFeatures { resValues = true }
+    lint { abortOnError true }
+}

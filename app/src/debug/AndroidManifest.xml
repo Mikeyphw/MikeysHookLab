@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries><package android:name="com.mikeyphw.hooklab.probetarget" /></queries>
+    <application>
+        <activity android:name=".probe.TransportProbeActivity" android:label="@string/mod01_probe_title" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+        </activity>
+    </application>
+</manifest>

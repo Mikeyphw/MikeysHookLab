@@ -6,7 +6,7 @@ r=Path(__file__).resolve().parents[1];j=r/'app/src/main/java/com/mikeyphw/hookla
 def get(p):return (j/p).read_text()
 h=get('chatgpt/ChatGptTermuxHandoff.java');b=get('chatgpt/TermuxOfferGate.java');p=get('chatgpt/ChatGptCodeProbe.java');a=get('termux/TermuxBridgeActivity.java');policy=get('termux/TermuxCommandPolicy.java');s=get('root/RootDiagnosticService.java');c=get('root/RootPlatform.java')
 assert 'ChatGptTermuxHandoff::install' in get('core/TweakCatalog.java')
-assert 'chatgpt.codeblock.termux.handoff' in get('core/HookGroupCatalog.java')
+assert 'chatgpt.codeblock.termux.handoff' in (r/'runtime/src/main/resources/META-INF/hooklab/builtin-registry.json').read_text() and 'BuiltinRegistry.current()' in get('core/HookGroupCatalog.java')
 assert 'ChatGptCodeProbe.active()' not in h and 'clipboardResult' not in p and 'PopupWindow' not in h
 for x in ('HOST_KEY=0xd01ebe4d','host.branch.getByte(delegate)!=8','code!=FRAME.get()','chain.proceed(new Object[]{HOST_KEY,true,wrapped,chain.getArg(3)})','h.call(h.startNode,c)','h.call(h.reuseNode,c)','RUN_SLOT','COPY_SLOT','h.call(h.invoke3,copyLambda,scope,c,0)','h.call(h.end,c,true)','h.call(h.end,c,false)','h.remember','state.remembered()','state.dispose()','startActivityForResult(intent,0x484c)'):
  assert x in h,x

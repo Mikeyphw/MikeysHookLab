@@ -60,26 +60,66 @@ def verify_browser_case(roster,case_id,g):
     actual={'id':case_id,'route':g['route'],'theme':g['theme'],'dialog':g['dialog'],'tokens':g['tokens'],'controls':controls}
     require(actual==roster[case_id],'browser semantic/control/token drift '+case_id)
 
-def capture(root,out,browser_path=None):
-    from playwright.sync_api import sync_playwright
+class CaptureUnavailable(Exception):
+    """Only a classified screenshot protocol failure may restart a browser."""
+
+
+def is_transient_screenshot(error):
+    text=str(error)
+    return ('Page.screenshot: Protocol error (Page.captureScreenshot): Unable to capture screenshot' in text)
+
+
+def capture_case(browser, base, roster, c, screenshot_error):
+    from io import BytesIO
     from PIL import Image
-    base,cases=verify(root); roster=browser_roster(root); require(not out.exists(),'fresh reference output required');out.mkdir(parents=True)
-    records=[];seen=set()
-    with sync_playwright() as pw:
-        browser=pw.chromium.launch(headless=True,executable_path=browser_path)
+    context=browser.new_context(viewport=c['viewport'],device_scale_factor=1,locale='en-US',timezone_id='UTC',color_scheme='dark',reduced_motion='reduce')
+    try:
+        page=context.new_page(); errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+        page.clock.install(time=datetime(2026,11,23,21,42,tzinfo=timezone.utc));page.clock.pause_at(datetime(2026,11,23,21,42,1,tzinfo=timezone.utc));page.set_content((base/'hooklab_ux_revamp.html').read_text(encoding='utf-8'));page.evaluate('document.fonts.ready');page.evaluate(FIXTURE,c)
+        geometry=page.evaluate(GEOMETRY);require(not errors,'browser errors '+str(errors));require(geometry['viewport']==[390,844] and geometry['route']==c['route'] and geometry['theme']==c['theme'] and geometry['items'],'incorrect/empty reference state')
+        if c['sheet']:require(geometry['dialog'] is not None,'sheet missing')
+        verify_browser_case(roster,c['id'],geometry)
+        try:
+            png=page.screenshot(animations='disabled',caret='hide')
+        except screenshot_error as exc:
+            if not is_transient_screenshot(exc):raise
+            raise CaptureUnavailable(str(exc)) from exc
+        require(not errors,'browser errors '+str(errors))
+        require(page.evaluate(GEOMETRY)==geometry,'geometry changed during screenshot')
+        with Image.open(BytesIO(png)) as im:require(im.size==(390,844) and im.getextrema()[0][0]!=im.getextrema()[0][1],'blank/wrong-sized screenshot')
+        return png,geometry
+    finally:context.close()
+
+
+def capture_with_recovery(launch, base, roster, cases, out, screenshot_error):
+    records=[];seen=set();browser=launch();version=browser.version
+    try:
         for c in cases:
-            context=browser.new_context(viewport=c['viewport'],device_scale_factor=1,locale='en-US',timezone_id='UTC',color_scheme='dark',reduced_motion='reduce')
-            page=context.new_page(); errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-            page.clock.install(time=datetime(2026,11,23,21,42,tzinfo=timezone.utc));page.clock.pause_at(datetime(2026,11,23,21,42,1,tzinfo=timezone.utc));page.set_content((base/'hooklab_ux_revamp.html').read_text(encoding='utf-8'));page.evaluate('document.fonts.ready');page.evaluate(FIXTURE,c)
-            geometry=page.evaluate(GEOMETRY);require(not errors,'browser errors '+str(errors));require(geometry['viewport']==[390,844] and geometry['route']==c['route'] and geometry['theme']==c['theme'] and geometry['items'],'incorrect/empty reference state')
-            if c['sheet']:require(geometry['dialog'] is not None,'sheet missing')
-            verify_browser_case(roster,c['id'],geometry)
-            png=out/(c['id']+'.png');page.screenshot(path=png,animations='disabled',caret='hide')
-            with Image.open(png) as im:require(im.size==(390,844) and im.getextrema()[0][0]!=im.getextrema()[0][1],'blank/wrong-sized screenshot')
-            h=digest(png);require(h not in seen,'duplicate screenshot');seen.add(h)
+            for attempt in range(1,4):
+                try:png,geometry=capture_case(browser,base,roster,c,screenshot_error)
+                except CaptureUnavailable as exc:
+                    print(f'BROWSER_CAPTURE_TRANSIENT case={c["id"]} attempt={attempt}/3 chromium={version}: {exc}',file=sys.stderr,flush=True)
+                    if attempt==3:raise ValueError('screenshot recovery exhausted for '+c['id']) from exc
+                    browser.close();browser=None;browser=launch()
+                    require(browser.version==version,'browser version drift during recovery')
+                    continue
+                except (ValueError,screenshot_error) as exc:
+                    raise ValueError('reference case '+c['id']+': '+str(exc)) from exc
+                break
+            h=hashlib.sha256(png).hexdigest();require(h not in seen,'duplicate screenshot '+c['id']);seen.add(h)
+            (out/(c['id']+'.png')).write_bytes(png)
             geo=out/(c['id']+'.json');geo.write_text(json.dumps(geometry,sort_keys=True,indent=2)+'\n')
-            records.append({'id':c['id'],'png_sha256':h,'geometry_sha256':digest(geo),'elements':len(geometry['items'])});context.close()
-        version=browser.version;browser.close()
+            records.append({'id':c['id'],'png_sha256':h,'geometry_sha256':digest(geo),'elements':len(geometry['items'])})
+    finally:
+        if browser is not None:browser.close()
+    return records,version
+
+
+def capture(root,out,browser_path=None):
+    from playwright.sync_api import sync_playwright, Error
+    base,cases=verify(root); roster=browser_roster(root); require(not out.exists(),'fresh reference output required');out.mkdir(parents=True)
+    with sync_playwright() as pw:
+        records,version=capture_with_recovery(lambda:pw.chromium.launch(headless=True,executable_path=browser_path),base,roster,cases,out,Error)
     result={'schema':'hooklab.browser.reference.v1','reference_files':FILES,'browser_version':version,'engine':'local_override' if browser_path else 'playwright-pinned','viewport':[390,844],'cases':records,'native_approved':False}
     (out/'manifest.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n');print('BROWSER_REFERENCE_CAPTURED',len(records),version,flush=True);return result
 

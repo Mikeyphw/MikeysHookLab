@@ -46,6 +46,21 @@ class UiEnvironment {
         }
         return lastPort;
     }
+    boolean publishRegistry(Port expected) {
+        if (expected == null || expected != currentService()) return false;
+        final SharedPreferences prefs;
+        try { prefs = expected.getRemotePreferences(com.mikeyphw.hooklab.runtime.BuiltinRegistry.RegistryGeneration.GROUP); }
+        catch (RuntimeException | LinkageError error) { return false; }
+        if (prefs == null) return false;
+        String generation = com.mikeyphw.hooklab.runtime.BuiltinRegistry.current().generation;
+        return com.mikeyphw.hooklab.runtime.BuiltinRegistry.RegistryGeneration.publish(generation,
+                new com.mikeyphw.hooklab.runtime.BuiltinRegistry.RegistryGeneration.Publisher() {
+                    @Override public String read() { return prefs.getString(com.mikeyphw.hooklab.runtime.BuiltinRegistry.RegistryGeneration.KEY,null); }
+                    @Override public boolean write(String value) {
+                        return expected == currentService() && prefs.edit().putString(com.mikeyphw.hooklab.runtime.BuiltinRegistry.RegistryGeneration.KEY,value).commit();
+                    }
+                }) && expected == currentService();
+    }
     List<TweakEngine.Entry<HookContext>> entries() { return TweakCatalog.entries(); }
     List<TweakSpec> all() {
         List<TweakSpec> result = new ArrayList<>();

@@ -6,6 +6,9 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.util.Log;
 import com.mikeyphw.hooklab.core.HookContext;
+import com.mikeyphw.hooklab.core.HostFlagSnapshot;
+import com.mikeyphw.hooklab.runtime.BuiltinRegistry;
+import com.mikeyphw.hooklab.runtime.BuiltinRegistry.RegistryGeneration;
 import com.mikeyphw.hooklab.core.TweakCatalog;
 import com.mikeyphw.hooklab.core.TweakEngine;
 import com.mikeyphw.hooklab.core.TweakKeys;
@@ -26,7 +29,7 @@ public final class HookLabModule extends XposedModule {
 
     @Override public void onModuleLoaded(XposedModuleInterface.ModuleLoadedParam param) {
         process = param.getProcessName();
-        if (param.isSystemServer() || TweakCatalog.entries().isEmpty()) {
+        if (param.isSystemServer()) {
             // Nothing registered, so do not retain package callbacks in unrelated processes.
             detach();
         }
@@ -34,8 +37,11 @@ public final class HookLabModule extends XposedModule {
 
     @Override public void onPackageLoaded(XposedModuleInterface.PackageLoadedParam param) {
         String pkg = param.getPackageName();
-        if (!param.isFirstPackage() || process == null || !pkg.equals(process)
-                || !TweakCatalog.knowsPackage(pkg)) return;
+        if (!param.isFirstPackage() || process == null || !pkg.equals(process)) return;
+        try { if (!TweakCatalog.knowsPackage(pkg) && !ProbeBridge.supportsHost(pkg)) return; }
+        catch (RuntimeException | LinkageError ex) {
+            log(Log.WARN,"HookLab","Registry unavailable; host refused"); return;
+        }
         if (!bootstrapInstalled.compareAndSet(false, true)) return;
         try {
             // ApplicationInfo.longVersionCode is a hidden SDK field: obtain public
@@ -73,6 +79,18 @@ public final class HookLabModule extends XposedModule {
             return;
         }
         if (version < 1) return;
+        if (ProbeBridge.supportsHost(pkg)) {
+            ProbeBridge.dispatch(this,ctx,pkg,process,version,loader); return;
+        }
+        try {
+            if (getApiVersion() < API_102 || (getFrameworkProperties() & PROP_CAP_REMOTE) == 0 ||
+                    !RegistryGeneration.matches(BuiltinRegistry.current().generation,
+                            () -> getRemotePreferences(RegistryGeneration.GROUP).getString(RegistryGeneration.KEY,null))) {
+                log(Log.WARN,"HookLab","Missing or stale registry generation; restart manager then host"); return;
+            }
+        } catch (RuntimeException | LinkageError ex) {
+            log(Log.WARN,"HookLab","Registry transport unavailable; host refused"); return;
+        }
         final SharedPreferences settings;
         try {
             settings = getRemotePreferences(TweakKeys.GROUP);
@@ -92,15 +110,22 @@ public final class HookLabModule extends XposedModule {
         // Bind only after verified host identity and both framework preference groups.
         VerboseLogs.bind(settings, this);
         VerboseLogs.emit(VerboseLogs.Event.HOST_DISPATCH_READY);
-        HookContext context = new HookContext(pkg, process, version, loader, this, ctx);
-        TweakEngine.dispatch(TweakCatalog.entries(), pkg, process, version,
-                id -> settings.getBoolean(TweakKeys.enabled(id), false), context,
+        HookContext context = new HookContext(pkg, process, version, loader, this, ctx,
+                event -> log(Log.INFO,"HookLab","SDK event="+event.name()));
+        final java.util.List<TweakEngine.Entry<HookContext>> entries=TweakCatalog.entries();
+        final HostFlagSnapshot snapshot=HostFlagSnapshot.capture(entries,pkg,process,version,
+                id -> settings.getBoolean(TweakKeys.enabled(id), false),
+                id -> safety.getBoolean(TweakDiagnostics.quarantineKey(id), false));
+        if (!RegistryGeneration.matches(BuiltinRegistry.current().generation,
+                () -> getRemotePreferences(RegistryGeneration.GROUP).getString(RegistryGeneration.KEY,null))) return;
+        TweakEngine.dispatch(entries, pkg, process, version,
+                snapshot::enabled, context,
                 (id, failure) -> log(Log.ERROR, "HookLab",
                         "Tweak failure id=" + id + " category=" + TweakDiagnostics.failureCategory(failure)),
                 new TweakEngine.FaultPolicy() {
                     @Override public boolean quarantined(String id) {
                         return failedInProcess.contains(id)
-                                || safety.getBoolean(TweakDiagnostics.quarantineKey(id), false);
+                                || snapshot.locked(id);
                     }
                     @Override public void quarantine(String id) {
                         // Host remote preferences cannot be written; latch in this process only.

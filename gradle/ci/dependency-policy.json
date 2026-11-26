@@ -1,0 +1,13 @@
+{
+  "schema": "hooklab.ci.dependency-policy.v1",
+  "central": "https://repo.maven.apache.org/maven2/",
+  "mirror": "https://maven-central.storage-download.googleapis.com/maven2/",
+  "certificate_url": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xBC900CD2FC9A9D906ECBA48BE3822B59020A349D",
+  "primary_fingerprint": "BC900CD2FC9A9D906ECBA48BE3822B59020A349D",
+  "signing_fingerprint": "E7DC75FC24FB3C8DFE8086AD3D5839A2262CBBFB",
+  "trust_reference": "https://github.com/gradle/gradle/blob/v9.3.1/gradle/verification-metadata.xml",
+  "coordinates": {
+    "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.1": ["pom", "module", "jar"],
+    "org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.7.1": ["pom"]
+  }
+}

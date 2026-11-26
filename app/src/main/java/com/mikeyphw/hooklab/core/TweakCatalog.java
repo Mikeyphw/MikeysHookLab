@@ -8,71 +8,79 @@ import com.mikeyphw.hooklab.obtainx.DroidifyHook;
 import com.mikeyphw.hooklab.wordmaster.WordMasterNightHook;
 import com.mikeyphw.hooklab.chatgpt.ChatGptCodeProbe;
 import com.mikeyphw.hooklab.chatgpt.ChatGptTermuxHandoff;
+import com.mikeyphw.hooklab.runtime.BuiltinRegistry;
+import com.mikeyphw.hooklab.sdk.HookSdk.HookDescriptor;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 
-/** Independently opted-in, exact-host API102 integrations. */
+/** Compatibility facade over the one immutable metadata generation.
+ * Manager discovery never resolves an executable adapter. */
 public final class TweakCatalog {
     private TweakCatalog() { }
-
-    // Keep the existing ID so users need not re-enable their manual button after an update.
-    // Previously persisted VIP, banner and auto-refill flags have no registered installers.
-    private static final List<TweakEngine.Entry<HookContext>> REGISTRY =
-        TweakEngine.immutableCatalog(Arrays.<TweakEngine.Entry<HookContext>>asList(
-            new TweakEngine.Entry<>(
-                new TweakSpec(MccIds.DIAMOND_MANUAL, MccIds.PACKAGE, 1L, Long.MAX_VALUE),
-                "MCC · Manual diamond button",
-                "Tap ♦ 9 inside MCC to open manual control; confirmed root only in HookLab. " +
-                "No VIP, banner or automatic refills.",
-                MccDiamondUi::install),
-            new TweakEngine.Entry<>(
-                new TweakSpec(ObtainXIds.NEO_TWEAK, ObtainXIds.NEO,
-                    ObtainXIds.NEO_CODE, ObtainXIds.NEO_CODE),
-                "Neo Store · Open in ObtainX",
-                "Neo Store 1.3.3/1304 only. Show ObtainX-branded header icon on a " +
-                "verified app page; tap to open ObtainX import preview. No auto imports.",
-                NeoStoreHook::install),
-            new TweakEngine.Entry<>(
-                new TweakSpec(ObtainXIds.DROIDIFY_TWEAK, ObtainXIds.DROIDIFY,
-                    ObtainXIds.DROIDIFY_CODE, ObtainXIds.DROIDIFY_CODE),
-                "Droid-ify · Add to ObtainX",
-                "Droid-ify 0.7.8/780 only. Adds one native toolbar action after " +
-                "validating the current app and repository. No host data writes.",
-                DroidifyHook::install),
-            new TweakEngine.Entry<>(
-                new TweakSpec(WordMasterNightHook.TWEAK_ID, WordMasterNightHook.PACKAGE,
-                    WordMasterNightHook.VERSION_CODE, WordMasterNightHook.VERSION_CODE),
-                "Word Master · Night filter (experimental)",
-                "Word Master 0.6.10 only. Dims the Unity gameplay view without " +
-                "recoloring in-game textures. Fully opt-in; restart the game to apply or remove.",
-                WordMasterNightHook::install),
-            new TweakEngine.Entry<>(
-                new TweakSpec(ChatGptCodeProbe.TWEAK_ID, ChatGptCodeProbe.PACKAGE,
-                    ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE),
-                "ChatGPT · Code-block action diagnostic (experimental)",
-                "Read-only, opt-in diagnostics for ChatGPT 1.2026.321/2632128. " +
-                "Observes native CodeBlock/CopyButton renders and callback/clipboard parity; " +
-                "no command execution, message storage, Termux dispatch or raw text logs.",
-                ChatGptCodeProbe::install),
-            new TweakEngine.Entry<>(
-                new TweakSpec(ChatGptTermuxHandoff.TWEAK_ID, ChatGptCodeProbe.PACKAGE,
-                    ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE),
-                "ChatGPT · Run code in Termux (experimental)",
-                "Adds a separate native Run action beside Copy; review and confirm in HookLab. " +
-                "No clipboard dependency or automatic execution.",
-                ChatGptTermuxHandoff::install)
-        ));
-
-    public static List<TweakEngine.Entry<HookContext>> entries() { return REGISTRY; }
+    private static final class Holder {
+        static final List<TweakEngine.Entry<HookContext>> ENTRIES = create(BuiltinRegistry.current());
+    }
+    private static List<TweakEngine.Entry<HookContext>> create(BuiltinRegistry registry) {
+        Set<String> expected = new HashSet<>(Arrays.asList(MccIds.DIAMOND_MANUAL,
+                ObtainXIds.NEO_TWEAK, ObtainXIds.DROIDIFY_TWEAK, WordMasterNightHook.TWEAK_ID,
+                ChatGptCodeProbe.TWEAK_ID, ChatGptTermuxHandoff.TWEAK_ID));
+        List<TweakEngine.Entry<HookContext>> entries = new ArrayList<>();
+        for (HookDescriptor hook : registry.hooks()) {
+            if (!expected.remove(hook.id) || !adapterCompatible(hook)) throw new IllegalStateException("unreviewed built-in adapter");
+            entries.add(new TweakEngine.Entry<>(new TweakSpec(hook.id,hook.packageName,hook.minVersion,hook.maxVersion),
+                    hook.title,hook.description, context -> install(hook,context)));
+        }
+        if (!expected.isEmpty()) throw new IllegalStateException("missing built-in adapter");
+        return TweakEngine.immutableCatalog(entries);
+    }
+    /** Resolve method references only after the engine has verified eligibility and opt-in. */
+    private static void install(HookDescriptor hook, HookContext context) throws Exception {
+        if (!hook.eligible(context.packageName, context.processName, context.versionCode, true, true, true))
+            throw new IllegalStateException("adapter context mismatch");
+        com.mikeyphw.hooklab.sdk.HookSdk.Entrypoint adapter = sdkContext -> {
+            if (!sdkContext.settings.enabled(hook.id) || !hook.eligible(sdkContext.packageName,sdkContext.processName,sdkContext.version,true,true,true))
+                throw new IllegalStateException("SDK context refused");
+            sdkContext.diagnostics.record(com.mikeyphw.hooklab.sdk.HookSdk.Event.INSTALL_STARTED);
+            resolve(hook.id).install(context);
+            sdkContext.diagnostics.record(com.mikeyphw.hooklab.sdk.HookSdk.Event.INSTALL_COMPLETED);
+        };
+        adapter.install(context.sdk(hook.id));
+    }
+    /** Existing compiled integration bounds are also checked against manifest metadata. */
+    private static boolean adapterCompatible(HookDescriptor hook) {
+        switch (hook.id) {
+            case MccIds.DIAMOND_MANUAL: return bounds(hook,MccIds.PACKAGE,1L,Long.MAX_VALUE);
+            case ObtainXIds.NEO_TWEAK: return bounds(hook,ObtainXIds.NEO,ObtainXIds.NEO_CODE, ObtainXIds.NEO_CODE);
+            case ObtainXIds.DROIDIFY_TWEAK: return bounds(hook,ObtainXIds.DROIDIFY,ObtainXIds.DROIDIFY_CODE, ObtainXIds.DROIDIFY_CODE);
+            case WordMasterNightHook.TWEAK_ID: return bounds(hook,WordMasterNightHook.PACKAGE,WordMasterNightHook.VERSION_CODE, WordMasterNightHook.VERSION_CODE);
+            case ChatGptCodeProbe.TWEAK_ID:
+            case ChatGptTermuxHandoff.TWEAK_ID: return bounds(hook,ChatGptCodeProbe.PACKAGE,ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE);
+            default: return false;
+        }
+    }
+    private static boolean bounds(HookDescriptor hook,String pkg,long min,long max) {
+        return hook.packageName.equals(pkg) && hook.minVersion == min && hook.maxVersion == max;
+    }
+    private static TweakEngine.Installer<HookContext> resolve(String id) {
+        switch (id) {
+            case MccIds.DIAMOND_MANUAL: return MccDiamondUi::install;
+            case ObtainXIds.NEO_TWEAK: return NeoStoreHook::install;
+            case ObtainXIds.DROIDIFY_TWEAK: return DroidifyHook::install;
+            case WordMasterNightHook.TWEAK_ID: return WordMasterNightHook::install;
+            case ChatGptCodeProbe.TWEAK_ID: return ChatGptCodeProbe::install;
+            case ChatGptTermuxHandoff.TWEAK_ID: return ChatGptTermuxHandoff::install;
+            default: throw new IllegalArgumentException("unknown built-in adapter");
+        }
+    }
+    public static List<TweakEngine.Entry<HookContext>> entries() { return Holder.ENTRIES; }
     public static List<TweakSpec> all() {
         List<TweakSpec> result = new ArrayList<>();
-        for (TweakEngine.Entry<HookContext> entry : REGISTRY) result.add(entry.spec);
+        for (TweakEngine.Entry<HookContext> entry : entries()) result.add(entry.spec);
         return Collections.unmodifiableList(result);
     }
-    public static boolean knowsPackage(String packageName) {
-        for (TweakSpec spec : all()) if (spec.packageName.equals(packageName)) return true;
-        return false;
-    }
+    public static boolean knowsPackage(String packageName) { return BuiltinRegistry.current().knowsPackage(packageName); }
 }

@@ -5,7 +5,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from check_apk import EXPECTED_PROPS, EXPECTED_SCOPE, ENTRY, PREFIX, verify
+from check_apk import EXPECTED_PROPS, EXPECTED_SCOPE, ENTRY, PREFIX, verify, REGISTRY_MEMBER, REGISTRY_PATH
 
 
 class ApkScopeContractTest(unittest.TestCase):
@@ -15,7 +15,7 @@ class ApkScopeContractTest(unittest.TestCase):
         self.apk = Path(self.directory.name) / "synthetic.apk"
 
     def packaged(self, *, scope=EXPECTED_SCOPE, entry=ENTRY, props=None,
-                 legacy=False, dex=True, duplicate_scope=False):
+                 legacy=False, dex=True, duplicate_scope=False, registry=REGISTRY_PATH.read_bytes()):
         if props is None:
             props = EXPECTED_PROPS
         with zipfile.ZipFile(self.apk, "w", compression=zipfile.ZIP_DEFLATED) as z:
@@ -28,6 +28,8 @@ class ApkScopeContractTest(unittest.TestCase):
                     z.writestr(PREFIX + "scope.list", scope)
             if legacy:
                 z.writestr("assets/xposed_init", "old module")
+            if registry is not None:
+                z.writestr(REGISTRY_MEMBER, registry)
             if dex:
                 z.writestr("classes.dex", "synthetic test")
         return self.apk
@@ -84,6 +86,12 @@ class ApkScopeContractTest(unittest.TestCase):
 
     def test_wrong_entry_refused(self):
         self.reject(entry="com.example.Untrusted")
+
+    def test_registry_missing_refused(self):
+        self.reject(registry=None)
+
+    def test_registry_changed_refused(self):
+        self.reject(registry=b"{}")
 
     def test_missing_dex_refused(self):
         self.reject(dex=False)
