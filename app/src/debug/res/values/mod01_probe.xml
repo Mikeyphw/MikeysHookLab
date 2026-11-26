@@ -6,7 +6,7 @@
 <string name="mod01_probe_publish">Publish and enable benign marker</string>
 <string name="mod01_probe_disable">Disable marker</string>
 <string name="mod01_probe_refused">Probe refused (%1$s). Activation state may be unknown; inspect or remove scope before retrying.</string>
-<string name="mod01_probe_report">Framework: %1$s %2$s (%3$d)\nAPI: %4$d\nProperties: %5$d\nScoped: %6$b\nEnabled: %7$b\nPayload: %8$s\nRegistry: %9$s\nSource: %10$s</string>
+<string name="mod01_probe_report">Framework: %1$s %2$s (%3$d)\nAPI: %4$d\nProperties: %5$d\nScoped: %6$b\nEnabled: %7$b\nPayload: %8$s\nRegistry: %9$s\nSource: %10$s\nPublication only. Target execution: open the owned target and run the marker; check HookLabProbe logs.</string>
 <string name="mod01_probe_already_scoped">Owned target already scoped.</string>
 <string name="mod01_probe_scope_callback">Scope response received. Inspect actual scope before publishing.</string>
 <string name="mod01_probe_scope_failed">Scope request failed. Inspect current state.</string>

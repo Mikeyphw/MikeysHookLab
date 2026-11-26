@@ -5,6 +5,7 @@ ASSET='assets/mod01-probe/classes.dex'
 ENTRY='Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;'
 SDK='Lcom/mikeyphw/hooklab/sdk/HookSdk;'
 ACTIVITY='Lcom/mikeyphw/hooklab/probe/TransportProbeActivity;'
+LOADER='Lcom/mikeyphw/hooklab/probe/ProbeDexLoader;'
 TARGET='Lcom/mikeyphw/hooklab/probetarget/ProbeTargetActivity;'
 LIMIT=128*1024*1024
 
@@ -53,7 +54,7 @@ def identity(root):
 def check(root,debug,release,target):
     d,p=inspect(debug);r,pr=inspect(release);t,pt=inspect(target)
     require(p is not None and pr is None and pt is None,'debug-only payload drift')
-    require(ENTRY not in d and ENTRY not in r and SDK in d and SDK in r and ACTIVITY in d and ACTIVITY not in r and TARGET in t,'manager/SDK/target boundary')
+    require(ENTRY not in d and ENTRY not in r and SDK in d and SDK in r and ACTIVITY in d and ACTIVITY not in r and LOADER in d and LOADER not in r and TARGET in t,'manager/SDK/target boundary')
     c=dex_classes(p);require(ENTRY in c and all(x.startswith('Lcom/mikeyphw/hooklab/modules/probe/') for x in c),'payload contains unreviewed classes or duplicated SDK')
     return {'schema':'hooklab.mod01.probe.apks.v1',**identity(root),'debug_sha256':sha(debug.read_bytes()),'release_sha256':sha(release.read_bytes()),'target_sha256':sha(target.read_bytes()),'payload_sha256':sha(p),'device_qualified':False,'release_qualified':False}
 def main():

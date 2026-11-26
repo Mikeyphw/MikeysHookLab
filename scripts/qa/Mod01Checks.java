@@ -7,6 +7,8 @@ import com.mikeyphw.hooklab.probe.ProbeProtocol;
 import java.io.*;
 import java.net.*;
 import java.nio.file.*;
+import java.nio.ByteBuffer;
+import java.nio.ReadOnlyBufferException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,6 +52,15 @@ public final class Mod01Checks {
         byte[] dex=new byte[112];System.arraycopy(new byte[]{'d','e','x','\n'},0,dex,0,4);String sha=ProbeProtocol.digest(dex);check(ProbeProtocol.matches(dex,ProbeProtocol.read(new ByteArrayInputStream(dex)),sha),"owned bytes readback");byte[] bad=dex.clone();bad[100]=1;check(!ProbeProtocol.matches(dex,bad,sha),"altered payload refused");
         try{ProbeProtocol.read(new ByteArrayInputStream(new byte[ProbeProtocol.MAX_BYTES+1]));throw new AssertionError("oversized");}catch(IOException expected){check(true,"oversize payload refused");}
         reject(()->ProbeProtocol.file("../file"),"path refused");
+        ByteBuffer old=ByteBuffer.wrap(dex).asReadOnlyBuffer();
+        try{old.array();throw new AssertionError("old heap buffer unexpectedly accessible");}
+        catch(ReadOnlyBufferException expected){check(true,"old Android backing-array failure reproduced");}
+        byte[] remote=dex.clone();ByteBuffer direct=ProbeProtocol.verifiedDexBuffer(dex,remote,sha);
+        check(direct.isDirect()&&!direct.isReadOnly()&&direct.position()==0&&direct.limit()==dex.length,"ART-compatible private direct buffer bounds");
+        remote[0]=0;byte[] copied=new byte[dex.length];direct.get(copied);
+        check(Arrays.equals(dex,copied),"loader buffer owns exact verified bytes");
+        reject(()->ProbeProtocol.verifiedDexBuffer(dex,remote,sha),"modified transport rejected before buffer allocation");
+        reject(()->ProbeProtocol.verifiedDexBuffer(dex,dex,"0".repeat(64)),"wrong digest rejected before buffer allocation");
         try(URLClassLoader loader=new URLClassLoader(new URL[]{Path.of(args[2]).toUri().toURL()},HookSdk.class.getClassLoader())){
             Class<?> type=Class.forName(ProbeProtocol.ENTRY,false,loader);check(type.getClassLoader()==loader&&HookSdk.Entrypoint.class.isAssignableFrom(type),"independent JVM payload SDK identity");
             HookSdk.Entrypoint ep=type.asSubclass(HookSdk.Entrypoint.class).getDeclaredConstructor().newInstance();

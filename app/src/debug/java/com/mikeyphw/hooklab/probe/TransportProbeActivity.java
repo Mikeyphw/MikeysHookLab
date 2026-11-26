@@ -1,6 +1,9 @@
 package com.mikeyphw.hooklab.probe;
 
 import android.app.Activity;
+import android.graphics.Insets;
+import android.os.Build;
+import android.view.WindowInsets;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -28,16 +31,31 @@ public final class TransportProbeActivity extends Activity {
     private Button inspect, scope, publish, disable;
     private boolean busy;
     private interface Operation { String run(XposedService service) throws Exception; }
+    private void applySystemInsets(ScrollView root) {
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.R){
+            getWindow().setDecorFitsSystemWindows(false);
+            root.setOnApplyWindowInsetsListener((view,insets)->{
+                Insets safe=insets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+                view.setPadding(safe.left,safe.top,safe.right,safe.bottom);
+                return WindowInsets.CONSUMED;
+            });
+            root.requestApplyInsets();
+        }
+        // API 29 retains the platform's default decor-fitting window.
+    }
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);app=(HookLabApp)getApplication();
         LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);
-        ScrollView scroll=new ScrollView(this);scroll.addView(content);
+        int spacing=Math.round(16*getResources().getDisplayMetrics().density);
+        content.setPadding(spacing,spacing,spacing,spacing);
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(content);
         status=new TextView(this);status.setText(R.string.mod01_probe_intro);content.addView(status);
         inspect=button(content,R.string.mod01_probe_inspect,()->execute(this::inspect));
         scope=button(content,R.string.mod01_probe_scope,()->execute(this::scope));
         publish=button(content,R.string.mod01_probe_publish,()->execute(this::publish));
         disable=button(content,R.string.mod01_probe_disable,()->execute(this::disable));
         setContentView(scroll);
+        applySystemInsets(scroll);
     }
     private Button button(LinearLayout parent,int text,Runnable action){Button b=new Button(this);b.setText(text);b.setOnClickListener(v->action.run());parent.addView(b);return b;}
     private void setBusy(boolean value){busy=value;inspect.setEnabled(!value);scope.setEnabled(!value);publish.setEnabled(!value);disable.setEnabled(!value);}

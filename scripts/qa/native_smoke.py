@@ -9,7 +9,9 @@ TEST='com.mikeyphw.hooklab.qa.NativeBaselineTest#realActivityOfflineNavigation'
 FIXTURE='com.mikeyphw.hooklab.qa.DiagnosticFixtureTest#importedFixtureProjectionAndFilter'
 FRAMEWORK_TEST='com.mikeyphw.hooklab.ui.FrameworkFixtureTest#connectedCommandsStaleCallbackAndClock'
 TERMUX_TEST='com.mikeyphw.hooklab.termux.TermuxBridgeFixtureTest#syntheticAuthorizationAndReceipt'
-TESTS=[TEST,TEST,FIXTURE,FRAMEWORK_TEST,TERMUX_TEST]
+PROBE_TEST='com.mikeyphw.hooklab.qa.ProbeArtFixtureTest#verifiedDexAndBothProbeWindows'
+PROBE_TARGET='com.mikeyphw.hooklab.probetarget'
+TESTS=[TEST,TEST,FIXTURE,FRAMEWORK_TEST,TERMUX_TEST,PROBE_TEST]
 FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','scope_pending_across_recreation','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','capture_restart_same_route','health_exact_same_package_routes','health_navigation_no_writes','filtered_multi_app_route','catalog_recreate_and_return','catalog_navigation_no_writes','installed_package_icon_identity','missing_and_unknown_icon_states','no_real_framework']}
 FIXTURE_EVIDENCE={'schema':'hooklab.diagnostics.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'framework_disconnected':True,'assertions':['three_normalized_events','actual_timeline_projection','filter_one_of_three','raw_marker_not_rendered','store_unchanged','no_framework_service','filter_cancel_preserves_applied','stable_inspector_identity_recreate','isolated_workspaces','clear_filter','single_import_sheet_cancel','unsafe_uri_refused','redaction_preview_cancel_clipboard_unchanged']}
 
@@ -118,6 +120,7 @@ def validate_receipt_files(out,receipt):
     require(set(p.name for p in out.iterdir())==expected_files and all(p.is_file() and not p.is_symlink() for p in out.iterdir()),'unexpected native evidence files')
     for name,expected in [('fixture',FIXTURE_EVIDENCE),('framework-fixture',FRAMEWORK_EVIDENCE)]:
         p=out/(name+'.json');require(p.stat().st_size<=4096 and json.loads(p.read_text())==expected and receipt.get(name.replace('-','_')+'_sha256')==digest(p),'fixture evidence mismatch '+name)
+    require(re.fullmatch('[a-f0-9]{64}',receipt.get('probe_target_apk_sha256','')) and receipt['probe_target_apk_sha256']==receipt.get('installed_probe_target_apk_sha256'),'owned probe target APK drift')
     isolation=out/'release-isolation.json';require(digest(isolation)==receipt['release_isolation_sha256'],'release isolation hash drift');verify_release(json.loads(isolation.read_text()),receipt['app_apk_sha256'],receipt['android_test_apk_sha256'])
     env=out/'environment.json';e=json.loads(env.read_text());require(digest(env)==receipt['environment_sha256'],'environment evidence hash drift');validate_environment(e)
     for suffix,field in [('', 'screenshots'),('-repeat','repeat_screenshots')]:
@@ -299,15 +302,23 @@ def compare_native_repeats(out,ident,completed,records,repeat_records):
         raise ValueError('native repeat regression '+','.join(failures))
     return repeat
 
-def run(out):
+def run(out,probe_dir):
     ident=expected_identity();require(not out.exists(),'fresh output required');out.mkdir(parents=True);(out/'receipt.json').write_text(json.dumps({**ident,'status':'IN_PROGRESS','completed_tests':[]}));guard()
     configured_renderer=configure_renderer()
-    for name in (PKG,PKG+'.test'):
+    for name in (PKG,PKG+'.test',PROBE_TARGET):
         res=subprocess.run(['adb','-s',SERIAL,'shell','pm','path',name],capture_output=True,text=True,timeout=20);require(not res.stdout.strip(),'preexisting app refused')
     app=one('app/build/outputs/apk/debug/*.apk');test=one('app/build/outputs/apk/androidTest/debug/*.apk')
     cert=subprocess.check_output([str(Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0/apksigner'),'verify','--print-certs',str(app)],text=True,timeout=30)
     m=re.search(r'Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]{64})',cert);require(m is not None,'debug signer unavailable')
-    for apk in (app,test):install_apk(apk)
+    from mod01_probe_apk import check as probe_check
+    require(probe_dir.is_dir() and not probe_dir.is_symlink() and {x.name for x in probe_dir.iterdir()}=={'target.apk','probe-receipt.json'},'probe artifact roster')
+    target=probe_dir/'target.apk';release=one('app/build/outputs/apk/release/*.apk')
+    probe_receipt=probe_dir/'probe-receipt.json';require(probe_receipt.is_file() and not probe_receipt.is_symlink() and probe_receipt.stat().st_size<65536,'probe receipt unsafe')
+    require(json.loads(probe_receipt.read_text())==probe_check(Path.cwd(),app,release,target),'probe APK source/attempt mismatch')
+    target_cert=subprocess.check_output([str(Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0/apksigner'),'verify','--print-certs',str(target)],text=True,timeout=30)
+    require(re.findall(r'Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]{64})',target_cert)==[m.group(1)],'probe target signer mismatch')
+    for apk in (app,test,target):install_apk(apk)
+    target_hash=digest(target);installed_digest(PROBE_TARGET,target_hash)
     ah,th=digest(app),digest(test)
     installed_digest(PKG,ah);installed_digest(PKG+'.test',th)
     adb('shell','wm','size','780x1688');adb('shell','wm','density','320');adb('shell','settings','put','system','font_scale','1.0');adb('shell','cmd','uimode','night','yes')
@@ -330,11 +341,11 @@ def run(out):
     instrument(TEST);repeat_records=capture('-repeat');require(renderer_environment()==configured_renderer,'renderer changed after repeat capture')
     # Run the independent functional fixtures even if the already captured
     # pixels later fail strict comparison. No retry or selection of a passing pair.
-    instrument(FIXTURE);instrument(FRAMEWORK_TEST);instrument(TERMUX_TEST)
+    instrument(FIXTURE);instrument(FRAMEWORK_TEST);instrument(TERMUX_TEST);instrument(PROBE_TEST)
     for name in ('fixture','framework-fixture'):
         f=out/(name+'.json');f.write_bytes(raw('exec-out','run-as',PKG,'cat','files/uxr00-native-smoke/'+f.name))
     repeat=compare_native_repeats(out,ident,completed,records,repeat_records)
-    receipt={**ident,'status':'BASELINE_PASS_NOT_VISUAL_APPROVAL','tests':TESTS,'fixture_sha256':digest(out/'fixture.json'),'framework_fixture_sha256':digest(out/'framework-fixture.json'),'release_isolation_sha256':digest(out/'release-isolation.json'),'environment_sha256':digest(out/'environment.json'),'app_apk_sha256':ah,'android_test_apk_sha256':th,'installed_apk_sha256':installed_digest(PKG,ah),'installed_test_apk_sha256':installed_digest(PKG+'.test',th),'debug_certificate_sha256':m.group(1).lower(),'screenshots':records,'repeat_screenshots':repeat_records,'repeat_calibration':repeat}
+    receipt={**ident,'status':'BASELINE_PASS_NOT_VISUAL_APPROVAL','tests':TESTS,'fixture_sha256':digest(out/'fixture.json'),'framework_fixture_sha256':digest(out/'framework-fixture.json'),'release_isolation_sha256':digest(out/'release-isolation.json'),'environment_sha256':digest(out/'environment.json'),'app_apk_sha256':ah,'android_test_apk_sha256':th,'installed_apk_sha256':installed_digest(PKG,ah),'installed_test_apk_sha256':installed_digest(PKG+'.test',th),'debug_certificate_sha256':m.group(1).lower(),'probe_target_apk_sha256':target_hash,'installed_probe_target_apk_sha256':installed_digest(PROBE_TARGET,target_hash),'screenshots':records,'repeat_screenshots':repeat_records,'repeat_calibration':repeat}
     dump(out/'receipt.json',receipt)
     try:verify(out,ident)
     except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):
@@ -342,9 +353,10 @@ def run(out):
     print('NATIVE_BASELINE_PASS_NOT_VISUAL_APPROVAL')
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('command',choices=['run','verify']);p.add_argument('--out',type=Path,required=True);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('command',choices=['run','verify']);p.add_argument('--out',type=Path,required=True);p.add_argument('--probe-dir',type=Path);a=p.parse_args()
     try:
-        if a.command=='run':run(a.out)
+        if a.command=='run':
+            require(a.probe_dir is not None,'exact probe artifact directory required');run(a.out,a.probe_dir)
         else:verify(a.out,expected_identity());print('NATIVE_BASELINE_INDEPENDENT_VERIFY_PASS')
         return 0
     except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as e:print('NATIVE_SMOKE_REFUSED',e,file=sys.stderr);return 2
