@@ -805,8 +805,11 @@ public final class MainActivity extends AppCompatActivity {
         TextView title=text(getString(R.string.dx01_choose_source),20);FlatUi.sectionHeading(title);panel.addView(title);
         final String[] types={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};final int[] labels={R.string.dx01_module,R.string.dx01_framework,R.string.dx01_logcat_import};
         for(int i=0;i<types.length;i++){String type=types[i];button(panel,labels[i],v->{sheet.dismiss();launchDiagnosticImport(type,null);});}
-        button(panel,android.R.string.cancel,v->sheet.dismiss());sheet.show();
+        button(panel,android.R.string.cancel,v->sheet.dismiss()).setId(R.id.hooklab_import_cancel);
+        // Establish the expanded state before the dialog window acquires focus.
+        // Keep the original scrollable import sheet and all three SAF choices.
         sheet.getBehavior().setSkipCollapsed(true);sheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+        sheet.show();
     }
     private void diagnosticsTimelinePage(){
         body.addView(text(getString(R.string.dx01_import_only),14));

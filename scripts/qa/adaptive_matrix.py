@@ -32,12 +32,19 @@ def config(case):
  api,w,h,font,theme=CASES[case];return dict(api=api,width_px=w*2,height_px=h*2,density_dpi=DENSITY,font_scale=font,theme=theme)
 # Only fixed phase IDs, selected framework exception classes and source-frame
 # locations are exported. Raw Espresso view dumps and test output remain private.
-PHASES=frozenset(['SETUP','VIEWPORT_READY','LAUNCH_HOME','HOME_SCROLL','HOME_SHORTCUT_VISIBLE','OPEN_HOOKS','SEARCH_OPEN','SEARCH_TYPE','SEARCH_CLOSE_IME','SEARCH_RECREATE','SEARCH_ROTATE','SEARCH_ROTATE_RETURN','SEARCH_CLEAR','CATALOG_HIT_TARGETS','OPEN_GROUP','OPEN_HOOK','OPEN_DIAGNOSTICS','IMPORT_CANCEL','OPEN_SETTINGS','THEME_CANCEL','SETTINGS_KEYBOARD_FOCUS','OPEN_SCOPE','SOURCE_PROVENANCE','OPEN_HELP','PRIVACY_RECREATE','MCC_CANCEL','PERF_IMPORT','PERF_LAUNCH','PERF_PAGE','PERF_NATIVE_FRAMES','PERF_WRITE']+['CAPTURE_'+x.upper() for x in ROUTES])
-EXCEPTIONS=frozenset(['java.lang.AssertionError','java.lang.IllegalStateException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.base.DefaultFailureHandler$AssertionFailedWithCauseError','com.google.android.apps.common.testing.accessibility.framework.AccessibilityViewCheckException','androidx.test.espresso.accessibility.AccessibilityViewCheckException'])
-def failure_info(output,test,rc):
- phases=[];frames=[];codes=[];categories=[]
+PHASES=frozenset(['SETUP','VIEWPORT_READY','LAUNCH_HOME','HOME_SCROLL','HOME_SHORTCUT_VISIBLE','OPEN_HOOKS','SEARCH_OPEN','SEARCH_TYPE','SEARCH_CLOSE_IME','SEARCH_RECREATE','SEARCH_ROTATE','SEARCH_ROTATE_REQUEST','SEARCH_ROTATE_SETTLE','SEARCH_ROTATE_RETURN','SEARCH_ROTATE_RETURN_SETTLE','SEARCH_CLEAR','CATALOG_HIT_TARGETS','OPEN_GROUP','OPEN_HOOK','OPEN_DIAGNOSTICS','IMPORT_OPEN','IMPORT_DIALOG_READY','IMPORT_CANCEL','IMPORT_DISMISSED','OPEN_SETTINGS','THEME_CANCEL','SETTINGS_KEYBOARD_FOCUS','OPEN_SCOPE','SOURCE_PROVENANCE','OPEN_HELP','PRIVACY_RECREATE','MCC_CANCEL','PERF_IMPORT','PERF_LAUNCH','PERF_PAGE','PERF_NATIVE_FRAMES','PERF_WRITE']+['CAPTURE_'+x.upper() for x in ROUTES])
+EXCEPTIONS=frozenset(['java.lang.AssertionError','java.lang.IllegalStateException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.base.RootViewPicker$RootViewWithoutFocusException','androidx.test.espresso.base.DefaultFailureHandler$AssertionFailedWithCauseError','com.google.android.apps.common.testing.accessibility.framework.AccessibilityViewCheckException','androidx.test.espresso.accessibility.AccessibilityViewCheckException'])
+def failure_info(output,test,rc,reason=None):
+ if isinstance(output,bytes):output=output.decode('utf-8','replace')
+ output=output or ''
+ phases=[];frames=[];codes=[];categories=[];termination=[]
  for line in output.splitlines():
   clean=line.strip()
+  marker={'INSTRUMENTATION_RESULT: shortMsg=Process crashed.':'PROCESS_CRASH_REPORTED',
+          'INSTRUMENTATION_RESULT: shortMsg=Process killed.':'PROCESS_KILLED_REPORTED',
+          'INSTRUMENTATION_ABORTED':'RUNNER_ABORTED',
+          'INSTRUMENTATION_FAILED':'RUNNER_FAILED'}.get(clean)
+  if marker and marker not in termination:termination.append(marker)
   m=re.fullmatch(r'(?:INSTRUMENTATION_STATUS: stack=|Caused by: )?java\.lang\.AssertionError: ADAPTIVE_PHASE_([A-Z0-9_]+)',clean)
   if m and m[1] in PHASES and m[1] not in phases:phases.append(m[1])
   m=re.fullmatch(r'at (com\.mikeyphw\.hooklab\.[\w.$]+\([\w]+\.java:\d+\))',clean)
@@ -46,7 +53,9 @@ def failure_info(output,test,rc):
   if m and len(codes)<32 and -1000<=int(m[2])<=1000:codes.append([m[1],int(m[2])])
   m=re.match(r'^(?:INSTRUMENTATION_STATUS: stack=|Caused by: )?([\w.$]+)(?::|$)',clean)
   if m and m[1] in EXCEPTIONS and m[1] not in categories:categories.append(m[1])
- return {'schema':'hooklab.uxr04.instrumentation-failure.v1','test':test,'transport_exit':rc,'phases':phases,'exception_classes':categories,'status_codes':codes,'source_frames':frames}
+ terminal=any(kind=='CODE' for kind,_ in codes)
+ if reason is None:reason='TRANSPORT_FAILED' if rc!=0 else 'TEST_FAILED' if terminal else 'TERMINAL_RESULT_MISSING'
+ return {'schema':'hooklab.uxr04.instrumentation-failure.v1','test':test,'transport_exit':rc,'reason':reason,'terminal_result_present':terminal,'termination_markers':termination,'phases':phases,'exception_classes':categories,'status_codes':codes,'source_frames':frames}
 def checkpoint_phase(source,test):
  if test not in (JOURNEY,PERF):return None
  try:
@@ -126,12 +135,20 @@ def instrument(test,cfg,source,out):
  # A checkpoint from a different invocation must never be accepted as current.
  n.clear_failure_checkpoint()
  if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json')
- result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
+ output='';rc=None;reason=None
  try:
-  require(result.returncode==0,'instrument transport failed: '+test)
-  n.parse_instrumentation(result.stdout,test)
+  result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
+  rc=result.returncode;output=result.stdout
+  require(rc==0,'instrument transport failed: '+test)
+  n.parse_instrumentation(output,test)
+ except subprocess.TimeoutExpired as error:
+  output=error.stdout;reason='TIMEOUT'
+ except OSError:
+  reason='SPAWN_FAILED'
  except ValueError:
-  failure=failure_info(result.stdout,test,result.returncode);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES)
+  reason=failure_info(output,test,rc)['reason']
+ if reason is not None:
+  failure=failure_info(output,test,rc,reason);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES)
   if test==JOURNEY and failure['checkpoint_phase']=='HOME_SCROLL':failure['home_target_geometry']=home_geometry_checkpoint(source)
   if failure['checkpoint_phase']=='VIEWPORT_READY':failure['viewport_geometry']=viewport_failure(source,test)
   if failure['checkpoint_phase'] in ('OPEN_HOOKS','SEARCH_OPEN'):failure['catalog_readiness']=catalog_readiness(source,test,failure['checkpoint_phase'])
