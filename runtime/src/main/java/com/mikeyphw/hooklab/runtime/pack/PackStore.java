@@ -121,6 +121,40 @@ public final class PackStore {
     }
     private void save(State s)throws IOException,GeneralSecurityException{s.snapshot();byte[] bytes=encode(s);if(bytes.length>MAX_STATE)throw new IOException("store size");atomic(journal,bytes,"STATE");}
     public State state()throws IOException,GeneralSecurityException{return locked(s->s);}
+    /** Metadata-only view from one locked, signature-verified private-store read. */
+    public static final class PackMetadata {
+        public final String moduleId, version, archiveSha256, signer, channel, sourceSha, sourceTree;
+        public final long runId, runAttempt, settingsSchema;
+        public final boolean hasUi;public final com.mikeyphw.hooklab.sdk.ModuleUiResources uiResources;
+        private PackMetadata(HookPack.Verified p){
+            Map<?,?> v=(Map<?,?>)com.mikeyphw.hooklab.sdk.HookSdk.StrictJson.read(p.provenance());
+            moduleId=p.moduleId;version=p.version;archiveSha256=p.archiveSha256;signer=p.signer;channel=p.channel;
+            sourceSha=(String)v.get("source_sha");sourceTree=(String)v.get("source_tree");runId=(Long)v.get("run_id");runAttempt=(Long)v.get("run_attempt");settingsSchema=(Long)v.get("settings_schema");hasUi=p.hasUi();uiResources=p.uiResources;
+        }
+    }
+    public static final class Catalog {
+        public final State state;
+        public final Map<String,PackMetadata> current, previous;
+        private Catalog(State state,Map<String,PackMetadata> current,Map<String,PackMetadata> previous){
+            this.state=state;this.current=Collections.unmodifiableMap(current);this.previous=Collections.unmodifiableMap(previous);
+        }
+    }
+    private PackMetadata metadata(State s,String module,String digest)throws IOException,GeneralSecurityException {
+        HookPack.Verified p=verify(s,file(archive(digest),HookPack.MAX_ARCHIVE));
+        if(!p.moduleId.equals(module)||!p.archiveSha256.equals(digest))throw new IOException("catalog archive identity mismatch");
+        return new PackMetadata(p);
+    }
+    public HookPack.Verified uiArchive(String module,String sha)throws IOException,GeneralSecurityException {
+        PackPolicy.requireModule(module);PackPolicy.requireHash(sha);return locked(s->{Version v=s.versions.get(module);if(v==null||!sha.equals(v.current))throw new IllegalArgumentException("UI archive selection changed");return verify(s,verifiedBytes(s,sha));});
+    }
+    public Catalog catalog()throws IOException,GeneralSecurityException {
+        return locked(s->{Map<String,PackMetadata> current=new TreeMap<>(),previous=new TreeMap<>();
+            for(Map.Entry<String,Version> e:s.versions.entrySet()){
+                current.put(e.getKey(),metadata(s,e.getKey(),e.getValue().current));
+                if(!"-".equals(e.getValue().previous))previous.put(e.getKey(),metadata(s,e.getKey(),e.getValue().previous));
+            }return new Catalog(s,current,previous);
+        });
+    }
     public void trust(byte[] publicKey,String confirmedFingerprint,String channel)throws IOException,GeneralSecurityException {
         final byte[] key=publicKey.clone();String sha=HookPack.signerFingerprint(key);if(!sha.equals(confirmedFingerprint))throw new IllegalArgumentException("trust confirmation mismatch");
         locked(s->{if(s.revoked.contains(sha)||s.key!=null&&(!java.util.Arrays.equals(s.key,key)||!s.channel.equals(channel)))throw new IllegalArgumentException("revoke current publisher before rotation");s.key=key;s.channel=channel;save(s);return null;});

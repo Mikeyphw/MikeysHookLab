@@ -28,12 +28,15 @@ public final class HookPack {
     public static final int MAX_METADATA = 65536;
     private static final String MANIFEST = "manifest.json", DEX = "runtime/classes.dex",
             PROVENANCE = "provenance.json", DIGESTS = "META-INF/digests.txt", SIGNATURE = "META-INF/signature.bin";
+    private static final String UI_DEX="ui/classes.dex", UI_RESOURCES="ui/resources.json";
+    private static final int MAX_UI_DEX=1024*1024;
     private static final Set<String> NAMES = Collections.unmodifiableSet(new java.util.HashSet<>(Arrays.asList(MANIFEST, DEX, PROVENANCE, DIGESTS, SIGNATURE)));
     private HookPack() { }
 
     public static final class Verified {
         public final String moduleId, version, entrypoint, signer, archiveSha256, channel;
-        private final byte[] manifest, dex, provenance, signedDigests, signature;
+        private final byte[] manifest, dex, provenance, signedDigests, signature, uiDex;
+        public final com.mikeyphw.hooklab.sdk.ModuleUiResources uiResources;
         private Verified(Map<String,byte[]> parts, String signer, String archiveSha256) {
             Map<?,?> m = (Map<?,?>) HookSdk.StrictJson.read(parts.get(MANIFEST));
             moduleId = (String)m.get("module_id"); version = (String)m.get("version"); entrypoint = (String)m.get("entrypoint");
@@ -41,12 +44,17 @@ public final class HookPack {
             channel=(String)((Map<?,?>)HookSdk.StrictJson.read(parts.get(PROVENANCE))).get("channel");
             manifest = parts.get(MANIFEST).clone(); dex = parts.get(DEX).clone(); provenance = parts.get(PROVENANCE).clone();
             signedDigests = parts.get(DIGESTS).clone(); signature = parts.get(SIGNATURE).clone();
+            uiDex=parts.containsKey(UI_DEX)?parts.get(UI_DEX).clone():null;
+            uiResources=parts.containsKey(UI_RESOURCES)?com.mikeyphw.hooklab.sdk.ModuleUiResources.parse(moduleId,parts.get(UI_RESOURCES)):com.mikeyphw.hooklab.sdk.ModuleUiResources.empty(moduleId);
         }
         public byte[] manifest() { return manifest.clone(); }
         public byte[] dex() { return dex.clone(); }
         public byte[] provenance() { return provenance.clone(); }
         public byte[] signedDigests() { return signedDigests.clone(); }
         public byte[] signature() { return signature.clone(); }
+        public boolean hasUi(){return uiDex!=null;}
+        public ByteBuffer directUiDex(){if(uiDex==null)throw new IllegalStateException("no custom UI");ByteBuffer result=ByteBuffer.allocateDirect(uiDex.length);result.put(uiDex).flip();return result;}
+        public String uiEntrypoint(){return "com.mikeyphw.hooklab.moduleui."+moduleId+".Provider";}
         /** A private direct buffer avoids the ART read-only heap-array failure. */
         public ByteBuffer directDex() { ByteBuffer result=ByteBuffer.allocateDirect(dex.length); result.put(dex).flip(); return result; }
     }
@@ -86,9 +94,9 @@ public final class HookPack {
     private static String name(ByteBuffer b,int n) {
         require(n>0 && n<=128 && n<=b.remaining(),"entry name length");
         byte[] data=new byte[n];b.get(data);String s=new String(data,StandardCharsets.US_ASCII);
-        require(NAMES.contains(s) && Arrays.equals(data,s.getBytes(StandardCharsets.US_ASCII)),"entry allowlist");return s;
+        require((NAMES.contains(s)||UI_DEX.equals(s)||UI_RESOURCES.equals(s)) && Arrays.equals(data,s.getBytes(StandardCharsets.US_ASCII)),"entry allowlist");return s;
     }
-    private static int limit(String name) { return DEX.equals(name)?MAX_DEX:SIGNATURE.equals(name)?384:MAX_METADATA; }
+    private static int limit(String name) { return DEX.equals(name)?MAX_DEX:UI_DEX.equals(name)?MAX_UI_DEX:SIGNATURE.equals(name)?384:MAX_METADATA; }
     private static final class Row {
         final int offset;final long crc;final byte[] bytes;
         Row(int offset,long crc,byte[] bytes){this.offset=offset;this.crc=crc;this.bytes=bytes;}
@@ -97,7 +105,7 @@ public final class HookPack {
         require(archive!=null && archive.length>=22 && archive.length<=MAX_ARCHIVE,"archive bound");
         ByteBuffer b=ByteBuffer.wrap(archive).order(ByteOrder.LITTLE_ENDIAN); b.position(archive.length-22);
         expect(b,0x06054b50);require(u16(b)==0 && u16(b)==0,"multi-disk archive");
-        int count=u16(b);require(count==NAMES.size() && u16(b)==count,"entry count");
+        int count=u16(b);require(count>=NAMES.size() && count<=NAMES.size()+2 && u16(b)==count,"entry count");
         int centralSize=size(u32(b),archive.length), centralOffset=size(u32(b),archive.length);
         require(u16(b)==0 && (long)centralOffset+centralSize==archive.length-22L,"central directory bounds");
         // Read exactly the local entries from offset zero; reject prefix, gaps, descriptors and extras.
@@ -112,7 +120,7 @@ public final class HookPack {
             byte[] bytes=new byte[length];b.get(bytes);CRC32 crc32=new CRC32();crc32.update(bytes);
             require(crc32.getValue()==crc,"entry CRC");local.put(n,new Row(off,crc,bytes));
         }
-        require(b.position()==centralOffset && local.keySet().equals(NAMES),"local inventory");
+        require(b.position()==centralOffset && local.keySet().containsAll(NAMES),"local inventory");
         Map<String,byte[]> result=new LinkedHashMap<>();
         for(Map.Entry<String,Row> entry:local.entrySet()) {
             Row row=entry.getValue();expect(b,0x02014b50);
@@ -172,7 +180,7 @@ public final class HookPack {
         String text=new String(dex,pos,count,StandardCharsets.US_ASCII);
         require(text.matches("L(?:[A-Za-z0-9_$]+/)+[A-Za-z0-9_$-]+;"),"DEX class descriptor");return text;
     }
-    private static void validateDex(byte[] dex,byte[] manifest) throws GeneralSecurityException {
+    private static void validateDex(byte[] dex,byte[] manifest,boolean ui) throws GeneralSecurityException {
         require(dex.length>=112 && dex.length<=MAX_DEX && dex[0]=='d' && dex[1]=='e' && dex[2]=='x' && dex[3]=='\n' && dex[7]==0,"DEX header");
         require(Arrays.asList("035","037","038","039").contains(new String(dex,4,3,StandardCharsets.US_ASCII)),"DEX version");
         ByteBuffer h=ByteBuffer.wrap(dex).order(ByteOrder.LITTLE_ENDIAN);
@@ -183,8 +191,8 @@ public final class HookPack {
         int strings=table(h,56,60,4,dex.length),types=table(h,64,68,4,dex.length),classes=table(h,96,100,32,dex.length);
         int sc=h.getInt(56),tc=h.getInt(64),cc=h.getInt(96);
         Map<?,?> m=(Map<?,?>)HookSdk.StrictJson.read(manifest);
-        String prefix="Lcom/mikeyphw/hooklab/modules/"+m.get("module_id")+"/";
-        String entry="L"+((String)m.get("entrypoint")).replace('.','/')+";";
+        String prefix="Lcom/mikeyphw/hooklab/"+(ui?"moduleui/":"modules/")+m.get("module_id")+"/";
+        String entry=ui?prefix+"Provider;":"L"+((String)m.get("entrypoint")).replace('.','/')+";";
         Set<String> names=new java.util.HashSet<>();
         for(int i=0;i<cc;i++) {
             int type=h.getInt(classes+32*i);require(type>=0&&type<tc,"DEX class type index");
@@ -204,7 +212,8 @@ public final class HookPack {
         Signature signature=Signature.getInstance("SHA256withRSA");signature.initVerify(rsa);signature.update(expected);
         require(parts.get(SIGNATURE).length==384 && signature.verify(parts.get(SIGNATURE)),"signature");
         require("hooklab.module.manifest.v1".equals(HookSdk.ContractReader.validate(parts.get(MANIFEST))),"manifest schema");
-        validateProvenance(parts.get(PROVENANCE));requireCanonical(parts.get(MANIFEST));requireCanonical(parts.get(PROVENANCE));validateDex(parts.get(DEX),parts.get(MANIFEST));
+        validateProvenance(parts.get(PROVENANCE));requireCanonical(parts.get(MANIFEST));requireCanonical(parts.get(PROVENANCE));validateDex(parts.get(DEX),parts.get(MANIFEST),false);
+        if(parts.containsKey(UI_DEX))validateDex(parts.get(UI_DEX),parts.get(MANIFEST),true);
         return new Verified(parts,signer,digest(snapshot));
     }
 }

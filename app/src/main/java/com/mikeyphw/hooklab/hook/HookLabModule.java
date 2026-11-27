@@ -110,10 +110,15 @@ public final class HookLabModule extends XposedModule {
         // Bind only after verified host identity and both framework preference groups.
         VerboseLogs.bind(settings, this);
         VerboseLogs.emit(VerboseLogs.Event.HOST_DISPATCH_READY);
+        com.mikeyphw.hooklab.sdk.ModuleConfig.Filter config=com.mikeyphw.hooklab.sdk.ModuleConfig.defaultsFilter();boolean configValid=true;
+        if(com.mikeyphw.hooklab.sdk.ModuleConfig.TARGET.equals(pkg))try{
+            config=com.mikeyphw.hooklab.sdk.ModuleConfig.read(getRemotePreferences(com.mikeyphw.hooklab.sdk.ModuleConfig.GROUP).getAll()).current.effective(com.mikeyphw.hooklab.sdk.ModuleConfig.MODULE,com.mikeyphw.hooklab.sdk.ModuleConfig.HOOK,pkg);
+        }catch(RuntimeException|LinkageError failure){configValid=false;log(Log.WARN,"HookLab","MODULE_CONFIG_REFUSED id=wordmaster.night.filter");}
+        final boolean configReady=configValid;
         HookContext context = new HookContext(pkg, process, version, loader, this, ctx,
-                event -> log(Log.INFO,"HookLab","SDK event="+event.name()));
+                event -> log(Log.INFO,"HookLab","SDK event="+event.name()),config);
         final java.util.List<TweakEngine.Entry<HookContext>> entries=TweakCatalog.entries();
-        final PackRuntime packs=new PackRuntime(this,ctx,pkg,process,version,loader,settings,safety,failedInProcess);
+        final PackRuntime packs=new PackRuntime(this,ctx,pkg,process,version,loader,settings,safety,failedInProcess,config);
         final java.util.List<TweakEngine.Entry<HookContext>> resolved=new java.util.ArrayList<>();
         for(TweakEngine.Entry<HookContext> entry:entries){
             if(packs.usesPack(entry.spec.id))resolved.add(new TweakEngine.Entry<>(entry.spec,entry.title,entry.description,ignored->packs.install(entry.spec.id)));
@@ -125,7 +130,7 @@ public final class HookLabModule extends XposedModule {
         if (!RegistryGeneration.matches(BuiltinRegistry.current().generation,
                 () -> getRemotePreferences(RegistryGeneration.GROUP).getString(RegistryGeneration.KEY,null))) return;
         TweakEngine.dispatch(resolved, pkg, process, version,
-                id -> packs.eligible(id) && snapshot.enabled(id), context,
+                id -> packs.eligible(id) && snapshot.enabled(id) && (configReady||!com.mikeyphw.hooklab.sdk.ModuleConfig.HOOK.equals(id)), context,
                 (id, failure) -> log(Log.ERROR, "HookLab",
                         "Tweak failure id=" + id + " category=" + TweakDiagnostics.failureCategory(failure)),
                 new TweakEngine.FaultPolicy() {

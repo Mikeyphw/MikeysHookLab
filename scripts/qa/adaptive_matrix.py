@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse, hashlib, json, math, os, re, shutil, subprocess, sys, time, xml.etree.ElementTree as ET, zipfile
 from pathlib import Path
 import native_smoke as n
+import secrets
+import rotation_bridge
 CASES={
  'api29-compact':(29,320,700,2.0,'light'),
  'api29-standard':(29,390,844,1.0,'dark'),
@@ -130,17 +132,36 @@ def lock_matrix_rotation(cfg):
  print('ROTATION_LOCK_REFUSED '+json.dumps({'api':cfg['api'],'requested':int(rotation),'wm_confirmed':wm_ok,'settings_confirmed':settings_ok,'stable_samples':stable,'observations':ROTATION_OBSERVATIONS},sort_keys=True),flush=True)
  require(wm_ok and settings_ok and stable==2,'matrix rotation lock/settings not stably confirmed')
 
+def run_instrumentation(test,cfg,source):
+ nonce=secrets.token_hex(16)
+ bridge=rotation_bridge.Bridge(cfg,source,nonce,lock_matrix_rotation) if test==JOURNEY else None
+ args=['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),'-e','uxr04_rotation_nonce',nonce,n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner']
+ if bridge:bridge.start()
+ try:
+  result=subprocess.run(args,capture_output=True,text=True,timeout=900)
+ except BaseException:
+  if bridge:bridge.finish(False)
+  raise
+ if bridge:
+  # A runner failure still retains the original status/partial checkpoint.
+  try:n.parse_instrumentation(result.stdout,test);complete=result.returncode==0
+  except ValueError:complete=False
+  if not bridge.finish(complete):
+   result.rotation_bridge_failed=True
+ return result
+
 def instrument(test,cfg,source,out):
  lock_matrix_rotation(cfg)
  # A checkpoint from a different invocation must never be accepted as current.
  n.clear_failure_checkpoint()
- if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json')
+ if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json','files/uxr04-adaptive/rotation-request.json','files/uxr04-adaptive/rotation-request.tmp')
  output='';rc=None;reason=None
  try:
-  result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
+  result=run_instrumentation(test,cfg,source)
   rc=result.returncode;output=result.stdout
   require(rc==0,'instrument transport failed: '+test)
   n.parse_instrumentation(output,test)
+  if getattr(result,'rotation_bridge_failed',False):reason='ROTATION_BRIDGE_REFUSED'
  except subprocess.TimeoutExpired as error:
   output=error.stdout;reason='TIMEOUT'
  except OSError:

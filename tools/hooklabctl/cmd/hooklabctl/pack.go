@@ -9,6 +9,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -22,6 +23,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 const packMax = 9 * 1024 * 1024
@@ -31,6 +34,9 @@ const dexName = "runtime/classes.dex"
 const provenanceName = "provenance.json"
 const digestName = "META-INF/digests.txt"
 const signatureName = "META-INF/signature.bin"
+const uiDexName = "ui/classes.dex"
+const uiResourcesName = "ui/resources.json"
+const uiDexMax = 1024 * 1024
 
 var packNames = []string{digestName, signatureName, manifestName, provenanceName, dexName}
 var packRefused = errors.New("hookpack refused")
@@ -72,7 +78,7 @@ func packKey(b []byte) (*rsa.PublicKey, error) {
 	return r, nil
 }
 func strictPackObject(b []byte) (map[string]any, error) {
-	if len(b) > MaxBytes || !validEscapes(b) || !json.Valid(b) {
+	if len(b) > MaxBytes || !utf8.Valid(b) || !validEscapes(b) || !json.Valid(b) {
 		return nil, packRefused
 	}
 	d := json.NewDecoder(bytes.NewReader(b))
@@ -113,7 +119,8 @@ func canonicalProvenance(b []byte) ([]byte, error) {
 // D8 interface desugaring emits -IA/-CC class names; keep package segments strict.
 var dexDescriptor = regexp.MustCompile(`^L(?:[A-Za-z0-9_$]+/)+[A-Za-z0-9_$-]+;$`)
 
-func validPackDex(b, manifest []byte) bool {
+func validPackDex(b, manifest []byte) bool { return validPackDexRole(b, manifest, false) }
+func validPackDexRole(b, manifest []byte, ui bool) bool {
 	if len(b) < 112 || len(b) > dexMax || !bytes.Equal(b[:4], []byte("dex\n")) || b[7] != 0 {
 		return false
 	}
@@ -178,6 +185,10 @@ func validPackDex(b, manifest []byte) bool {
 	}
 	prefix := "Lcom/mikeyphw/hooklab/modules/" + s(m, "module_id") + "/"
 	entry := "L" + strings.ReplaceAll(s(m, "entrypoint"), ".", "/") + ";"
+	if ui {
+		prefix = "Lcom/mikeyphw/hooklab/moduleui/" + s(m, "module_id") + "/"
+		entry = prefix + "Provider;"
+	}
 	names := map[string]bool{}
 	for i := 0; i < cc; i++ {
 		t := u(co + 32*i)
@@ -199,7 +210,10 @@ func validPackDex(b, manifest []byte) bool {
 func signedInventory(parts map[string][]byte, signer string) []byte {
 	var out bytes.Buffer
 	fmt.Fprintf(&out, "HOOKLAB-PACK-V1\nkey-sha256 %s\n", signer)
-	for _, name := range []string{manifestName, provenanceName, dexName} {
+	for _, name := range []string{manifestName, provenanceName, dexName, uiDexName, uiResourcesName} {
+		if _, ok := parts[name]; !ok {
+			continue
+		}
 		v := parts[name]
 		fmt.Fprintf(&out, "%s %d %s\n", digestBytes(v), len(v), name)
 	}
@@ -219,17 +233,38 @@ func packLimit(n string) int {
 	if n == dexName {
 		return dexMax
 	}
+	if n == uiDexName {
+		return uiDexMax
+	}
 	if n == signatureName {
 		return 384
 	}
 	return MaxBytes
 }
-func encodePack(parts map[string][]byte) ([]byte, error) {
-	if len(parts) != len(packNames) {
+func inventoryNames(parts map[string][]byte) ([]string, error) {
+	names := append([]string(nil), packNames...)
+	for _, name := range []string{uiDexName, uiResourcesName} {
+		if _, ok := parts[name]; ok {
+			names = append(names, name)
+		}
+	}
+	if len(parts) != len(names) {
 		return nil, packRefused
 	}
+	for _, name := range names {
+		if _, ok := parts[name]; !ok {
+			return nil, packRefused
+		}
+	}
+	return names, nil
+}
+func encodePack(parts map[string][]byte) ([]byte, error) {
+	names, e := inventoryNames(parts)
+	if e != nil {
+		return nil, e
+	}
 	var b, c bytes.Buffer
-	for _, n := range packNames {
+	for _, n := range names {
 		data, ok := parts[n]
 		if !ok || len(data) == 0 || len(data) > packLimit(n) {
 			return nil, packRefused
@@ -264,7 +299,7 @@ func encodePack(parts map[string][]byte) ([]byte, error) {
 	offset, sz := uint32(b.Len()), uint32(c.Len())
 	b.Write(c.Bytes())
 	le32(&b, 0x06054b50)
-	for _, v := range []uint16{0, 0, uint16(len(packNames)), uint16(len(packNames))} {
+	for _, v := range []uint16{0, 0, uint16(len(names)), uint16(len(names))} {
 		le16(&b, v)
 	}
 	le32(&b, sz)
@@ -284,7 +319,32 @@ func decodePack(b []byte) (map[string][]byte, error) {
 	}
 	parts := map[string][]byte{}
 	pos := 0
-	for _, n := range packNames {
+	names := append([]string(nil), packNames...)
+	// The end record is untrusted until the complete archive is reconstructed.
+	count := int(binary.LittleEndian.Uint16(b[len(b)-12 : len(b)-10]))
+	if count < len(names) || count > len(names)+2 {
+		return nil, packRefused
+	}
+	for i := 0; i < count; i++ {
+		n := ""
+		if i < len(names) {
+			n = names[i]
+		} else {
+			if len(b)-pos < 30 {
+				return nil, packRefused
+			}
+			ln := int(binary.LittleEndian.Uint16(b[pos+26 : pos+28]))
+			if ln > len(b)-pos-30 {
+				return nil, packRefused
+			}
+			n = string(b[pos+30 : pos+30+ln])
+			if n != uiDexName && n != uiResourcesName {
+				return nil, packRefused
+			}
+			if _, ok := parts[n]; ok {
+				return nil, packRefused
+			}
+		}
 		if len(b)-pos < 30 {
 			return nil, packRefused
 		}
@@ -315,6 +375,9 @@ func decodePack(b []byte) (map[string][]byte, error) {
 	return parts, nil
 }
 func createPack(manifest, provenance, dex []byte, key *rsa.PrivateKey) ([]byte, error) {
+	return createPackWithUi(manifest, provenance, dex, key, nil, nil)
+}
+func createPackWithUi(manifest, provenance, dex []byte, key *rsa.PrivateKey, uiDex, uiResources []byte) ([]byte, error) {
 	m, e := canonicalManifest(manifest)
 	if e != nil {
 		return nil, e
@@ -334,6 +397,18 @@ func createPack(manifest, provenance, dex []byte, key *rsa.PrivateKey) ([]byte, 
 		return nil, e
 	}
 	parts := map[string][]byte{manifestName: m, provenanceName: p, dexName: dex}
+	if uiDex != nil {
+		if len(uiDex) > uiDexMax || !validPackDexRole(uiDex, m, true) {
+			return nil, packRefused
+		}
+		parts[uiDexName] = uiDex
+	}
+	if uiResources != nil {
+		if !validUiResources(uiResources, m) {
+			return nil, packRefused
+		}
+		parts[uiResourcesName] = uiResources
+	}
 	inv := signedInventory(parts, digestBytes(pub))
 	h := sha256.Sum256(inv)
 	sig, e := rsa.SignPKCS1v15(nil, key, crypto.SHA256, h[:])
@@ -369,7 +444,83 @@ func verifyPack(b, pub []byte) (map[string][]byte, error) {
 	if e != nil || !bytes.Equal(p, parts[provenanceName]) || !validPackDex(parts[dexName], parts[manifestName]) {
 		return nil, packRefused
 	}
+	if ui, ok := parts[uiDexName]; ok && !validPackDexRole(ui, m, true) {
+		return nil, packRefused
+	}
+	if resources, ok := parts[uiResourcesName]; ok && !validUiResources(resources, m) {
+		return nil, packRefused
+	}
 	return parts, nil
+}
+func validUiResources(raw, manifest []byte) bool {
+	root, e := strictPackObject(raw)
+	m, me := strictPackObject(manifest)
+	if e != nil || me != nil || !fields(root, "schema", "module_id", "locales", "assets") || s(root, "schema") != "hooklab.module.ui-resources.v1" || s(root, "module_id") != s(m, "module_id") {
+		return false
+	}
+	locales, ok := root["locales"].(map[string]any)
+	assets, ak := root["assets"].(map[string]any)
+	if !ok || !ak || len(locales) > 16 || len(assets) > 16 {
+		return false
+	}
+	en, ok := locales["en"].(map[string]any)
+	if !ok {
+		return false
+	}
+	name := regexp.MustCompile(`^[a-z][a-z0-9_.-]{0,63}$`)
+	lang := regexp.MustCompile(`^[a-z]{2,3}(-[A-Z]{2})?$`)
+	safeName := func(v string) bool { return name.MatchString(v) && !strings.Contains(v, "..") }
+	textOK := func(v string) bool {
+		if !utf8.ValidString(v) {
+			return false
+		}
+		for _, r := range v {
+			if unicode.IsControl(r) && r != '\n' {
+				return false
+			}
+		}
+		return true
+	}
+	for tag, value := range locales {
+		rows, ok := value.(map[string]any)
+		if !ok || !lang.MatchString(tag) || len(rows) > 64 {
+			return false
+		}
+		for k, v := range rows {
+			label, ok := v.(string)
+			if _, exists := en[k]; !exists || !ok || !safeName(k) || len(label) == 0 || len(label) > 512 || !textOK(label) {
+				return false
+			}
+		}
+	}
+	for k, value := range assets {
+		row, ok := value.(map[string]any)
+		if !ok || !safeName(k) || !fields(row, "type", "data") {
+			return false
+		}
+		encoded := s(row, "data")
+		data, e := base64.StdEncoding.DecodeString(encoded)
+		if e != nil || len(data) == 0 || len(data) > 16384 || base64.StdEncoding.EncodeToString(data) != encoded {
+			return false
+		}
+		switch s(row, "type") {
+		case "text/plain":
+			if !textOK(string(data)) {
+				return false
+			}
+		case "image/png":
+			if len(data) < 33 || !bytes.Equal(data[:16], []byte{137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82}) {
+				return false
+			}
+			w, h := binary.BigEndian.Uint32(data[16:20]), binary.BigEndian.Uint32(data[20:24])
+			if w == 0 || h == 0 || w > 512 || h > 512 {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 func packCommand(args []string, stdout, stderr io.Writer) int {
 	fail := func(stage string, err error) int {
@@ -393,7 +544,7 @@ func packCommand(args []string, stdout, stderr io.Writer) int {
 	}
 	switch args[0] {
 	case "pack":
-		if len(args) != 6 {
+		if len(args) < 6 || len(args) > 10 || (len(args)-6)%2 != 0 {
 			return fail("arguments", nil)
 		}
 		m, e := packRead(args[1], MaxBytes)
@@ -445,7 +596,27 @@ func packCommand(args []string, stdout, stderr io.Writer) int {
 		if key.Validate() != nil || key.N.BitLen() != 3072 || key.E != 65537 {
 			return fail("validate_private_key", packRefused)
 		}
-		b, e := createPack(m, p, d, key)
+		var uiDex, uiResources []byte
+		for i := 6; i < len(args); i += 2 {
+			switch args[i] {
+			case "--ui-dex":
+				if uiDex != nil {
+					return fail("arguments", nil)
+				}
+				uiDex, e = packRead(args[i+1], uiDexMax)
+			case "--ui-resources":
+				if uiResources != nil {
+					return fail("arguments", nil)
+				}
+				uiResources, e = packRead(args[i+1], MaxBytes)
+			default:
+				return fail("arguments", nil)
+			}
+			if e != nil {
+				return fail("read_ui", e)
+			}
+		}
+		b, e := createPackWithUi(m, p, d, key, uiDex, uiResources)
 		if e != nil {
 			return fail("sign_pack", e)
 		}
@@ -497,6 +668,12 @@ func packCommand(args []string, stdout, stderr io.Writer) int {
 		}
 		if args[0] == "inspect" {
 			o := map[string]any{"archive_sha256": digestBytes(b), "signer_sha256": digestBytes(pub), "manifest": json.RawMessage(parts[manifestName]), "provenance": json.RawMessage(parts[provenanceName])}
+			if ui, ok := parts[uiDexName]; ok {
+				o["ui_dex_sha256"] = digestBytes(ui)
+			}
+			if ui, ok := parts[uiResourcesName]; ok {
+				o["ui_resources_sha256"] = digestBytes(ui)
+			}
 			enc := json.NewEncoder(stdout)
 			if enc.Encode(o) != nil {
 				return fail("encode_inspection", nil)

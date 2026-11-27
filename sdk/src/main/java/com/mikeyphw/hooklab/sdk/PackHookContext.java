@@ -9,10 +9,12 @@ public final class PackHookContext {
     public final ClassLoader classLoader;
     private final PackHookApi api;
     private final Object host;
+    private final HookSdk.Settings settings;
     PackHookContext(HookSdk.Context context,Object host,PackHookApi api){
         packageName=context.packageName;processName=context.processName;versionCode=context.version;classLoader=context.hostLoader;
-        this.api=Objects.requireNonNull(api);this.host=Objects.requireNonNull(host);
+        this.api=Objects.requireNonNull(api);this.host=Objects.requireNonNull(host);this.settings=context.settings;
     }
+    public ModuleConfig.Filter wordMasterFilter(){return settings.wordMasterFilter();}
     public <T>T framework(Class<T> type){if(type!=PackHookApi.class)throw new IllegalArgumentException("unsupported pack API");return type.cast(api);}
     public <T>T appContext(Class<T> type){return type.cast(host);}
 }

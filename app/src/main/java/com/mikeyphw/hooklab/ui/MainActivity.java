@@ -65,7 +65,7 @@ public final class MainActivity extends AppCompatActivity {
     private static final int NAV_HOME = 201, NAV_APPS = 202, NAV_DIAGNOSTICS = 203;
     private static final int THEME_AMOLED = 100;
     private int page;
-    private static final String ACTION_OPEN_HOOK = "com.mikeyphw.hooklab.action.OPEN_HOOK";
+    public static final String ACTION_OPEN_HOOK = "com.mikeyphw.hooklab.action.OPEN_HOOK";
     private String selectedHookId;
     private int helpReturnPage=SETTINGS;
     private String healthFocusHookId;
@@ -385,6 +385,7 @@ public final class MainActivity extends AppCompatActivity {
             @Override public void afterTextChanged(android.text.Editable editable) { }
         });
         renderCatalogResults();
+        button(body,R.string.mod03_installed,v->startActivity(new android.content.Intent(this,com.mikeyphw.hooklab.packs.PackManagerActivity.class)));
     }
 
 
@@ -1288,7 +1289,10 @@ public final class MainActivity extends AppCompatActivity {
             return;
         }
         heading(R.string.ui05_group_setup);
-        card(groupName(group), group.description + "\n" + getString(R.string.ui_group_no_toggle));
+        LinearLayout moduleCard=card(groupName(group), group.description + "\n" + getString(R.string.ui_group_no_toggle));
+        for(com.mikeyphw.hooklab.sdk.HookSdk.ModuleDescriptor module:com.mikeyphw.hooklab.runtime.BuiltinRegistry.current().modules()){
+            if(module.groupId.equals(group.id))button(moduleCard,R.string.mod03_module_details,v->startActivity(com.mikeyphw.hooklab.packs.PackManagerActivity.moduleIntent(this,module.id)));
+        }
         UiEnvironment.Port expected = service();
         Set<String> scope = scopedPackages(expected);
         sectionTitle(R.string.ui05_group_hooks);
@@ -1341,6 +1345,8 @@ public final class MainActivity extends AppCompatActivity {
         if (owningGroup != null) {
             compactDiagnosticRow(overview,groupName(owningGroup),getString(R.string.r02_group_context),null,v->showGroup(owningGroup));
         }
+        for(com.mikeyphw.hooklab.sdk.HookSdk.HookDescriptor hook:com.mikeyphw.hooklab.runtime.BuiltinRegistry.current().hooks())
+            if(hook.id.equals(spec.id))button(overview,R.string.mod03_module_details,v->startActivity(com.mikeyphw.hooklab.packs.PackManagerActivity.moduleIntent(this,hook.moduleId)));
         FrameworkSnapshot.Flag observedFlag = snapshot.flag(spec.id);
         String versionText = observedFlag == null || observedFlag.installedVersion == null
                 ? getString(R.string.ui05_version_unknown)

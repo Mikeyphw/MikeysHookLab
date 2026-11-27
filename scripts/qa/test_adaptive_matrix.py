@@ -47,7 +47,7 @@ class AdaptiveMatrixTests(unittest.TestCase):
   from unittest.mock import patch
   from types import SimpleNamespace
   cfg=a.config('api36-landscape')
-  with patch.object(a.time,'sleep'),patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=lambda *args: 'lock 1' if args[:2]==('shell','wm') else '0' if args[-1]=='accelerometer_rotation' else '1'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'parse_instrumentation'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='')):
+  with patch.object(a.time,'sleep'),patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=lambda *args: 'lock 1' if args[:2]==('shell','wm') else '0' if args[-1]=='accelerometer_rotation' else '1'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'parse_instrumentation'),patch.object(a,'run_instrumentation',return_value=SimpleNamespace(returncode=0,stdout='')):
    for method in (a.JOURNEY,a.PERF):a.instrument(method,cfg,'a'*40,Path('.'))
    self.assertEqual([x.args for x in adb.call_args_list if x.args[:3]==('shell','wm','user-rotation')],[('shell','wm','user-rotation','lock','1')]*2)
    self.assertEqual(sum('files/uxr04-adaptive/viewport-failure.json' in x.args for x in adb.call_args_list),2)
@@ -135,7 +135,7 @@ class AdaptiveMatrixTests(unittest.TestCase):
   success=started+f'INSTRUMENTATION_STATUS: class={cls}\nINSTRUMENTATION_STATUS: test={method}\nINSTRUMENTATION_STATUS_CODE: 0\nOK (1 test)\nINSTRUMENTATION_CODE: -1\n'
   cases=[(subprocess.CompletedProcess([],0,started+'INSTRUMENTATION_RESULT: shortMsg=Process crashed.\nPRIVATE DUMP',''),None,'TERMINAL_RESULT_MISSING'),(subprocess.CompletedProcess([],7,'PRIVATE DUMP',''),None,'TRANSPORT_FAILED'),(None,subprocess.TimeoutExpired('adb',900,output=started.encode()),'TIMEOUT'),(None,OSError('PRIVATE DUMP'),'SPAWN_FAILED'),(subprocess.CompletedProcess([],0,success,'') ,None,None)]
   for result,error,expected in cases:
-   with self.subTest(expected=expected),tempfile.TemporaryDirectory() as tmp,patch.object(a,'lock_matrix_rotation'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'adb'),patch.object(a,'checkpoint_phase',return_value='SEARCH_ROTATE_REQUEST'),patch.object(a.n,'failure_checkpoint',return_value=None),patch.object(a.subprocess,'run',return_value=result,side_effect=error) as child:
+   with self.subTest(expected=expected),tempfile.TemporaryDirectory() as tmp,patch.object(a,'lock_matrix_rotation'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'adb'),patch.object(a,'checkpoint_phase',return_value='SEARCH_ROTATE_REQUEST'),patch.object(a.n,'failure_checkpoint',return_value=None),patch.object(a,'run_instrumentation',return_value=result,side_effect=error) as child:
     out=Path(tmp)
     if expected is None:
      a.instrument(a.JOURNEY,a.config('api29-compact'),'a'*40,out);self.assertFalse((out/'failure.json').exists())

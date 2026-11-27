@@ -175,24 +175,44 @@ def plan(root,head,base,event,run_id,attempt):
     value={'schema':SCHEMA,'repository':REPO,'source_sha':head,'source_tree':git(root,'rev-parse',head+'^{tree}'),'base_sha':base_observed,'requested_base':base,'event':event,'run_id':str(run_id),'run_attempt':str(attempt),'policy_sha256':policy_digest,'changes':changes,'overlays':intents,'gates':gates,'adaptive_cases':cases,'functional_tests':tests,'full_reason':full_reason,'physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
     value['plan_sha256']=sha(canonical(value));return value
 
-def aggregate(expected, observed, jobs):
+def aggregate(expected, observed, jobs, reuse=None):
     require(expected==observed,'plan differs from independent exact-source recomputation')
     require(isinstance(jobs,dict) and set(jobs)==set(GATES),'missing or extra gate results')
     rows={}
+    reused=set(reuse['gates']) if reuse else set()
+    if reuse:
+        import tree_reuse
+        require(reuse['current_plan_sha256']==expected['plan_sha256'] and reused and reused<=tree_reuse.REUSE and all(expected['gates'][g]['required'] for g in reused),'reuse is not bound to required gates')
     for gate in GATES:
         needed=expected['gates'][gate]['required'];result=jobs[gate]
+        if gate in reused:
+            require(result=='skipped','reused gate unexpectedly executed: '+gate)
+            rows[gate]={'verdict':'REUSED_TREE_QUALIFIED','job_result':result,'reasons':expected['gates'][gate]['reasons']}
+            continue
         require(result==('success' if needed else 'skipped'),'gate '+gate+' expected '+('success' if needed else 'skipped')+' but observed '+str(result))
         rows[gate]={'verdict':'PASS' if needed else 'NOT_APPLICABLE','job_result':result,'reasons':expected['gates'][gate]['reasons']}
-    return {'schema':RECEIPT,'repository':REPO,'source_sha':expected['source_sha'],'source_tree':expected['source_tree'],'base_sha':expected['base_sha'],'run_id':expected['run_id'],'run_attempt':expected['run_attempt'],'plan_sha256':expected['plan_sha256'],'policy_sha256':expected['policy_sha256'],'gates':rows,'adaptive_cases':expected['adaptive_cases'],'functional_tests':expected['functional_tests'],'overall':'PASS_TARGETED_HOSTED','physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
+    receipt={'schema':RECEIPT,'repository':REPO,'source_sha':expected['source_sha'],'source_tree':expected['source_tree'],'base_sha':expected['base_sha'],'run_id':expected['run_id'],'run_attempt':expected['run_attempt'],'plan_sha256':expected['plan_sha256'],'policy_sha256':expected['policy_sha256'],'gates':rows,'adaptive_cases':expected['adaptive_cases'],'functional_tests':expected['functional_tests'],'overall':'PASS_TARGETED_HOSTED','physical_device_qualified':False,'release_qualified':False,'visual_approved':False}
+    if reuse:
+        receipt.update(overall='PASS_TARGETED_HOSTED_WITH_REUSE',tree_reuse=reuse)
+    return receipt
 
 def cli():
-    p=argparse.ArgumentParser();p.add_argument('mode',choices=['plan','aggregate','verify']);p.add_argument('--root',type=Path,default=Path.cwd());p.add_argument('--head',required=True);p.add_argument('--base',default='');p.add_argument('--event',required=True);p.add_argument('--run-id',required=True);p.add_argument('--attempt',required=True);p.add_argument('--plan',type=Path,required=True);p.add_argument('--receipt',type=Path);p.add_argument('--jobs');p.add_argument('--github-output',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('mode',choices=['plan','aggregate','verify']);p.add_argument('--root',type=Path,default=Path.cwd());p.add_argument('--head',required=True);p.add_argument('--base',default='');p.add_argument('--event',required=True);p.add_argument('--run-id',required=True);p.add_argument('--attempt',required=True);p.add_argument('--plan',type=Path,required=True);p.add_argument('--receipt',type=Path);p.add_argument('--jobs');p.add_argument('--github-output',type=Path);p.add_argument('--reuse',type=Path);a=p.parse_args()
     try:
         expected=plan(a.root,a.head,a.base,a.event,a.run_id,a.attempt)
         if a.mode=='plan':
             a.plan.parent.mkdir(parents=True,exist_ok=True);a.plan.write_bytes(canonical(expected)+b'\n')
+            reuse=None
+            if a.reuse is not None and a.event=='push' and os.environ.get('GITHUB_ACTIONS')=='true' and os.environ.get('GH_TOKEN'):
+                import tree_reuse
+                reuse=tree_reuse.decide(a.root,expected,tree_reuse.Api(os.environ['GH_TOKEN']),int(a.run_id))
+                if reuse:
+                    require(not a.reuse.exists(),'fresh reuse receipt required')
+                    a.reuse.write_bytes(canonical(reuse)+b'\n')
             if a.github_output:
                 values={k:str(v['required']).lower() for k,v in expected['gates'].items()}
+                if reuse:
+                    for g in reuse['gates']:values[g]='false'
                 values.update(adaptive_cases=json.dumps([{'case':c,'api':CASES[c]} for c in expected['adaptive_cases']],separators=(',',':')),functional_tests=','.join(expected['functional_tests']))
                 with a.github_output.open('a') as f:
                     for k,v in values.items():f.write(k+'='+v+'\n')
@@ -200,10 +220,16 @@ def cli():
         else:
             require(a.receipt is not None and a.jobs is not None,'receipt and independent jobs required')
             require(a.plan.is_file() and not a.plan.is_symlink() and a.plan.stat().st_size<=8*1024*1024,'unsafe plan artifact')
-            result=aggregate(expected,strict_json(a.plan.read_bytes()),strict_json(a.jobs))
+            reuse=None
+            if a.reuse is not None and a.reuse.exists():
+                require(a.event=='push' and a.reuse.is_file() and not a.reuse.is_symlink() and a.reuse.stat().st_size<=8*1024*1024,'invalid reuse proof')
+                import tree_reuse
+                reuse=tree_reuse.admit(a.root,expected,tree_reuse.Api(os.environ.get('GH_TOKEN')),int(a.run_id))
+                require(strict_json(a.reuse.read_bytes())==reuse,'reuse evidence changed since impact planning')
+            result=aggregate(expected,strict_json(a.plan.read_bytes()),strict_json(a.jobs),reuse)
             if a.mode=='verify':require(a.receipt.is_file() and not a.receipt.is_symlink() and strict_json(a.receipt.read_bytes())==result,'aggregate receipt differs')
             else:a.receipt.write_bytes(canonical(result)+b'\n')
-            print('PASS_TARGETED_HOSTED',result['plan_sha256'])
+            print(result['overall'],result['plan_sha256'])
         return 0
     except (ValueError,TypeError,KeyError,OSError,subprocess.SubprocessError) as exc:
         print('QUALIFICATION_REFUSED',str(exc),file=sys.stderr);return 2

@@ -280,9 +280,20 @@ public final class AdaptiveUiTest {
         }
         fail("rotated Activity, real display, search focus, text or IME not stably observed");
     }
-    private void requestSearchRotation(int rotation){
-        assertTrue("search rotation request refused",ins.getUiAutomation().setRotation(rotation==android.view.Surface.ROTATION_90
-            ?android.app.UiAutomation.ROTATION_FREEZE_90:android.app.UiAutomation.ROTATION_FREEZE_0));
+    private int rotationSequence;
+    private void requestSearchRotation(int rotation)throws Exception {
+        // Do not mutate the runner's own UiAutomation connection while an
+        // Activity is destroyed/recreated. Request the hosted shell mutation,
+        // then independently observe the real resumed Activity below.
+        String source=InstrumentationRegistry.getArguments().getString("uxr04_source","");
+        String nonce=InstrumentationRegistry.getArguments().getString("uxr04_rotation_nonce","");
+        assertTrue(source.matches("[0-9a-f]{40}")&&nonce.matches("[0-9a-f]{32}")&&rotationSequence<2);
+        assertTrue(rotation==android.view.Surface.ROTATION_0||rotation==android.view.Surface.ROTATION_90);
+        JSONObject request=new JSONObject().put("schema","hooklab.rotation-request.v1").put("source",source)
+            .put("nonce",nonce).put("sequence",++rotationSequence).put("rotation",rotation).put("pid",android.os.Process.myPid());
+        File tmp=new File(folder,"rotation-request.tmp"),target=new File(folder,"rotation-request.json");
+        Files.write(tmp.toPath(),request.toString().getBytes(StandardCharsets.UTF_8));
+        Files.move(tmp.toPath(),target.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
     }
     private View awaitFocusedActivityRoot(ActivityScenario<MainActivity> scenario){
         for(int i=0;i<50;i++){

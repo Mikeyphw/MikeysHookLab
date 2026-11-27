@@ -75,8 +75,26 @@ class PackInterop(unittest.TestCase):
             for m in mutations:
                 bad.write_bytes(m);run(cli,'module','verify',bad,public,ok=False);run('java','-cp',classes,'Mod02PackChecks',bad,public,ok=False)
             print('MOD02_PACK_INTEROP_PASS deterministic signed ZIP, actual Java/Go and negative fixtures')
+            # MOD-03 uses the same signed inventory; independently verify both
+            # optional UI members without loading them in a host or manager.
+            ui=p/'ui.dex';ui.write_bytes(fixture_dex(b'Lcom/mikeyphw/hooklab/moduleui/probe/Provider;'))
+            resources=p/'ui-resources.json';resource_doc={'schema':'hooklab.module.ui-resources.v1','module_id':'probe','locales':{'en':{'help':'Help','label':'Settings'},'pt-BR':{'help':'Ajuda'}},'assets':{'guide':{'type':'text/plain','data':'aGVsbG8='}}}
+            resources.write_text(json.dumps(resource_doc));with_ui=p/'with-ui.hookpack'
+            run(cli,'module','pack',manifest,provenance,dex,private,with_ui,'--ui-dex',ui,'--ui-resources',resources)
+            inspection=json.loads(run(cli,'module','inspect',with_ui,public));self.assertEqual(inspection['ui_dex_sha256'],hashlib.sha256(ui.read_bytes()).hexdigest());self.assertEqual(inspection['ui_resources_sha256'],hashlib.sha256(resources.read_bytes()).hexdigest())
+            self.assertIn('JAVA_PACK_UI_RESOURCES_PASS',run('java','-cp',classes,'Mod02PackChecks',with_ui,public))
+            with zipfile.ZipFile(with_ui) as z:
+                self.assertEqual(len(z.infolist()),7)
+                for entry in z.infolist():
+                    if not entry.filename.startswith('ui/'):continue
+                    mutated=bytearray(with_ui.read_bytes());mutated[entry.header_offset+30+len(entry.filename)]^=1;bad.write_bytes(mutated)
+                    run(cli,'module','verify',bad,public,ok=False);run('java','-cp',classes,'Mod02PackChecks',bad,public,ok=False)
+            for i,value in enumerate([dict(resource_doc,module_id='other'),dict(resource_doc,assets={'guide':{'type':'application/x-executable','data':'aGVsbG8='}}),dict(resource_doc,locales={'pt-BR':{'help':'Ajuda'}}),dict(resource_doc,assets={'../bad':{'type':'text/plain','data':'aGVsbG8='}})]):
+                resources.write_text(json.dumps(value));run(cli,'module','pack',manifest,provenance,dex,private,p/f'bad-ui-{i}.hookpack','--ui-resources',resources,ok=False)
+            ui.write_bytes(fixture_dex(b'Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;'));run(cli,'module','pack',manifest,provenance,dex,private,p/'bad-role.hookpack','--ui-dex',ui,ok=False)
+            print('MOD03_UI_PACK_INTEROP_PASS signed optional payloads and negative namespace/type/signature fixtures')
             from mod02_hosted_packs import verify_artifacts, TEST, sha
-            from module_sources import ROSTER, manifest as module_manifest
+            from module_sources import ROSTER, manifest as module_manifest, settings_schema
             from qualification import canonical
             ident={'source_sha':'c'*40,'source_tree':'d'*40,'run_id':123,'run_attempt':2}
             signed=p/'signed';personal=p/'personal';signed.mkdir();personal.mkdir();(signed/'publisher-test.der').write_bytes(public.read_bytes())
@@ -84,10 +102,15 @@ class PackInterop(unittest.TestCase):
                 mp=personal/module;mp.mkdir();md=module_manifest(module)
                 (mp/'manifest.json').write_bytes(canonical(md))
                 (mp/'classes.dex').write_bytes(fixture_dex(('L'+md['entrypoint'].replace('.','/')+';').encode()))
-                prov={'schema':'hooklab.pack.provenance.v1',**ident,'settings_schema':1,'channel':'test'}
+                prov={'schema':'hooklab.pack.provenance.v1',**ident,'settings_schema':settings_schema(module),'channel':'test'}
                 provfile=p/'fixture-provenance.json';provfile.write_bytes(canonical(prov))
                 (mp/'provenance.json').write_bytes(canonical({**prov,'channel':'personal'}))
-                run(cli,'module','pack',mp/'manifest.json',provfile,mp/'classes.dex',private,signed/(module+'.hookpack'))
+                args=[]
+                if module=='wordmaster':
+                    (mp/'ui.dex').write_bytes(fixture_dex(b'Lcom/mikeyphw/hooklab/moduleui/wordmaster/Provider;'))
+                    (mp/'ui-resources.json').write_bytes((ROOT/'modules/wordmaster/ui/resources.json').read_bytes())
+                    args=['--ui-dex',mp/'ui.dex','--ui-resources',mp/'ui-resources.json']
+                run(cli,'module','pack',mp/'manifest.json',provfile,mp/'classes.dex',private,signed/(module+'.hookpack'),*args)
             (signed/'receipt.json').write_bytes(canonical({'schema':'hooklab.mod02.hosted.v1',**ident,'status':'SIGNED_TEST_PACKS_VERIFIED_NOT_ACTIVATED','files':{f.name:sha(f) for f in signed.iterdir()}}))
             (personal/'receipt.json').write_bytes(canonical({'schema':'hooklab.mod02.personal-inputs.v1',**ident,'status':'UNSIGNED_NOT_INSTALLABLE','files':{f.relative_to(personal).as_posix():sha(f) for f in personal.rglob('*') if f.is_file()}}))
             evidence=p/'art-fixture.json';evidence.write_bytes(canonical({'schema':'hooklab.mod02.art.v1',**ident,'status':'ART_LOAD_PASS_NOT_VECTOR_ACCEPTANCE','test':TEST,'pack_receipt_sha256':sha(signed/'receipt.json')}))

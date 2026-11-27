@@ -298,8 +298,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "FAILED",
-      "blocker": "MOD-02 native apply transaction 20261127T033418Z-f4866c834fc3 failed in the real Go pack interop test (HOOKPACK_REFUSED), before commit or delivery; retained history must be reconciled. F01 cumulative repair from the unchanged merged base preserves the failed checkout.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Merged PR #37 at 1c8ed7f2a1605fe47e7576e0855ecbdc083c8005; exact PR head run 46002218234 attempt 1 reported 44 successful jobs, 3 skipped; merged-main run 46004449579 attempt 1 reported 41 successful, 3 failed, 3 skipped (API29 compact missing instrumentation terminal at SEARCH_ROTATE_RETURN_SETTLE; aggregate and final downstream failures). User confirms hooks work; physical log establishes Neo Store signed ObtainX runtime 1.0.0, not signed runtime for all five hooks. Full independent hosted artifact, remaining physical, release and visual acceptance pending. User authorizes MOD-03 source continuation with gates retained.",
       "counted": true,
       "dependencies": [
         "MOD-01"
@@ -337,8 +337,8 @@
       "parent_id": "MOD-02"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Exact full hosted adaptive matrix, aggregate, final gate and independent physical acceptance remain required.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Merged PR #37; exact PR head hosted check conclusions passed; merged-main API29 compact missing instrumentation terminal result remains, root cause unproven. MOD-03 consolidates proposed rotation boundary repair; no independent hosted acceptance for successor yet.",
       "counted": false,
       "dependencies": [
         "MOD-02-F02"
@@ -351,13 +351,13 @@
     },
     {
       "acceptance": "PENDING",
-      "blocker": "Prerequisite overlay not accepted",
+      "blocker": "Source candidate includes native module workspace, Word Master configuration, signed personal native UI with explicit trust-only admission and PAT gated, signed resources, visual candidate, rotation boundary and tree-bound CI reuse. Native/hosted/physical/release and visual approval pending; same-UID isolation is not claimed.",
       "counted": true,
       "dependencies": [
         "MOD-02"
       ],
       "id": "MOD-03",
-      "implementation": "PLANNED",
+      "implementation": "SOURCE_COMPLETE",
       "kind": "OVERLAY",
       "name": "Native Module UI & Configuration",
       "parent_id": null
@@ -484,5 +484,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-02-F03"
+  "version": "2.0-MOD-03"
 }

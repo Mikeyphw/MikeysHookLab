@@ -25,6 +25,7 @@ public final class DiagnosticTimeline {
     public static final int MAX_BYTES=2*1024*1024, MAX_LINES=10000, MAX_EVENTS=4000;
     private static final Pattern ISO=Pattern.compile("\\b(20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9:.]+(?:Z|[+-][0-9:]+))\\b");
     private static final Pattern HOOK=Pattern.compile("(?:^|\\s)event=([A-Z][A-Z0-9_]{1,63})(?:\\b|$)");
+    private static final Pattern PACK=Pattern.compile("(?:^|[\\s:])(?:[IWEVD]/)?HookLabPack(?:\\([0-9 ]+\\))?\\s*:\\s*(?:com\\.mikeyphw\\.hooklab:\\s*)?(?:\\[[A-Z]+\\]\\s*)?PACK_INSTALLED id=([a-z][a-z0-9_.-]{0,127}) module=([a-z][a-z0-9_.-]{0,127}) version=([0-9.]{1,29}) sha256=([a-f0-9]{64}) generation=([a-f0-9]{64})$");
     private static final Pattern PREFIX=Pattern.compile("(password|token|authorization|bearer|cookie|secret)",Pattern.CASE_INSENSITIVE);
     private final List<Event> events=new ArrayList<>();
     private long serial;
@@ -33,14 +34,16 @@ public final class DiagnosticTimeline {
     public static final class Event {
         public final String source, collector, fileSha256, code, severity, hookId, packageName;
         public final String correlation, message, timestamp;
+        public final String moduleId,moduleVersion,archiveSha256,registryGeneration;
         public final long utcMillis, ordinal;
         public final int lineNumber;
         private Event(String source,String collector,String sha,String code,String severity,
                 String hookId,String pkg,String corr,String message,String timestamp,
-                long utc,long ordinal,int line) {
+                long utc,long ordinal,int line,String moduleId,String moduleVersion,String archiveSha256,String registryGeneration) {
             this.source=source;this.collector=collector;this.fileSha256=sha;this.code=code;
             this.severity=severity;this.hookId=hookId;this.packageName=pkg;
             this.correlation=corr;this.message=message;this.timestamp=timestamp;
+            this.moduleId=moduleId;this.moduleVersion=moduleVersion;this.archiveSha256=archiveSha256;this.registryGeneration=registryGeneration;
             this.utcMillis=utc;this.ordinal=ordinal;this.lineNumber=line;
         }
         public String id() {return fileSha256+":"+lineNumber+":"+ordinal;}
@@ -128,11 +131,23 @@ public final class DiagnosticTimeline {
             }
         } else if(upper.contains("EXCEPTION")){code="EXCEPTION_REPORTED";}
         else if(upper.contains("SCOPE")){code="SCOPE_REPORTED";}
+        String moduleId="",moduleVersion="",archiveSha256="",registryGeneration="";
+        Matcher installed=PACK.matcher(raw);
+        if(installed.find()){
+            try{
+                com.mikeyphw.hooklab.sdk.HookSdk.HookDescriptor descriptor=com.mikeyphw.hooklab.runtime.pack.PackPolicy.hook(installed.group(1));
+                com.mikeyphw.hooklab.runtime.pack.PackPolicy.compareVersions(installed.group(3),installed.group(3));
+                if(descriptor.moduleId.equals(installed.group(2))){
+                    code="PACK_INSTALLED";severity="INFO";confidence="ASSOCIATED";hook=descriptor.id;pkg=descriptor.packageName;
+                    moduleId=descriptor.moduleId;moduleVersion=installed.group(3);archiveSha256=installed.group(4);registryGeneration=installed.group(5);
+                }
+            }catch(IllegalArgumentException ignored){/* Unreviewed imported evidence remains unclassified. */}
+        }
         // Never keep raw third-party text, tokens, paths, URLs, account or clipboard data.
         String message=code.equals("FRAMEWORK_LINE")?"Unclassified imported log line (contents withheld)":
             "Reported diagnostic code: "+code;
         return new Event(source,"SAF_IMPORT",digest,code,severity,hook,pkg,confidence,
-                message,timestamp,millis,ordinal,line);
+                message,timestamp,millis,ordinal,line,moduleId,moduleVersion,archiveSha256,registryGeneration);
     }
     /** Reviewed fixed event-code vocabulary from HookLab's opt-in VerboseLogs. */
     private static boolean knownEvent(String c){
@@ -150,7 +165,7 @@ public final class DiagnosticTimeline {
             if(f.afterUtc>0 && (e.utcMillis==0||e.utcMillis<f.afterUtc))continue;
             if(f.beforeUtc>0 && (e.utcMillis==0||e.utcMillis>f.beforeUtc))continue;
             String q=f.query==null?"":f.query.trim().toLowerCase(Locale.ROOT);
-            if(!q.isEmpty()&&!((e.code+" "+e.message+" "+e.packageName+" "+e.hookId+" "+e.source).toLowerCase(Locale.ROOT).contains(q)))continue;
+            if(!q.isEmpty()&&!((e.code+" "+e.message+" "+e.packageName+" "+e.hookId+" "+e.source+" "+e.moduleId+" "+e.archiveSha256).toLowerCase(Locale.ROOT).contains(q)))continue;
             result.add(e);
         }
         // Unknown source clocks remain in stable import order, not fabricated wall-time order.
@@ -190,7 +205,9 @@ public final class DiagnosticTimeline {
           ",\"utc_millis\":"+e.utcMillis+",\"severity\":"+json(e.severity)+
           ",\"event_code\":"+json(e.code)+",\"message_redacted\":"+json(e.message)+
           ",\"hook_id\":"+json(e.hookId)+",\"package\":"+json(e.packageName)+
-          ",\"correlation\":"+json(e.correlation)+"}";
+          ",\"correlation\":"+json(e.correlation)+(e.moduleId.isEmpty()?"":
+          ",\"module_id\":"+json(e.moduleId)+",\"module_version\":"+json(e.moduleVersion)+
+          ",\"archive_sha256\":"+json(e.archiveSha256)+",\"registry_generation\":"+json(e.registryGeneration))+"}";
     }
     public static String toJsonl(List<Event> events){
         StringBuilder sb=new StringBuilder();for(Event e:events)sb.append(toJson(e)).append('\n');
