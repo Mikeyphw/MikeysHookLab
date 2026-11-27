@@ -805,8 +805,11 @@ public final class MainActivity extends AppCompatActivity {
         TextView title=text(getString(R.string.dx01_choose_source),20);FlatUi.sectionHeading(title);panel.addView(title);
         final String[] types={"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"};final int[] labels={R.string.dx01_module,R.string.dx01_framework,R.string.dx01_logcat_import};
         for(int i=0;i<types.length;i++){String type=types[i];button(panel,labels[i],v->{sheet.dismiss();launchDiagnosticImport(type,null);});}
-        button(panel,android.R.string.cancel,v->sheet.dismiss());sheet.show();
+        button(panel,android.R.string.cancel,v->sheet.dismiss()).setId(R.id.hooklab_import_cancel);
+        // Establish the expanded state before the dialog window acquires focus.
+        // Keep the original scrollable import sheet and all three SAF choices.
         sheet.getBehavior().setSkipCollapsed(true);sheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+        sheet.show();
     }
     private void diagnosticsTimelinePage(){
         body.addView(text(getString(R.string.dx01_import_only),14));
@@ -1769,6 +1772,8 @@ public final class MainActivity extends AppCompatActivity {
         row(framework,R.string.r03_scope,getString(R.string.ui07_scope_warning),v->goTo(SCOPE));
         row(framework,R.string.ui07_open_hooks,getString(R.string.ui_catalog_intro),v->goTo(APPS));
         verboseLogging(); // Existing framework-owned preference + verified commit/readback.
+        LinearLayout packCard=card(getString(R.string.pack_title),getString(R.string.pack_settings_detail));
+        button(packCard,R.string.pack_title,v->startActivity(new Intent(this,com.mikeyphw.hooklab.packs.PackManagerActivity.class)));
         LinearLayout termux=card(getString(R.string.termux_r05_settings_label),
                 getString(R.string.termux_r05_settings_description));
         button(termux,R.string.termux_r05_settings_label,v -> startActivity(

@@ -55,7 +55,7 @@ public final class DiagnosticFixtureTest {
             onView(withText(R.string.dx01_module)).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()));
             onView(withText(R.string.dx01_framework)).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()));
             onView(withText(R.string.dx01_logcat_import)).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()));
-            onView(withText(android.R.string.cancel)).perform(scrollTo(),click());assertEquals(3,app.diagnostics().size());
+            onView(withId(R.id.hooklab_import_cancel)).inRoot(androidx.test.espresso.matcher.RootMatchers.isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(withText(android.R.string.cancel))).perform(scrollTo(),click());assertEquals(3,app.diagnostics().size());
             // Content URI only; malformed paths must fail before resolver access.
             try{com.mikeyphw.hooklab.diagnostics.DiagnosticSaf.importDocument(app.getContentResolver(),android.net.Uri.parse("file:///not-allowed"),app.diagnostics(),"LSPOSED_MODULE");fail();}
             catch(java.io.IOException expected){assertEquals(3,app.diagnostics().size());}

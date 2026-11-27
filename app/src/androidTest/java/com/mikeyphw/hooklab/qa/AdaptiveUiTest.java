@@ -196,13 +196,27 @@ public final class AdaptiveUiTest {
         Files.write(new File(folder,"viewport-failure.json").toPath(),observed.toString().getBytes(StandardCharsets.UTF_8));
         fail("actual matrix viewport did not settle");
     }
-    private void awaitOrientation(ActivityScenario<MainActivity> scenario,int wanted)throws Exception {
-        for(int i=0;i<30;i++){
-            ins.waitForIdleSync();final boolean[] observed={false};
-            scenario.onActivity(a->observed[0]=a.getResources().getConfiguration().orientation==wanted);
-            if(observed[0])return;SystemClock.sleep(200);
+    private View awaitPrimaryNavTarget(ActivityScenario<MainActivity> scenario) {
+        final View[] previous={null,null};final Rect previousBounds=new Rect();int stable=0;
+        for(int i=0;i<50;i++){
+            ins.waitForIdleSync();final View[] observed={null,null};final Rect bounds=new Rect();
+            scenario.onActivity(a->{
+                View root=a.getWindow().getDecorView();NavigationBarView nav=root.findViewById(R.id.hooklab_primary_navigation);
+                View item=nav==null?null:nav.findViewById(202);int min=Math.round(48*a.getResources().getDisplayMetrics().density);
+                if(root.hasWindowFocus()&&item!=null&&item.isAttachedToWindow()&&item.isShown()&&item.isEnabled()&&item.isClickable()
+                    &&item.getGlobalVisibleRect(bounds)&&bounds.width()>=min&&bounds.height()>=min){observed[0]=root;observed[1]=item;}
+            });
+            if(observed[0]!=null&&observed[0]==previous[0]&&observed[1]==previous[1]&&bounds.equals(previousBounds)){
+                if(++stable>=2)return observed[0];
+            }else stable=0;
+            previous[0]=observed[0];previous[1]=observed[1];previousBounds.set(bounds);SystemClock.sleep(200);
         }
-        fail("actual Activity orientation did not change");
+        throw new AssertionError("stable primary navigation target missing");
+    }
+    private static float[] visibleTouchCenter(View view){
+        Rect visible=new Rect();if(!view.getLocalVisibleRect(visible)||visible.isEmpty())throw new AssertionError("navigation target not visible");
+        int[] screen=new int[2];view.getLocationOnScreen(screen);
+        return new float[]{screen[0]+visible.exactCenterX(),screen[1]+visible.exactCenterY()};
     }
     private View awaitCatalogRoot(ActivityScenario<MainActivity> scenario)throws Exception {
         // A successful click or screenshot is not proof that the destination
@@ -236,6 +250,47 @@ public final class AdaptiveUiTest {
         Files.write(new File(folder,"catalog-readiness.json").toPath(),evidence.toString().getBytes(StandardCharsets.UTF_8));
         fail("Hooks catalog readiness missing");
         throw new AssertionError("unreachable");
+    }
+    // Do not use ActivityScenario.onActivity while the old Activity is being
+    // destroyed. Observe the actual resumed Activity and its focused window.
+    private void awaitRotatedSearch(int rotation,String query)throws Exception {
+        android.os.Bundle args=InstrumentationRegistry.getArguments();
+        int w=Integer.parseInt(args.getString("uxr04_width_px","0")),h=Integer.parseInt(args.getString("uxr04_height_px","0"));
+        int expectedWidth=rotation==android.view.Surface.ROTATION_90?Math.max(w,h):Math.min(w,h);
+        int expectedHeight=rotation==android.view.Surface.ROTATION_90?Math.min(w,h):Math.max(w,h);
+        final View[] previous={null};int stable=0;
+        for(int i=0;i<50;i++){
+            final View[] observed={null};
+            ins.runOnMainSync(()->{
+                java.util.Collection<android.app.Activity> resumed=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED);
+                if(resumed.size()!=1)return;
+                android.app.Activity a=resumed.iterator().next();if(!(a instanceof MainActivity)||a.isFinishing()||a.isDestroyed())return;
+                View root=a.getWindow().getDecorView();android.view.Display display=a.getWindowManager().getDefaultDisplay();android.graphics.Point size=new android.graphics.Point();display.getRealSize(size);
+                android.widget.EditText field=root.findViewById(R.id.hooklab_catalog_search);NavigationBarView nav=root.findViewById(R.id.hooklab_primary_navigation);
+                androidx.core.view.WindowInsetsCompat insets=androidx.core.view.ViewCompat.getRootWindowInsets(root);Rect bounds=new Rect();
+                if(root.isAttachedToWindow()&&root.hasWindowFocus()&&display.getRotation()==rotation&&size.x==expectedWidth&&size.y==expectedHeight
+                    &&a.getResources().getConfiguration().orientation==(rotation==android.view.Surface.ROTATION_90?2:1)
+                    &&field!=null&&field.isAttachedToWindow()&&field.isShown()&&field.hasFocus()&&query.contentEquals(field.getText())
+                    &&field.getGlobalVisibleRect(bounds)&&bounds.height()>=Math.round(48*a.getResources().getDisplayMetrics().density)
+                    &&insets!=null&&!insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
+                    &&nav!=null&&nav.getSelectedItemId()==202&&nav.isShown())observed[0]=root;
+            });
+            if(observed[0]!=null&&observed[0]==previous[0]){if(++stable>=2)return;}else stable=0;
+            previous[0]=observed[0];SystemClock.sleep(200);
+        }
+        fail("rotated Activity, real display, search focus, text or IME not stably observed");
+    }
+    private void requestSearchRotation(int rotation){
+        assertTrue("search rotation request refused",ins.getUiAutomation().setRotation(rotation==android.view.Surface.ROTATION_90
+            ?android.app.UiAutomation.ROTATION_FREEZE_90:android.app.UiAutomation.ROTATION_FREEZE_0));
+    }
+    private View awaitFocusedActivityRoot(ActivityScenario<MainActivity> scenario){
+        for(int i=0;i<50;i++){
+            ins.waitForIdleSync();final View[] observed={null};
+            scenario.onActivity(a->{View root=a.getWindow().getDecorView();if(root.isAttachedToWindow()&&root.hasWindowFocus())observed[0]=root;});
+            if(observed[0]!=null)return observed[0];SystemClock.sleep(200);
+        }
+        throw new AssertionError("Activity window focus not restored");
     }
     private void awaitSearch(ActivityScenario<MainActivity> scenario,boolean imeExpected,String query)throws Exception {
         // Insets and focus are asynchronous across real keyboard transitions.
@@ -311,7 +366,10 @@ public final class AdaptiveUiTest {
                 assertNotNull(target);assertTrue(target.isEnabled()&&target.isClickable()&&target.isFocusable());
                 assertTrue(target.getContentDescription()!=null&&target.getContentDescription().length()>0);
             });capture(s,"home",records);
-            phase("OPEN_HOOKS");onView(org.hamcrest.Matchers.allOf(withId(202),isDescendantOfA(withId(R.id.hooklab_primary_navigation)),isDisplayed())).perform(click());
+            phase("OPEN_HOOKS");View navigationRoot=awaitPrimaryNavTarget(s);
+            onView(org.hamcrest.Matchers.allOf(withId(202),isDescendantOfA(withId(R.id.hooklab_primary_navigation)),isDisplayed()))
+                .inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.is(navigationRoot)))
+                .perform(new androidx.test.espresso.action.GeneralClickAction(androidx.test.espresso.action.Tap.SINGLE,AdaptiveUiTest::visibleTouchCenter,androidx.test.espresso.action.Press.FINGER));
             awaitCatalogRoot(s);capture(s,"hooks",records);
             phase("SEARCH_OPEN");View catalogRoot=awaitCatalogRoot(s);
             onView(withId(R.id.hooklab_catalog_search)).inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.is(catalogRoot))).perform(scrollTo(),click());
@@ -319,22 +377,24 @@ public final class AdaptiveUiTest {
             phase("SEARCH_TYPE");onView(withId(R.id.hooklab_catalog_search)).perform(replaceText("Neo"));awaitSearch(s,true,"Neo");
             phase("SEARCH_CLOSE_IME");onView(withId(R.id.hooklab_catalog_search)).perform(closeSoftKeyboard());awaitSearch(s,false,"Neo");
             phase("SEARCH_RECREATE");s.recreate();awaitSearch(s,false,"Neo");
-            phase("SEARCH_ROTATE");final int[] orientation={0};s.onActivity(a->orientation[0]=a.getResources().getConfiguration().orientation);
-            try {
-                if(orientation[0]==1)device.setOrientationLeft();else device.setOrientationNatural();
-                awaitOrientation(s,orientation[0]==1?2:1);
-                awaitSearch(s,false,"Neo");
-            } finally {
-                if(orientation[0]==1)device.setOrientationNatural();else device.setOrientationLeft();
-            }
-            phase("SEARCH_ROTATE_RETURN");awaitOrientation(s,orientation[0]);awaitSearch(s,false,"Neo");
+            phase("SEARCH_ROTATE");final int[] rotation={0};s.onActivity(a->rotation[0]=a.getWindowManager().getDefaultDisplay().getRotation());
+            assertTrue(rotation[0]==android.view.Surface.ROTATION_0||rotation[0]==android.view.Surface.ROTATION_90);
+            int opposite=rotation[0]==android.view.Surface.ROTATION_0?android.view.Surface.ROTATION_90:android.view.Surface.ROTATION_0;
+            phase("SEARCH_ROTATE_REQUEST");requestSearchRotation(opposite);
+            phase("SEARCH_ROTATE_SETTLE");awaitRotatedSearch(opposite,"Neo");
+            phase("SEARCH_ROTATE_RETURN");requestSearchRotation(rotation[0]);
+            phase("SEARCH_ROTATE_RETURN_SETTLE");awaitRotatedSearch(rotation[0],"Neo");
             phase("SEARCH_CLEAR");onView(withId(R.id.hooklab_catalog_search)).perform(replaceText(""),closeSoftKeyboard());awaitSearch(s,false,"");
             phase("CATALOG_HIT_TARGETS");checkCatalogHitTargets(s);
             phase("OPEN_GROUP");onView(withTagValue(org.hamcrest.Matchers.is((Object)"r02:open:group.obtainx"))).perform(scrollTo(),click());capture(s,"group",records);
             phase("OPEN_HOOK");String hook=com.mikeyphw.hooklab.core.TweakCatalog.entries().stream().filter(e->"neostore.obtainx.manual".equals(e.spec.id)).findFirst().orElseThrow(IllegalStateException::new).title;
             onView(withText(hook)).perform(scrollTo(),click());capture(s,"hook",records);back();back();
             phase("OPEN_DIAGNOSTICS");onView(withId(203)).perform(click());capture(s,"diagnostics",records);
-            phase("IMPORT_CANCEL");tap(R.string.dx01_import);onView(withText(android.R.string.cancel)).perform(click());assertEquals(0,app.diagnostics().size());
+            phase("IMPORT_OPEN");View diagnosticsRoot=awaitFocusedActivityRoot(s);
+            onView(withText(R.string.dx01_import)).inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.is(diagnosticsRoot))).perform(scrollTo(),click());
+            phase("IMPORT_DIALOG_READY");onView(withText(R.string.dx01_choose_source)).inRoot(androidx.test.espresso.matcher.RootMatchers.isDialog()).check(matches(isDisplayed()));
+            phase("IMPORT_CANCEL");onView(withId(R.id.hooklab_import_cancel)).inRoot(androidx.test.espresso.matcher.RootMatchers.isDialog()).check(matches(withText(android.R.string.cancel))).perform(scrollTo(),click());
+            phase("IMPORT_DISMISSED");awaitFocusedActivityRoot(s);onView(withText(R.string.dx01_import)).check(matches(isDisplayed()));assertEquals(0,app.diagnostics().size());
             phase("OPEN_SETTINGS");onView(withId(100)).perform(click());capture(s,"settings",records);
             if(Build.VERSION.SDK_INT==29)onView(withText(R.string.r04_dynamic_unavailable)).perform(scrollTo()).check(matches(isDisplayed()));
             phase("THEME_CANCEL");tap(R.string.r03_theme);onView(withText(android.R.string.cancel)).perform(click());

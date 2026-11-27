@@ -53,14 +53,23 @@ public final class HookSdk {
         public final Diagnostics diagnostics;
         public final Hooks hooks;
         public final ApplyMode applyMode = ApplyMode.RESTART_HOST;
+        private final PackHookContext packHost;
         public Context(String pkg, String process, long version, String generation, ClassLoader loader,
                        Settings settings, Diagnostics diagnostics, Hooks hooks) {
+            this(pkg,process,version,generation,loader,settings,diagnostics,hooks,null,null);
+        }
+        /** Only the trusted parent dispatcher supplies this host registration port. */
+        public Context(String pkg,String process,long version,String generation,ClassLoader loader,
+                       Settings settings,Diagnostics diagnostics,Hooks hooks,Object hostContext,PackHookApi api) {
             if (version < 1 || !Objects.requireNonNull(pkg).equals(process) || generation == null || !generation.matches("[0-9a-f]{64}"))
                 throw new IllegalArgumentException("unverified host context");
             packageName = pkg; processName = process; this.version = version; this.generation = generation;
             hostLoader = Objects.requireNonNull(loader); this.settings = Objects.requireNonNull(settings);
             this.diagnostics = Objects.requireNonNull(diagnostics); this.hooks=Objects.requireNonNull(hooks);
+            if((hostContext==null)!=(api==null))throw new IllegalArgumentException("incomplete pack host port");
+            packHost=api==null?null:new PackHookContext(this,hostContext,api);
         }
+        public PackHookContext packHost(){if(packHost==null)throw new IllegalStateException("pack host port unavailable");return packHost;}
     }
 
     /** Immutable SDK v1 metadata. No executable class references. */

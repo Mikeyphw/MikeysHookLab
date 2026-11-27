@@ -9,4 +9,5 @@
     <item name="hooklab_capture_interrupted" type="id" />
     <item name="hooklab_capture_research" type="id" />
     <item name="hooklab_capture_module" type="id" />
+    <item name="hooklab_import_cancel" type="id" />
 </resources>

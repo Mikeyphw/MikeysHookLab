@@ -14,7 +14,7 @@ def require(value,reason):
 def compile_policy(root):
     helper=root/'Args.java'
     helper.write_text('import com.mikeyphw.hooklab.termux.TermuxCommandPolicy; public class Args { public static void main(String[] args) { for(String s:TermuxCommandPolicy.arguments(args[0],args[1])) { System.out.print(s);System.out.print((char)0); } }}')
-    subprocess.run(['javac','-encoding','UTF-8','-d',str(root),str(POLICY),str(helper)],check=True,timeout=30)
+    subprocess.run(['javac','-encoding','UTF-8','-d',str(root),str(POLICY),str(ROOT/'sdk/src/main/java/com/mikeyphw/hooklab/sdk/PackPreviewContract.java'),str(helper)],check=True,timeout=30)
 
 def args(root,prefix,source,shell):
     raw=subprocess.check_output(['java','-Dfile.encoding=UTF-8','-cp',str(root),'Args',source,shell],timeout=10)

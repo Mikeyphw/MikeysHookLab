@@ -86,11 +86,15 @@ class AdaptiveMatrixTests(unittest.TestCase):
    adb.assert_called_once()
  def test_search_real_route_window_binding(self):
   root=Path(__file__).resolve().parents[2];source=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text()
-  helper=source.split('private View awaitCatalogRoot(',1)[1].split('private void awaitSearch(',1)[0]
+  helper=source.split('private View awaitCatalogRoot(',1)[1].split('private void awaitRotatedSearch(',1)[0]
   for check in ('root.hasWindowFocus()','nav.getSelectedItemId()==202','R.string.ui_hooks','field.isAttachedToWindow()','field.getHeight()','i<50'):
    self.assertIn(check,helper)
   for prohibited in ('.perform(','.requestFocus(','.setText(','.setSelectedItemId(','.setRotation('):self.assertNotIn(prohibited,helper)
+  navigation=source.split('private View awaitPrimaryNavTarget(',1)[1].split('private View awaitCatalogRoot(',1)[0]
+  for check in ('root.hasWindowFocus()','item.isAttachedToWindow()','item.isClickable()','bounds.equals(previousBounds)','++stable>=2','i<50','getLocalVisibleRect','getLocationOnScreen'):self.assertIn(check,navigation)
+  for prohibited in ('.performClick(','.setSelectedItemId(','.requestFocus('):self.assertNotIn(prohibited,navigation)
   journey=source.split('phase("OPEN_HOOKS")',1)[1].split('phase("SEARCH_TYPE")',1)[0]
+  self.assertIn('awaitPrimaryNavTarget(s)',journey);self.assertIn('GeneralClickAction',journey);self.assertIn('Tap.SINGLE',journey);self.assertIn('visibleTouchCenter',journey)
   self.assertIn('isDescendantOfA(withId(R.id.hooklab_primary_navigation))',journey);self.assertIn('awaitCatalogRoot(s);capture(s,"hooks",records)',journey);self.assertIn('RootMatchers.withDecorView',journey);self.assertIn('.perform(scrollTo(),click())',journey);self.assertIn('awaitSearch(s,true,"")',journey)
  def test_catalog_readiness_is_source_phase_bound_and_safe(self):
   from unittest.mock import patch
@@ -103,6 +107,43 @@ class AdaptiveMatrixTests(unittest.TestCase):
    row['search_attached']='private hierarchy';self.assertIsNone(a.catalog_readiness('a'*40,a.JOURNEY,'SEARCH_OPEN'))
    row['search_attached']=True;row['search_laid_out']=True;self.assertIsNone(a.catalog_readiness('a'*40,a.JOURNEY,'SEARCH_OPEN'))
    row['search_laid_out']=False;row['raw']='private hierarchy';self.assertIsNone(a.catalog_readiness('a'*40,a.JOURNEY,'SEARCH_OPEN'))
+ def test_rotation_readiness_observes_real_resumed_window_without_state_mutation(self):
+  root=Path(__file__).resolve().parents[2];source=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text()
+  helper=source.split('private void awaitRotatedSearch(',1)[1].split('private void requestSearchRotation(',1)[0]
+  for marker in ('ins.runOnMainSync','Stage.RESUMED','resumed.size()!=1','root.hasWindowFocus()','display.getRotation()==rotation','size.x==expectedWidth&&size.y==expectedHeight','field.hasFocus()','query.contentEquals(field.getText())','getGlobalVisibleRect','Type.ime()','nav.getSelectedItemId()==202','nav.isShown()','++stable>=2','i<50'):
+   self.assertIn(marker,helper)
+  for forbidden in ('.setRotation(','.requestFocus(','.setText(','.performClick(','.onActivity(','.setSelectedItemId('):self.assertNotIn(forbidden,helper)
+  journey=source.split('phase("SEARCH_ROTATE_REQUEST")',1)[1].split('phase("SEARCH_CLEAR")',1)[0]
+  self.assertEqual(journey.count('requestSearchRotation('),2);self.assertEqual(journey.count('awaitRotatedSearch('),2)
+  self.assertIn('requestSearchRotation(opposite)',journey);self.assertIn('requestSearchRotation(rotation[0])',journey)
+  self.assertIn('phase("SEARCH_ROTATE_SETTLE")',journey);self.assertIn('phase("SEARCH_ROTATE_RETURN_SETTLE")',journey)
+ def test_import_retains_single_native_sheet_real_cancel_and_focus(self):
+  root=Path(__file__).resolve().parents[2];activity=(root/'app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java').read_text();source=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text()
+  sheet=activity.split('private void showImportSheet()',1)[1].split('private void diagnosticsTimelinePage()',1)[0]
+  self.assertEqual(sheet.count('new com.google.android.material.bottomsheet.BottomSheetDialog'),1);self.assertIn('ScrollView',sheet)
+  self.assertIn('"LSPOSED_MODULE","LSPOSED_FRAMEWORK","ANDROID_LOGCAT_IMPORT"',sheet);self.assertIn('diagnosticState.pickerPending()',sheet);self.assertIn('launchDiagnosticImport(type,null)',sheet)
+  self.assertLess(sheet.index('STATE_EXPANDED'),sheet.index('sheet.show()'));self.assertIn('button(panel,android.R.string.cancel,v->sheet.dismiss()).setId(R.id.hooklab_import_cancel)',sheet)
+  journey=source.split('phase("IMPORT_OPEN")',1)[1].split('phase("OPEN_SETTINGS")',1)[0]
+  for marker in ('awaitFocusedActivityRoot(s)','RootMatchers.withDecorView','R.string.dx01_choose_source','RootMatchers.isDialog()','withId(R.id.hooklab_import_cancel)','withText(android.R.string.cancel)','perform(scrollTo(),click())','assertEquals(0,app.diagnostics().size())'):
+   self.assertIn(marker,journey)
+  self.assertEqual(journey.count('perform(scrollTo(),click())'),2);self.assertNotIn('.dismiss(',journey)
+  self.assertEqual(journey.count('awaitFocusedActivityRoot(s)'),2)
+ def test_instrument_missing_terminal_timeout_and_spawn_fail_closed(self):
+  from unittest.mock import patch
+  import subprocess
+  cls,method=a.JOURNEY.split('#');started=f'INSTRUMENTATION_STATUS: class={cls}\nINSTRUMENTATION_STATUS: test={method}\nINSTRUMENTATION_STATUS_CODE: 1\n'
+  success=started+f'INSTRUMENTATION_STATUS: class={cls}\nINSTRUMENTATION_STATUS: test={method}\nINSTRUMENTATION_STATUS_CODE: 0\nOK (1 test)\nINSTRUMENTATION_CODE: -1\n'
+  cases=[(subprocess.CompletedProcess([],0,started+'INSTRUMENTATION_RESULT: shortMsg=Process crashed.\nPRIVATE DUMP',''),None,'TERMINAL_RESULT_MISSING'),(subprocess.CompletedProcess([],7,'PRIVATE DUMP',''),None,'TRANSPORT_FAILED'),(None,subprocess.TimeoutExpired('adb',900,output=started.encode()),'TIMEOUT'),(None,OSError('PRIVATE DUMP'),'SPAWN_FAILED'),(subprocess.CompletedProcess([],0,success,'') ,None,None)]
+  for result,error,expected in cases:
+   with self.subTest(expected=expected),tempfile.TemporaryDirectory() as tmp,patch.object(a,'lock_matrix_rotation'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'adb'),patch.object(a,'checkpoint_phase',return_value='SEARCH_ROTATE_REQUEST'),patch.object(a.n,'failure_checkpoint',return_value=None),patch.object(a.subprocess,'run',return_value=result,side_effect=error) as child:
+    out=Path(tmp)
+    if expected is None:
+     a.instrument(a.JOURNEY,a.config('api29-compact'),'a'*40,out);self.assertFalse((out/'failure.json').exists())
+    else:
+     with self.assertRaisesRegex(ValueError,'instrumentation failed'):a.instrument(a.JOURNEY,a.config('api29-compact'),'a'*40,out)
+     row=json.loads((out/'failure.json').read_text());self.assertEqual(row['reason'],expected);self.assertFalse(row['terminal_result_present']);self.assertNotIn('PRIVATE',json.dumps(row));self.assertEqual(row['checkpoint_phase'],'SEARCH_ROTATE_REQUEST')
+     if expected=='TERMINAL_RESULT_MISSING':self.assertEqual(row['termination_markers'],['PROCESS_CRASH_REPORTED']);self.assertEqual(row['transport_exit'],0)
+    child.assert_called_once()
  def test_home_uses_semantic_action_and_keeps_full_accessibility_gate(self):
   root=Path(__file__).resolve().parents[2];test=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text();activity=(root/'app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java').read_text()
   home=test.split('phase("HOME_SCROLL")',1)[1].split('phase("OPEN_HOOKS")',1)[0]

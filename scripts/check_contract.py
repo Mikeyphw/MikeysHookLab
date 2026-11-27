@@ -25,14 +25,16 @@ check(len(query_list)==1 and all(x.tag=='package' for x in query_list[0])
           'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx','com.termux'],
       'exact MCC/Neo Store/Droid-ify/Word Master/ChatGPT/ObtainX visibility only')
 check(app.get(ns+'allowBackup')=='false' and app.get(ns+'name')=='.HookLabApp', 'lifecycle application')
-act = app.findall('activity')
-check(len(act)==3 and
-      {a.get(ns+'name') for a in act}=={'.ui.MainActivity','.mcc.MccControlActivity','.termux.TermuxBridgeActivity'}
-      and all(a.get(ns+'exported')=='true' for a in act)
-      and len(act[0].findall('intent-filter'))==1
-      and len(act[1].findall('intent-filter'))==0
-      and len(act[2].findall('intent-filter'))==0,
-      'one launcher and two explicit-only activities')
+act = {a.get(ns+'name'):a for a in app.findall('activity')}
+check(len(app.findall('activity'))==4 and set(act)=={'.ui.MainActivity','.mcc.MccControlActivity','.termux.TermuxBridgeActivity','.packs.PackManagerActivity'}
+      and all(a.get(ns+'exported')=='true' for a in act.values())
+      and len(act['.ui.MainActivity'].findall('intent-filter'))==1
+      and not act['.mcc.MccControlActivity'].findall('intent-filter')
+      and not act['.termux.TermuxBridgeActivity'].findall('intent-filter'), 'one launcher and exact reviewed activity roster')
+share=act['.packs.PackManagerActivity'].findall('intent-filter')
+check(len(share)==1 and [(x.tag,dict(x.attrib)) for x in share[0]]==[
+      ('action',{ns+'name':'android.intent.action.SEND'}),('category',{ns+'name':'android.intent.category.DEFAULT'}),
+      ('data',{ns+'mimeType':'application/vnd.hooklab.pack'})], 'exact pack share MIME only')
 receivers=app.findall('receiver')
 check(len(receivers)==1 and receivers[0].get(ns+'name')=='.termux.TermuxSessionReceipt' and receivers[0].get(ns+'exported')=='false' and not receivers[0].findall('intent-filter'),'private Termux session callback only')
 providers = app.findall('provider')

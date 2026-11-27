@@ -20,6 +20,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".packs.PackManagerActivity" android:label="@string/pack_title" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="application/vnd.hooklab.pack"/></intent-filter>
+        </activity>
         <activity android:name=".mcc.MccControlActivity" android:exported="true" />
         <activity android:name=".termux.TermuxBridgeActivity" android:exported="true" android:excludeFromRecents="true" />
         <receiver android:name=".termux.TermuxSessionReceipt" android:exported="false" />
