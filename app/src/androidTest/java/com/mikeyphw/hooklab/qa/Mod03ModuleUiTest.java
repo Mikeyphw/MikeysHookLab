@@ -62,22 +62,32 @@ public final class Mod03ModuleUiTest {
         byte[] key=Files.readAllBytes(new File(DIR,"publisher.der").toPath());
         byte[] bytes=Files.readAllBytes(new File(DIR,"wordmaster.hookpack").toPath());
         HookPack.Verified pack=HookPack.verify(bytes,key);PackPolicy.requireUiAdmission(pack,pack.archiveSha256);
-        store.trust(key,pack.signer,"personal");store.install(new ByteArrayInputStream(bytes),pack.archiveSha256);
-        try(ActivityScenario<PackManagerActivity> activity=ActivityScenario.launch(PackManagerActivity.moduleIntent(APP,"wordmaster"))){
-            waitFor(R.string.mod03_configure);capture(activity,"overview",R.string.mod03_overview);
-            tap(R.string.mod03_configure);waitFor(R.string.mod03_ui_open);capture(activity,"configure",R.string.mod03_configure);
+        store.trust(key,pack.signer,"personal");
+        for(String module:java.util.List.of("wordmaster","chatgpt")){
+            byte[] archive=Files.readAllBytes(new File(DIR,module+".hookpack").toPath());
+            HookPack.Verified admitted=HookPack.verify(archive,key);PackPolicy.requireUiAdmission(admitted,admitted.archiveSha256);
+            assertEquals(module,admitted.moduleId);store.install(new ByteArrayInputStream(archive),admitted.archiveSha256);
+            exercise(module);
+        }
+        for(String id:java.util.List.of("wordmaster.night.filter","chatgpt.codeblock.copy.probe","chatgpt.codeblock.termux.handoff"))assertEquals("module navigation must not activate runtime","builtin",store.state().modes().get(id));
+    }
+    private static void exercise(String module)throws Exception{
+        boolean chat="chatgpt".equals(module);String prefix=chat?"chatgpt-":"";
+        try(ActivityScenario<PackManagerActivity> activity=ActivityScenario.launch(PackManagerActivity.moduleIntent(APP,module))){
+            waitFor(R.string.mod03_configure);capture(activity,prefix+"overview",R.string.mod03_overview);
+            tap(R.string.mod03_configure);waitFor(R.string.mod03_ui_open);capture(activity,prefix+"configure",R.string.mod03_configure);
             tap(R.string.mod03_ui_open);onView(withText(android.R.string.cancel)).perform(click());
             onView(withText(R.string.mod03_ui_close)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist());
             tap(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_consent)).perform(click());waitFor(R.string.mod03_ui_close);
-            onView(withText("Word Master custom settings")).perform(scrollTo()).check(matches(isDisplayed()));
-            onView(withText("Changes require review and a host restart.")).perform(scrollTo()).check(matches(isDisplayed()));
+            onView(withText(chat?"ChatGPT custom settings":"Word Master custom settings")).perform(scrollTo()).check(matches(isDisplayed()));
+            onView(withText(chat?"Review and restart ChatGPT. Existing execution consent is unchanged. Profiles cannot enable direct execution.":"Changes require review and a host restart.")).perform(scrollTo()).check(matches(isDisplayed()));
             tap(R.string.mod03_ui_close);onView(withText(R.string.mod03_ui_close)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist());
             tap(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_consent)).perform(click());waitFor(R.string.mod03_ui_close);
             activity.recreate();waitFor(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_close)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist());
-            tap(R.string.mod03_logs);capture(activity,"logs",R.string.mod03_logs);
-            tap(R.string.mod03_versions);capture(activity,"versions",R.string.mod03_versions);
+            tap(R.string.mod03_logs);capture(activity,prefix+"logs",R.string.mod03_logs);
+            tap(R.string.mod03_versions);capture(activity,prefix+"versions",R.string.mod03_versions);
             activity.onActivity(a->{assertFalse(a.isFinishing());});
+            if(chat)com.mikeyphw.hooklab.packs.ChatGptProfileFixture.exercise(activity);
         }
-        assertEquals("module navigation must not activate runtime","builtin",store.state().modes().get("wordmaster.night.filter"));
     }
 }

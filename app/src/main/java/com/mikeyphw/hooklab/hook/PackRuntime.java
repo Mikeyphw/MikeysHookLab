@@ -34,8 +34,9 @@ final class PackRuntime {
     private final String pkg,process;
     private final long version;
     private final com.mikeyphw.hooklab.sdk.ModuleConfig.Filter filter;
-    PackRuntime(XposedModule module,Context host,String pkg,String process,long version,ClassLoader loader,SharedPreferences settings,SharedPreferences safety,Set<String> failed,com.mikeyphw.hooklab.sdk.ModuleConfig.Filter filter){
-        this.module=module;this.host=host;this.pkg=pkg;this.process=process;this.version=version;hostLoader=loader;this.settings=settings;this.safety=safety;this.failed=failed;this.filter=filter;
+    private final com.mikeyphw.hooklab.sdk.ChatGptConfig.Options chatGpt;
+    PackRuntime(XposedModule module,Context host,String pkg,String process,long version,ClassLoader loader,SharedPreferences settings,SharedPreferences safety,Set<String> failed,com.mikeyphw.hooklab.sdk.ModuleConfig.Filter filter,com.mikeyphw.hooklab.sdk.ChatGptConfig.Options chatGpt){
+        this.module=module;this.host=host;this.pkg=pkg;this.process=process;this.version=version;hostLoader=loader;this.settings=settings;this.safety=safety;this.failed=failed;this.filter=filter;this.chatGpt=chatGpt;
         SharedPreferences preferences=null;PackSnapshot observed=null;
         try{preferences=module.getRemotePreferences(PackSnapshot.GROUP);observed=PackSnapshot.read(preferences.getAll());}
         catch(Exception|LinkageError e){module.log(Log.WARN,"HookLabPack","PACK_REGISTRY_REFUSED category="+TweakDiagnostics.failureCategory(e));}
@@ -92,7 +93,7 @@ final class PackRuntime {
         try{
             HookSdk.Entrypoint entry=type.getDeclaredConstructor().newInstance();
             HookSdk.Context context=new HookSdk.Context(pkg,process,version,snapshot.generation,hostLoader,
-                    new HookSdk.Settings(Collections.singletonMap(id,true),PackPolicy.settingsSchema(pack)==2?filter:com.mikeyphw.hooklab.sdk.ModuleConfig.defaultsFilter()),event->module.log(Log.INFO,"HookLabPack","SDK event="+event.name()),
+                    new HookSdk.Settings(Collections.singletonMap(id,true),PackPolicy.settingsSchema(pack)==2?filter:com.mikeyphw.hooklab.sdk.ModuleConfig.defaultsFilter(),PackPolicy.settingsSchema(pack)==2?chatGpt:com.mikeyphw.hooklab.sdk.ChatGptConfig.defaultsOptions()),event->module.log(Log.INFO,"HookLabPack","SDK event="+event.name()),
                     (ignored,marker)->{throw new IllegalStateException("probe registration not available in production packs");},host,transaction);
             entry.install(context);transaction.commit();
             module.log(Log.INFO,"HookLabPack","PACK_INSTALLED id="+id+" module="+pack.moduleId+" version="+pack.version+" sha256="+sha+" generation="+snapshot.generation);

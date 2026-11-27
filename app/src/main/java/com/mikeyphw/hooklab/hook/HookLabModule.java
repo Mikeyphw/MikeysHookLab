@@ -114,11 +114,15 @@ public final class HookLabModule extends XposedModule {
         if(com.mikeyphw.hooklab.sdk.ModuleConfig.TARGET.equals(pkg))try{
             config=com.mikeyphw.hooklab.sdk.ModuleConfig.read(getRemotePreferences(com.mikeyphw.hooklab.sdk.ModuleConfig.GROUP).getAll()).current.effective(com.mikeyphw.hooklab.sdk.ModuleConfig.MODULE,com.mikeyphw.hooklab.sdk.ModuleConfig.HOOK,pkg);
         }catch(RuntimeException|LinkageError failure){configValid=false;log(Log.WARN,"HookLab","MODULE_CONFIG_REFUSED id=wordmaster.night.filter");}
-        final boolean configReady=configValid;
+        com.mikeyphw.hooklab.sdk.ChatGptConfig.Options chatGpt=com.mikeyphw.hooklab.sdk.ChatGptConfig.defaultsOptions();boolean chatGptValid=true;
+        if(com.mikeyphw.hooklab.sdk.ChatGptConfig.TARGET.equals(pkg))try{
+            chatGpt=com.mikeyphw.hooklab.sdk.ChatGptConfig.read(getRemotePreferences(com.mikeyphw.hooklab.sdk.ChatGptConfig.GROUP).getAll()).current.effective(com.mikeyphw.hooklab.sdk.ChatGptConfig.MODULE,com.mikeyphw.hooklab.sdk.ChatGptConfig.HOOK,pkg);
+        }catch(RuntimeException|LinkageError failure){chatGptValid=false;log(Log.WARN,"HookLab","MODULE_CONFIG_REFUSED id=chatgpt.codeblock.termux.handoff");}
+        final boolean configReady=configValid,chatGptReady=chatGptValid;
         HookContext context = new HookContext(pkg, process, version, loader, this, ctx,
-                event -> log(Log.INFO,"HookLab","SDK event="+event.name()),config);
+                event -> log(Log.INFO,"HookLab","SDK event="+event.name()),config,chatGpt);
         final java.util.List<TweakEngine.Entry<HookContext>> entries=TweakCatalog.entries();
-        final PackRuntime packs=new PackRuntime(this,ctx,pkg,process,version,loader,settings,safety,failedInProcess,config);
+        final PackRuntime packs=new PackRuntime(this,ctx,pkg,process,version,loader,settings,safety,failedInProcess,config,chatGpt);
         final java.util.List<TweakEngine.Entry<HookContext>> resolved=new java.util.ArrayList<>();
         for(TweakEngine.Entry<HookContext> entry:entries){
             if(packs.usesPack(entry.spec.id))resolved.add(new TweakEngine.Entry<>(entry.spec,entry.title,entry.description,ignored->packs.install(entry.spec.id)));
@@ -130,7 +134,7 @@ public final class HookLabModule extends XposedModule {
         if (!RegistryGeneration.matches(BuiltinRegistry.current().generation,
                 () -> getRemotePreferences(RegistryGeneration.GROUP).getString(RegistryGeneration.KEY,null))) return;
         TweakEngine.dispatch(resolved, pkg, process, version,
-                id -> packs.eligible(id) && snapshot.enabled(id) && (configReady||!com.mikeyphw.hooklab.sdk.ModuleConfig.HOOK.equals(id)), context,
+                id -> packs.eligible(id) && snapshot.enabled(id) && (configReady||!com.mikeyphw.hooklab.sdk.ModuleConfig.HOOK.equals(id)) && (chatGptReady||!com.mikeyphw.hooklab.sdk.ChatGptConfig.HOOK.equals(id)), context,
                 (id, failure) -> log(Log.ERROR, "HookLab",
                         "Tweak failure id=" + id + " category=" + TweakDiagnostics.failureCategory(failure)),
                 new TweakEngine.FaultPolicy() {

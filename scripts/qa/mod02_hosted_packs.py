@@ -29,7 +29,7 @@ def verify_artifacts(out,personal,evidence,ident,cli):
     """
     signed=verify(out,ident)
     require(personal.is_dir() and not personal.is_symlink(),'personal directory')
-    expected={m+'/'+name for m in ROSTER for name in ('manifest.json','classes.dex','provenance.json')}|{'wordmaster/ui.dex','wordmaster/ui-resources.json'}
+    expected={m+'/'+name for m in ROSTER for name in ('manifest.json','classes.dex','provenance.json')}|{m+'/'+n for m in ('wordmaster','chatgpt') for n in ('ui.dex','ui-resources.json')}
     paths={p.relative_to(personal).as_posix():p for p in personal.rglob('*')}
     require(set(paths)==expected|set(ROSTER)|{'receipt.json'} and all(not p.is_symlink() and (p.is_dir() if n in ROSTER else p.is_file()) for n,p in paths.items()),'personal input inventory')
     receipt=strict_json((personal/'receipt.json').read_bytes())
@@ -46,7 +46,7 @@ def verify_artifacts(out,personal,evidence,ident,cli):
         # independently published unsigned bytes to those exact admitted DEX bytes.
         with zipfile.ZipFile(archive) as z:
             require(hashlib.sha256(z.read('runtime/classes.dex')).hexdigest()==receipt['files'][module+'/classes.dex'],'personal DEX differs from tested pack')
-            if module=='wordmaster':
+            if module in ('wordmaster','chatgpt'):
                 for member,filename in (('ui/classes.dex','ui.dex'),('ui/resources.json','ui-resources.json')):
                     require(hashlib.sha256(z.read(member)).hexdigest()==receipt['files'][module+'/'+filename],'personal UI input differs from tested pack')
     require(evidence.is_file() and not evidence.is_symlink(),'ART receipt missing')
@@ -79,9 +79,9 @@ def build(out,personal,ui_fixture):
             print(f'MOD02_HOSTED_DEX_READY module={module} sha256={sha(dexdir/"classes.dex")} bytes={(dexdir/"classes.dex").stat().st_size}',flush=True)
             ui_args=[]
             personal_module=personal/module;personal_module.mkdir()
-            if module=='wordmaster':
-                ui_src=ROOT/'modules/wordmaster/ui';api=work/'ui-api';api.mkdir();ui_classes=work/'ui-classes';ui_classes.mkdir();ui_dex=work/'ui-dex';ui_dex.mkdir()
-                api_jar=work/'ui-api.jar';ui_jar=work/'ui.jar'
+            if module in ('wordmaster','chatgpt'):
+                ui_src=ROOT/'modules'/module/'ui';api=home/'ui-api';api.mkdir();ui_classes=home/'ui-classes';ui_classes.mkdir();ui_dex=home/'ui-dex';ui_dex.mkdir()
+                api_jar=home/'ui-api.jar';ui_jar=home/'ui.jar'
                 run('javac','--release','17','-encoding','UTF-8','-classpath',f'{android}:{sdkjar}','-d',api,ROOT/'app/src/main/java/com/mikeyphw/hooklab/packs/ModuleUiProvider.java')
                 run('jar','--create','--file',api_jar,'-C',api,'.')
                 run('javac','--release','17','-encoding','UTF-8','-classpath',f'{android}:{sdkjar}:{api_jar}','-d',ui_classes,ui_src/'Provider.java')
@@ -95,11 +95,11 @@ def build(out,personal,ui_fixture):
             (personal_module/'provenance.json').write_bytes(canonical({'schema':'hooklab.pack.provenance.v1',**ident,'settings_schema':settings_schema(module),'channel':'personal'}))
             repeat=home/'repeat.hookpack';run(cli,'module','pack',mf,provenance,dexdir/'classes.dex',private,repeat,*ui_args);require(sha(pack)==sha(repeat),'nonrepeatable pack')
             run(cli,'module','verify',pack,public);run('java','-cp',f'{classes}:{ROOT/"runtime/src/main/resources"}','Mod02PackChecks',pack,public)
-            if module=='wordmaster':
+            if module in ('wordmaster','chatgpt'):
                 # Isolated emulator only. Never upload this personal fixture or its key.
                 (ui_fixture/'publisher.der').write_bytes(public.read_bytes())
-                run(cli,'module','pack',mf,personal_module/'provenance.json',dexdir/'classes.dex',private,ui_fixture/'wordmaster.hookpack',*ui_args)
-                run(cli,'module','verify',ui_fixture/'wordmaster.hookpack',public)
+                run(cli,'module','pack',mf,personal_module/'provenance.json',dexdir/'classes.dex',private,ui_fixture/(module+'.hookpack'),*ui_args)
+                run(cli,'module','verify',ui_fixture/(module+'.hookpack'),public)
     (out/'receipt.json').write_bytes(canonical({'schema':'hooklab.mod02.hosted.v1',**ident,'status':'SIGNED_TEST_PACKS_VERIFIED_NOT_ACTIVATED','files':{p.name:sha(p) for p in sorted(out.iterdir())}})+b'\n');verify(out,ident)
     (personal/'receipt.json').write_bytes(canonical({'schema':'hooklab.mod02.personal-inputs.v1',**ident,'status':'UNSIGNED_NOT_INSTALLABLE','files':{p.relative_to(personal).as_posix():sha(p) for p in sorted(personal.rglob('*')) if p.is_file()}})+b'\n')
     print('MOD02_HOSTED_SIGNED_TEST_PACKS_PASS')

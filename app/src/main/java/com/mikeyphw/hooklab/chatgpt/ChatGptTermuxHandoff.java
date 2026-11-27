@@ -11,6 +11,7 @@ import android.util.Log;
 import com.mikeyphw.hooklab.core.HookContext;
 import com.mikeyphw.hooklab.core.TweakDiagnostics;
 import com.mikeyphw.hooklab.termux.TermuxCommandPolicy;
+import com.mikeyphw.hooklab.sdk.ChatGptConfig;
 import io.github.libxposed.api.XposedInterface;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
@@ -38,7 +39,8 @@ public final class ChatGptTermuxHandoff {
             throw new SecurityException("Unsupported host");
         Context app=ctx.appContext(Context.class);PackageInfo info=app.getPackageManager().getPackageInfo(ctx.packageName,0);
         if(info.getLongVersionCode()!=ChatGptCodeProbe.VERSION_CODE||!ChatGptCodeProbe.VERSION_NAME.equals(info.versionName))throw new SecurityException("Unsupported build");
-        Host host=new Host(ctx.classLoader); // Resolve all exact signatures before registering any hook.
+        ChatGptConfig.Options options=ctx.chatGptOptions();
+        Host host=new Host(ctx.classLoader,options); // Resolve all exact signatures before registering any hook.
         XposedInterface xp=ctx.framework(XposedInterface.class);
         xp.hook(Activity.class.getDeclaredMethod("onPostResume")).setId("hooklab.cgt01.p08.resume")
             .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept(chain->{Object result=chain.proceed();
@@ -48,14 +50,14 @@ public final class ChatGptTermuxHandoff {
         xp.hook(host.contentInvoke).setId("hooklab.cgt01.p08.frame")
             .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept(chain->{
                 Object previous=FRAME.get();Object current=null;
-                if(ENABLED.get()&&!FAILED.get())try{current=host.contentCode.get(chain.getThisObject());}catch(ReflectiveOperationException e){log("FRAME_REFUSED");}
+                if(host.options.showRun&&ENABLED.get()&&!FAILED.get())try{current=host.contentCode.get(chain.getThisObject());}catch(ReflectiveOperationException e){log("FRAME_REFUSED");}
                 if(current==null)FRAME.remove();else FRAME.set(current);
                 try{return chain.proceed();}finally{if(previous==null)FRAME.remove();else FRAME.set(previous);}
             });
         xp.hook(host.factory).setId("hooklab.cgt01.p08.wrapper")
             .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept(chain->{
                 // Before touching the Composer, refuse any unexpected call site or malformed capture.
-                if(!ENABLED.get()||FAILED.get()||FRAME.get()==null||!Integer.valueOf(HOST_KEY).equals(chain.getArg(0))||!Boolean.TRUE.equals(chain.getArg(1)))return chain.proceed();
+                if(!host.options.showRun||!ENABLED.get()||FAILED.get()||FRAME.get()==null||!Integer.valueOf(HOST_KEY).equals(chain.getArg(0))||!Boolean.TRUE.equals(chain.getArg(1)))return chain.proceed();
                 Object delegate=chain.getArg(2);Object code;Object wrapped;
                 try{
                     if(delegate==null||delegate.getClass()!=host.q12||host.branch.getByte(delegate)!=8)return chain.proceed();
@@ -67,7 +69,7 @@ public final class ChatGptTermuxHandoff {
                 }catch(ReflectiveOperationException|IllegalArgumentException unavailable){log("CAPTURE_REFUSED");return chain.proceed();}
                 return chain.proceed(new Object[]{HOST_KEY,true,wrapped,chain.getArg(3)});
             });
-        ENABLED.set(true);log("INSTALLED");
+        ENABLED.set(true);log("INSTALLED");if(!options.showRun)log("CONFIG_ACTION_HIDDEN");
     }
     private static void log(String event){Log.i(TAG,"CGT01_P08_"+event+" execution=NONE");}
     private static boolean ready(Activity a){return a!=null&&!a.isFinishing()&&!a.isDestroyed()&&a.hasWindowFocus()&&a.getWindow().getDecorView().isAttachedToWindow();}
@@ -116,13 +118,13 @@ public final class ChatGptTermuxHandoff {
                 h.call(h.begin,c,RUN_SLOT);Object runLambda=h.call(h.factory,null,RUN_KEY,true,run,c);h.call(h.invoke2,runLambda,c,0);h.call(h.end,c,false);
                 h.call(h.begin,c,COPY_SLOT);Object copyLambda=h.call(h.factory,null,COPY_KEY,true,delegate,c);h.call(h.invoke3,copyLambda,scope,c,0);h.call(h.end,c,false);
                 h.call(h.end,c,true);h.call(h.end,c,false);
-                if(h.renderLogged.compareAndSet(false,true))log("ROW_COMPOSED");return h.unit;
+                if(h.options.layoutDiagnostics&&h.renderLogged.compareAndSet(false,true))log("ROW_COMPOSED");return h.unit;
             }catch(Throwable error){FAILED.set(true);log("COMPOSITION_FAILED");TweakDiagnostics.rethrowFatal(error);throw error;}
         }
     }
     private static final class Binding extends Lambda {
         final Host h;final TermuxOfferGate state;
-        Binding(Host h,Object code,String source){this.h=h;state=new TermuxOfferGate(code,source);}
+        Binding(Host h,Object code,String source){this.h=h;state=new TermuxOfferGate(code,source,h.options.tapIntervalMs);}
         // Function0 and RememberObserver share the same slot-owned object.
         @Override Object invokeBody(Object[] args){openPreview(state);return h.unit;}
         Object lifecycle(String method){switch(method){case "f":state.remembered();return null;case "m":case "n":state.dispose();return null;default:throw new UnsupportedOperationException();}}
@@ -133,7 +135,8 @@ public final class ChatGptTermuxHandoff {
         final Method contentInvoke,factory,begin,end,rowPolicy,locals,materialize,startNode,createNode,reuseNode,set,keySetter,invoke2,invoke3,readSlot,writeSlot,iconButton,iconPainter,drawIcon;
         final Object arrangement,alignment,emptyModifier,nodeFactory,measureSetter,localsSetter,compositeSetter,modifierSetter,unit,emptySlot,terminalAsset;
         final AtomicBoolean renderLogged=new AtomicBoolean();
-        Host(ClassLoader l)throws Exception {
+        final ChatGptConfig.Options options;
+        Host(ClassLoader l ,ChatGptConfig.Options options)throws Exception {this.options=java.util.Objects.requireNonNull(options);
             loader=l;q12=type("q12");co3=type("co3");composer=type("oba0");scope=type("fm3");f0=type("kotlin.jvm.functions.Function0");f2=type("kotlin.jvm.functions.Function2");f3=type("kotlin.jvm.functions.Function3");remember=type("q4z0");zdr=type("zdr");
             Class<?> rqr=type("rqr"),r0=type("r0o0"),gqr=type("gqr"),cxl=type("cxl");
             branch=field(q12,"a",byte.class);capture=field(q12,"b",Object.class);contentCode=field(cxl,"p",co3);codeText=field(co3,"b",String.class);

@@ -32,5 +32,7 @@ assert 'com.termux' not in (r/'app/src/main/resources/META-INF/xposed/scope.list
 for x in ('chatgpt/TermuxOfferGateTest.java','termux/TermuxCommandPolicyTest.java','root/RootIpcVerdictTest.java'):assert (t/x).is_file(),x
 assert not (j/'chatgpt/CompositionRunBinding.java').exists() and not (t/'chatgpt/CompositionRunBindingTest.java').exists()
 assert all(x not in b for x in ('TTL_MS','replace(long','available(long','consume(long','PopupWindow'))
-assert 'new TermuxOfferGate(code,source)' in h
+assert 'new TermuxOfferGate(code,source,h.options.tapIntervalMs)' in h
+assert 'if(!host.options.showRun||!ENABLED.get()' in h
+assert 'minimumInterval<500||minimumInterval>2000' in b and 'now-lastTap<minimumInterval' in b
 print('HL_DIAG_R05_STATIC=PASS; runtime acceptance pending')

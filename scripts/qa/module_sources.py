@@ -81,10 +81,10 @@ final class VerboseLogs {{
 '''
     return output
 
-def settings_schema(module):return 2 if module=='wordmaster' else 1
+def settings_schema(module):return 2 if module in ('wordmaster','chatgpt') else 1
 
 def manifest(module,version=None,root=ROOT):
-    if version is None:version='1.1.0' if module=='wordmaster' else '1.0.0'
+    if version is None:version='1.1.0' if module in ('wordmaster','chatgpt') else '1.0.0'
     registry=json.loads((root/'runtime/src/main/resources/META-INF/hooklab/builtin-registry.json').read_text())
     rows=[{k:r[k] for k in ('id','package','min_version','max_version')} for r in registry['hooks'] if r['module']==module]
     if {r['id'] for r in rows}!=set(ROSTER[module]['install']):raise ValueError('migration manifest roster drift')

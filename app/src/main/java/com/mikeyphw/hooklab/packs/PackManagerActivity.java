@@ -18,6 +18,7 @@ import com.mikeyphw.hooklab.ui.MainActivity;
 import com.mikeyphw.hooklab.runtime.BuiltinRegistry;
 import com.mikeyphw.hooklab.sdk.HookSdk;
 import com.mikeyphw.hooklab.sdk.ModuleConfig;
+import com.mikeyphw.hooklab.sdk.ChatGptConfig;
 import java.nio.charset.StandardCharsets;
 import java.io.OutputStream;
 import com.mikeyphw.hooklab.diagnostics.DiagnosticTimeline;
@@ -69,11 +70,11 @@ public final class PackManagerActivity extends AppCompatActivity {
     private int tab=0;
     private MaterialToolbar toolbar;
     private Model latest;
-    private ModuleConfig.Document exportDraft;
-    private WordMasterUiProvider provider;
+    private ModuleConfig.ProfileDocument<?,?> exportDraft;
+    private ProfileEditor<?,?> provider;
     private ModuleUiProvider importedProvider;private View importedView;private Button importedClose;private boolean importedResumed,activityResumed;
     private boolean visible;
-    private ModuleConfig.Document restoredDraft;
+    private ModuleConfig.ProfileDocument<?,?> restoredDraft;
     private String restoredBase="",restoredProfile="";
     public static Intent moduleIntent(Context context,String module){return new Intent(context,PackManagerActivity.class).setAction(ACTION_MODULE).putExtra(EXTRA_MODULE,module);}
     private static HookSdk.ModuleDescriptor descriptor(String module){for(HookSdk.ModuleDescriptor d:BuiltinRegistry.current().modules())if(d.id.equals(module))return d;return null;}
@@ -88,7 +89,7 @@ public final class PackManagerActivity extends AppCompatActivity {
         getDelegate().setLocalNightMode(night);super.onCreate(saved);
         if(Build.VERSION.SDK_INT>=31&&!amoled&&appearance.getBoolean("dynamicColors",true))try{DynamicColors.applyToActivityIfAvailable(this);}catch(RuntimeException ignored){}
         app=(HookLabApp)getApplication();store=new PackStore(getFilesDir().toPath().resolve("hookpacks"));
-        if(saved!=null){String id=saved.getString(EXTRA_MODULE,"");if(descriptor(id)!=null)moduleId=id;tab=Math.max(0,Math.min(3,saved.getInt("tab")));try{String draft=saved.getString("configDraft","");if(!draft.isEmpty()){restoredDraft=ModuleConfig.parse(draft.getBytes(StandardCharsets.UTF_8));restoredBase=saved.getString("configBase","");restoredProfile=saved.getString("configProfile","");}String export=saved.getString("exportDraft","");if(!export.isEmpty())exportDraft=ModuleConfig.parse(export.getBytes(StandardCharsets.UTF_8));}catch(RuntimeException ignored){restoredDraft=null;exportDraft=null;}}
+        if(saved!=null){String id=saved.getString(EXTRA_MODULE,"");if(descriptor(id)!=null)moduleId=id;tab=Math.max(0,Math.min(3,saved.getInt("tab")));try{String draft=saved.getString("configDraft","");if(!draft.isEmpty()){restoredDraft=ModuleConfig.parseDocument(draft.getBytes(StandardCharsets.UTF_8));restoredBase=saved.getString("configBase","");restoredProfile=saved.getString("configProfile","");}String export=saved.getString("exportDraft","");if(!export.isEmpty())exportDraft=ModuleConfig.parseDocument(export.getBytes(StandardCharsets.UTF_8));}catch(RuntimeException ignored){restoredDraft=null;exportDraft=null;}}
         else if(ACTION_MODULE.equals(getIntent().getAction()))try{String id=getIntent().getStringExtra(EXTRA_MODULE);if(descriptor(id)!=null)moduleId=id;}catch(RuntimeException ignored){}
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(FlatUi.canvas(this));
         toolbar=new MaterialToolbar(this);FlatUi.toolbar(toolbar);toolbar.setTitle(R.string.pack_title);root.addView(toolbar,new LinearLayout.LayoutParams(-1,-2));
@@ -108,7 +109,7 @@ public final class PackManagerActivity extends AppCompatActivity {
     @Override protected void onResume(){super.onResume();activityResumed=true;if(provider!=null)provider.resume();}
     @Override protected void onPause(){activityResumed=false;destroyImported();if(provider!=null)provider.pause();super.onPause();}
     @Override protected void onDestroy(){destroyImported();destroyProvider();super.onDestroy();}
-    @Override protected void onSaveInstanceState(Bundle out){out.putString(EXTRA_MODULE,moduleId);out.putInt("tab",tab);if(provider!=null&&latest!=null&&latest.configuration!=null){out.putString("configDraft",provider.draft().canonical());out.putString("configBase",latest.configuration.current.digest());out.putString("configProfile",provider.profile());}if(exportDraft!=null)out.putString("exportDraft",exportDraft.canonical());super.onSaveInstanceState(out);}
+    @Override protected void onSaveInstanceState(Bundle out){out.putString(EXTRA_MODULE,moduleId);out.putInt("tab",tab);if(provider!=null&&latest!=null&&latest.configuration(provider.draft().module())!=null){out.putString("configDraft",provider.draft().canonical());out.putString("configBase",latest.configuration(provider.draft().module()).current.digest());out.putString("configProfile",provider.profile());}if(exportDraft!=null)out.putString("exportDraft",exportDraft.canonical());super.onSaveInstanceState(out);}
     private boolean debug(){return (getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0;}
     private boolean alive(){return !isFinishing()&&!isDestroyed();}
     private void busy(boolean value){busy=value;for(Button b:buttons)b.setEnabled(!value);if(provider!=null)provider.busy(value);if(value&&importedProvider!=null)destroyImported();}
@@ -143,18 +144,20 @@ public final class PackManagerActivity extends AppCompatActivity {
     });}
     private static final class Model {
         final PackStore.Catalog catalog;final PackStore.State local;final String remote,generation;
-        final Set<String> scope;final Map<String,Boolean> enabled,locked;final Map<String,Long> versions;final ModuleConfig.Frame configuration;
-        Model(PackStore.Catalog catalog,String remote,String generation,Set<String> scope,Map<String,Boolean> enabled,Map<String,Boolean> locked,Map<String,Long> versions,ModuleConfig.Frame configuration){this.configuration=configuration;this.catalog=catalog;this.local=catalog.state;this.remote=remote;this.generation=generation;this.scope=scope;this.enabled=enabled;this.locked=locked;this.versions=versions;}
+        final Set<String> scope;final Map<String,Boolean> enabled,locked;final Map<String,Long> versions;final Map<String,FrameworkPackRemote.Configuration> configurations;
+        FrameworkPackRemote.Configuration configuration(String module){return configurations.get(module);}
+        Model(PackStore.Catalog catalog,String remote,String generation,Set<String> scope,Map<String,Boolean> enabled,Map<String,Boolean> locked,Map<String,Long> versions,Map<String,FrameworkPackRemote.Configuration> configurations){this.configurations=Collections.unmodifiableMap(new TreeMap<>(configurations));this.catalog=catalog;this.local=catalog.state;this.remote=remote;this.generation=generation;this.scope=scope;this.enabled=enabled;this.locked=locked;this.versions=versions;}
     }
     private void refresh(){execute(()->{
-        PackStore.Catalog catalog=store.catalog();String state=getString(R.string.pack_remote_unavailable);String generation="";Set<String> scope=null;Map<String,Boolean> enabled=Collections.emptyMap(),locked=Collections.emptyMap();Map<String,Long> versions=new TreeMap<>();ModuleConfig.Frame configuration=null;
+        PackStore.Catalog catalog=store.catalog();String state=getString(R.string.pack_remote_unavailable);String generation="";Set<String> scope=null;Map<String,Boolean> enabled=Collections.emptyMap(),locked=Collections.emptyMap();Map<String,Long> versions=new TreeMap<>();Map<String,FrameworkPackRemote.Configuration> configurations=new TreeMap<>();
         for(HookSdk.HookDescriptor h:BuiltinRegistry.current().hooks())try{PackageInfo info=getPackageManager().getPackageInfo(h.packageName,0);versions.put(h.id,info.getLongVersionCode());}catch(PackageManager.NameNotFoundException|RuntimeException ignored){}
         try{FrameworkPackRemote r=new FrameworkPackRemote(app);Map<String,?> values=r.state();if(Boolean.TRUE.equals(values.get(PackSnapshot.SAFE)))state=getString(R.string.pack_safe_active);
             else if(PackPublication.reconcile(store,r)){state=getString(R.string.pack_remote_ready);generation=PackSnapshot.read(r.state()).generation;if(!generation.equals(catalog.state.snapshot().generation)){state=getString(R.string.pack_remote_pending);generation="";}}
             else state=getString(R.string.pack_remote_pending);
-            scope=r.scope();enabled=r.flags(TweakKeys.GROUP,false);locked=r.flags(TweakDiagnostics.GROUP,true);configuration=r.configuration();
+            scope=r.scope();enabled=r.flags(TweakKeys.GROUP,false);locked=r.flags(TweakDiagnostics.GROUP,true);
+            for(String module:List.of(ModuleConfig.MODULE,ChatGptConfig.MODULE))try{configurations.put(module,r.configuration(module));}catch(Exception|LinkageError refused){/* unavailable config does not hide other modules */}
         }catch(Exception|LinkageError ignored){/* local inspection remains available; unavailable flags are unknown */}
-        return new Model(catalog,state,generation,scope,enabled,locked,versions,configuration);
+        return new Model(catalog,state,generation,scope,enabled,locked,versions,configurations);
     },model->{render(model);Uri share=pendingShare;pendingShare=null;if(share!=null)previewPack(share);});}
     private void publish(){confirm(R.string.pack_publish,R.string.pack_publish_prompt,()->execute(()->{
         PackStore.State s=store.state();if("test".equals(s.channel())&&!debug())throw new IllegalStateException("test trust not allowed in release");return PackPublication.publish(store,new FrameworkPackRemote(app));
@@ -220,8 +223,10 @@ public final class PackManagerActivity extends AppCompatActivity {
                             @Override public Context themedContext(){return PackManagerActivity.this;}
                             @Override public String moduleId(){return id;}
                             @Override public com.mikeyphw.hooklab.sdk.ModuleUiResources resources(){return verified.uiResources;}
-                            @Override public ModuleConfig.Document wordMasterSettings(){if(!ModuleConfig.MODULE.equals(id)||m.configuration==null||!configurationSupported(m))throw new IllegalStateException("configuration unavailable");return m.configuration.current;}
+                            @Override public ModuleConfig.Document wordMasterSettings(){if(!ModuleConfig.MODULE.equals(id)||m.configuration(id)==null||!configurationSupported(m,id))throw new IllegalStateException("configuration unavailable");return (ModuleConfig.Document)m.configuration(id).current;}
                             @Override public void reviewWordMasterSettings(ModuleConfig.Document draft){if(importedProvider!=custom||!visible||busy||latest!=m||!ModuleConfig.MODULE.equals(id))throw new IllegalStateException("provider inactive");saveConfiguration(m,java.util.Objects.requireNonNull(draft));}
+                            @Override public ChatGptConfig.Document chatGptSettings(){if(!ChatGptConfig.MODULE.equals(id)||m.configuration(id)==null||!configurationSupported(m,id))throw new IllegalStateException("configuration unavailable");return (ChatGptConfig.Document)m.configuration(id).current;}
+                            @Override public void reviewChatGptSettings(ChatGptConfig.Document draft){if(importedProvider!=custom||!visible||busy||latest!=m||!ChatGptConfig.MODULE.equals(id))throw new IllegalStateException("provider inactive");saveConfiguration(m,java.util.Objects.requireNonNull(draft));}
                             @Override public TextView heading(CharSequence label){TextView t=new TextView(PackManagerActivity.this);t.setText(label);t.setTextSize(20);FlatUi.sectionHeading(t);return t;}
                             @Override public Button button(CharSequence label,Runnable callback){MaterialButton b=new MaterialButton(PackManagerActivity.this);FlatUi.button(b);b.setText(label);b.setOnClickListener(v->{if(importedProvider==custom&&visible&&!busy&&latest==m)try{callback.run();}catch(RuntimeException|LinkageError|AssertionError failure){destroyImported();status.setText(R.string.mod03_ui_failed);}});return b;}
                         };
@@ -232,31 +237,48 @@ public final class PackManagerActivity extends AppCompatActivity {
                 });
             }).show());
     }
-    private void saveConfiguration(Model m,ModuleConfig.Document draft){
-        if(m.configuration==null||!configurationSupported(m))return;
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.mod03_config_review).setMessage(draft.canonical()+"\n\n"+getString(R.string.mod03_restart_config)).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,(d,w)->execute(()->{new FrameworkPackRemote(app).configuration(m.configuration,draft);return null;},ignored->refresh())).show();
+    private void saveConfiguration(Model m,ModuleConfig.ProfileDocument<?,?> draft){
+        final String id=draft.module();final FrameworkPackRemote.Configuration frame=m.configuration(id);
+        if(frame==null||!moduleId.equals(id)||latest!=m||!configurationSupported(m,id))return;
+        int message=ChatGptConfig.MODULE.equals(id)?R.string.mod03_chatgpt_restart_config:R.string.mod03_restart_config;
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.mod03_config_review).setMessage(draft.canonical()+"\n\n"+getString(message)).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,(d,w)->{
+            if(!visible||latest!=m||!moduleId.equals(id)||tab!=1)return;
+            execute(()->{new FrameworkPackRemote(app).configuration(frame,draft);return null;},ignored->refresh());
+        }).show();
     }
-    private boolean configurationSupported(Model m){
-        String mode=m.local.modes().get(ModuleConfig.HOOK);PackStore.PackMetadata pack=m.catalog.current.get(ModuleConfig.MODULE);
+    private boolean configurationSupported(Model m,String module){
+        String hook=ModuleConfig.MODULE.equals(module)?ModuleConfig.HOOK:ChatGptConfig.MODULE.equals(module)?ChatGptConfig.HOOK:null;
+        if(hook==null)return false;String mode=m.local.modes().get(hook);PackStore.PackMetadata pack=m.catalog.current.get(module);
         return PackSnapshot.BUILTIN.equals(mode)||"pack".equals(mode)&&pack!=null&&pack.settingsSchema==2;
     }
     private void configuration(Model m){
-        if(m.configuration==null){text(getString(R.string.mod03_config_unavailable));return;}
-        if(!configurationSupported(m)){text(getString(R.string.mod03_config_unsupported));return;}
-        try{provider=new WordMasterUiProvider(this,m.configuration.current,draft->saveConfiguration(m,draft));if(restoredDraft!=null&&m.configuration.current.digest().equals(restoredBase))provider.restore(restoredDraft,restoredProfile);restoredDraft=null;controls.addView(provider.create());if(activityResumed)provider.resume();}
-        catch(RuntimeException|LinkageError failure){destroyProvider();text(getString(R.string.mod03_config_unavailable));return;}
+        String id=moduleId;FrameworkPackRemote.Configuration frame=m.configuration(id);
+        if(frame==null){text(getString(R.string.mod03_config_unavailable));return;}
+        if(!configurationSupported(m,id)){text(getString(R.string.mod03_config_unsupported));return;}
+        try{
+            if(frame.current instanceof ModuleConfig.Document)provider=new WordMasterUiProvider(this,(ModuleConfig.Document)frame.current,draft->saveConfiguration(m,draft));
+            else if(frame.current instanceof ChatGptConfig.Document)provider=new ChatGptUiProvider(this,(ChatGptConfig.Document)frame.current,draft->saveConfiguration(m,draft));
+            else throw new IllegalStateException("unknown typed configuration");
+            if(restoredDraft!=null&&id.equals(restoredDraft.module())&&frame.current.digest().equals(restoredBase))provider.restore(restoredDraft,restoredProfile);
+            restoredDraft=null;controls.addView(provider.create());if(activityResumed)provider.resume();
+        }catch(RuntimeException|LinkageError failure){destroyProvider();text(getString(R.string.mod03_config_unavailable));return;}
         action(R.string.mod03_config_import,()->{Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/json");startActivityForResult(intent,IMPORT_CONFIG);});
-        action(R.string.mod03_config_export,()->{exportDraft=m.configuration.current;Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/json").putExtra(Intent.EXTRA_TITLE,"hooklab-wordmaster-profile.json");startActivityForResult(intent,EXPORT_CONFIG);});
-        action(R.string.mod03_config_reset,()->saveConfiguration(m,ModuleConfig.defaults()));
-        if(m.configuration.previous!=null)action(R.string.mod03_config_undo,()->saveConfiguration(m,m.configuration.previous));
+        action(R.string.mod03_config_export,()->{exportDraft=frame.current;Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/json").putExtra(Intent.EXTRA_TITLE,"hooklab-"+id+"-profile.json");startActivityForResult(intent,EXPORT_CONFIG);});
+        action(R.string.mod03_config_reset,()->saveConfiguration(m,ChatGptConfig.MODULE.equals(id)?ChatGptConfig.defaults():ModuleConfig.defaults()));
+        if(frame.previous!=null)action(R.string.mod03_config_undo,()->saveConfiguration(m,frame.previous));
     }
-    private void previewConfiguration(Uri uri){Model m=latest;if(m==null||m.configuration==null||!configurationSupported(m)||!ModuleConfig.MODULE.equals(moduleId))return;
-        execute(()->ModuleConfig.parse(read(uri,ModuleConfig.MAX_BYTES)),draft->saveConfiguration(m,draft));
+    private void previewConfiguration(Uri uri){Model m=latest;String id=moduleId;if(m==null||m.configuration(id)==null||!configurationSupported(m,id))return;
+        execute(()->ModuleConfig.parseForModule(id,read(uri,ModuleConfig.MAX_BYTES)),draft->saveConfiguration(m,draft));
     }
-    private void exportConfiguration(Uri uri){ModuleConfig.Document doc=exportDraft;exportDraft=null;if(doc==null)return;
+    private void exportConfiguration(Uri uri){ModuleConfig.ProfileDocument<?,?> doc=exportDraft;exportDraft=null;if(doc==null)return;
         execute(()->{if(!"content".equals(uri.getScheme()))throw new IOException("only document content accepted");try(OutputStream out=getContentResolver().openOutputStream(uri,"wt")){if(out==null)throw new IOException("document unavailable");out.write(doc.canonical().getBytes(StandardCharsets.UTF_8));out.flush();}return null;},ignored->status.setText(R.string.mod03_config_exported));
     }
-    private void render(Model m){if(provider!=null&&latest!=null&&latest.configuration!=null&&ModuleConfig.MODULE.equals(moduleId)&&tab==1&&m.configuration!=null&&latest.configuration.same(m.configuration)){restoredDraft=provider.draft();restoredBase=latest.configuration.current.digest();restoredProfile=provider.profile();}destroyProvider();latest=m;controls.removeAllViews();buttons.clear();status.setText(m.remote);action(R.string.pack_refresh,this::refresh);
+    private void render(Model m){
+        if(provider!=null&&latest!=null&&moduleId.equals(provider.draft().module())&&tab==1){
+            FrameworkPackRemote.Configuration before=latest.configuration(moduleId),after=m.configuration(moduleId);
+            if(before!=null&&before.same(after)){restoredDraft=provider.draft();restoredBase=before.current.digest();restoredProfile=provider.profile();}
+        }
+        destroyProvider();latest=m;controls.removeAllViews();buttons.clear();status.setText(m.remote);action(R.string.pack_refresh,this::refresh);
         HookSdk.ModuleDescriptor module=descriptor(moduleId);
         if(module==null){toolbar.setTitle(R.string.pack_title);heading(getString(R.string.mod03_installed));text(getString(R.string.pack_intro));
             for(HookSdk.ModuleDescriptor d:BuiltinRegistry.current().modules()){
@@ -268,7 +290,7 @@ public final class PackManagerActivity extends AppCompatActivity {
             for(int i=0;i<names.length;i++){final int next=i;action(getString(names[i])+(tab==i?" · "+getString(R.string.mod03_selected):""),()->{tab=next;render(m);});}
             heading(getString(names[tab]));PackStore.PackMetadata current=m.catalog.current.get(module.id),previous=m.catalog.previous.get(module.id);
             switch(tab){case 0:text(module.description);if(current!=null)metadata(current);else text(getString(R.string.mod03_builtin));hooks(m,module);break;
-                case 1:text(getString(R.string.mod03_config_caution));if(ModuleConfig.MODULE.equals(module.id))configuration(m);customUi(m,module);hooks(m,module);break;
+                case 1:text(getString(R.string.mod03_config_caution));if(ModuleConfig.MODULE.equals(module.id)||ChatGptConfig.MODULE.equals(module.id))configuration(m);customUi(m,module);hooks(m,module);break;
                 case 2:logs(m,module);break;
                 case 3:if(current!=null){heading(getString(R.string.mod03_current_archive));metadata(current);}else text(getString(R.string.mod03_builtin));
                     if(previous!=null){heading(getString(R.string.mod03_previous_archive));metadata(previous);action(R.string.pack_rollback,()->confirm(R.string.pack_rollback,R.string.pack_rollback_prompt,()->execute(()->{store.rollback(module.id);return null;},ignored->refresh())));}

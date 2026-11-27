@@ -40,7 +40,7 @@ public final class PackPolicy {
         if(!expected.isEmpty())throw new IllegalArgumentException("pack hook roster incomplete");
         Map<?,?> provenance=(Map<?,?>)HookSdk.StrictJson.read(pack.provenance());
         long schema=(Long)provenance.get("settings_schema");
-        if(schema!=1&&(schema!=2||!"wordmaster".equals(pack.moduleId)||compareVersions(pack.version,"1.1.0")<0))throw new IllegalArgumentException("unsupported pack settings migration");
+        if(schema!=1&&(schema!=2||!("wordmaster".equals(pack.moduleId)||"chatgpt".equals(pack.moduleId))||compareVersions(pack.version,"1.1.0")<0))throw new IllegalArgumentException("unsupported pack settings migration");
     }
     /** This is explicit trust admission, NOT an isolation or sandbox guarantee. */
     public static void requireUiAdmission(HookPack.Verified pack,String confirmedDigest){

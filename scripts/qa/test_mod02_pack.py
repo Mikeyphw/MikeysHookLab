@@ -106,9 +106,9 @@ class PackInterop(unittest.TestCase):
                 provfile=p/'fixture-provenance.json';provfile.write_bytes(canonical(prov))
                 (mp/'provenance.json').write_bytes(canonical({**prov,'channel':'personal'}))
                 args=[]
-                if module=='wordmaster':
-                    (mp/'ui.dex').write_bytes(fixture_dex(b'Lcom/mikeyphw/hooklab/moduleui/wordmaster/Provider;'))
-                    (mp/'ui-resources.json').write_bytes((ROOT/'modules/wordmaster/ui/resources.json').read_bytes())
+                if module in ('wordmaster','chatgpt'):
+                    (mp/'ui.dex').write_bytes(fixture_dex(('Lcom/mikeyphw/hooklab/moduleui/'+module+'/Provider;').encode()))
+                    (mp/'ui-resources.json').write_bytes((ROOT/'modules'/module/'ui/resources.json').read_bytes())
                     args=['--ui-dex',mp/'ui.dex','--ui-resources',mp/'ui-resources.json']
                 run(cli,'module','pack',mp/'manifest.json',provfile,mp/'classes.dex',private,signed/(module+'.hookpack'),*args)
             (signed/'receipt.json').write_bytes(canonical({'schema':'hooklab.mod02.hosted.v1',**ident,'status':'SIGNED_TEST_PACKS_VERIFIED_NOT_ACTIVATED','files':{f.name:sha(f) for f in signed.iterdir()}}))

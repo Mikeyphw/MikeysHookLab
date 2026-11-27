@@ -350,8 +350,8 @@
       "parent_id": "MOD-02"
     },
     {
-      "acceptance": "FAILED",
-      "blocker": "PR #38 run 46026702538 attempt 1: all ten adaptive cases failed SEARCH_ROTATE_SETTLE; aggregate and targeted qualification refused; hosted repair and device acceptance pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "PR #38 merged at 38d62247bfa66083fb507b050bbcd1ab31dc176d; exact PR run 46033866316 and main run 46036865570 succeeded. Word Master 0.6.10 registers but user reports no visible effect; user authorized ChatGPT as configuration acceptance subject. Word Master defect, device/release/visual approval remain open.",
       "counted": true,
       "dependencies": [
         "MOD-02"
@@ -363,8 +363,8 @@
       "parent_id": null
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-head ten-case adaptive matrix, independent CI/artifact checks, physical device and visual/release acceptance pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Exact PR head 12b2dd2d005ec0f31db1940543fbbbc5a563c4a7 run 46033866316 attempt 1 succeeded including 10/10 adaptive and 24/24 CI24; merged main run 46036865570 succeeded. Physical and release/visual approval pending.",
       "counted": false,
       "dependencies": [
         "MOD-03"
@@ -373,6 +373,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Adaptive Rotation Transport & Failure Evidence Repair",
+      "parent_id": "MOD-03"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-source hosted qualification and physical ChatGPT profile/readback, signed provider, release and visual approval remain pending; Word Master rendering defect not waived.",
+      "counted": false,
+      "dependencies": [
+        "MOD-03-F01"
+      ],
+      "id": "MOD-03-F02",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "ChatGPT Typed Profiles & Physical Acceptance Substitution",
       "parent_id": "MOD-03"
     },
     {
@@ -497,5 +510,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-03-F01"
+  "version": "2.0-MOD-03-F02"
 }

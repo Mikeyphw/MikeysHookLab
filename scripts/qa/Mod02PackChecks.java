@@ -19,7 +19,7 @@ public final class Mod02PackChecks {
         byte[] view=new byte[buffer.remaining()];buffer.get(view);if(!Arrays.equals(view,original))throw new AssertionError("direct buffer mismatch");
         if(pack.hasUi()){
             if(!pack.directUiDex().isDirect()||pack.directUiDex().remaining()==0||!pack.uiEntrypoint().equals("com.mikeyphw.hooklab.moduleui."+pack.moduleId+".Provider"))throw new AssertionError("UI DEX identity");
-            if("wordmaster".equals(pack.moduleId)){
+            if("wordmaster".equals(pack.moduleId)||"chatgpt".equals(pack.moduleId)){
                 try{PackPolicy.requireUiAdmission(pack,"0".repeat(64));throw new AssertionError("wrong approval accepted");}catch(IllegalArgumentException expected){}
                 if("personal".equals(pack.channel))PackPolicy.requireUiAdmission(pack,pack.archiveSha256);
                 else try{PackPolicy.requireUiAdmission(pack,pack.archiveSha256);throw new AssertionError("test UI admitted");}catch(IllegalArgumentException expected){}

@@ -6,7 +6,11 @@ final class TermuxOfferGate {
     private String source;
     private boolean active,disposed;
     private long lastTap=Long.MIN_VALUE;
-    TermuxOfferGate(Object identity,String source){
+    private final int minimumInterval;
+    TermuxOfferGate(Object identity,String source){this(identity,source,500);}
+    TermuxOfferGate(Object identity,String source,int minimumInterval){
+        if(minimumInterval<500||minimumInterval>2000||minimumInterval%100!=0)throw new IllegalArgumentException("Invalid tap interval");
+        this.minimumInterval=minimumInterval;
         if(identity==null||source==null)throw new IllegalArgumentException("Missing source binding");
         this.identity=identity;this.source=source;
     }
@@ -14,7 +18,7 @@ final class TermuxOfferGate {
     synchronized void remembered(){if(!disposed)active=true;}
     synchronized void dispose(){active=false;disposed=true;identity=null;source=null;}
     synchronized String selected(long now){
-        if(!active||disposed||source==null||now<0||(lastTap!=Long.MIN_VALUE&&(now<lastTap||now-lastTap<500)))return null;
+        if(!active||disposed||source==null||now<0||(lastTap!=Long.MIN_VALUE&&(now<lastTap||now-lastTap<minimumInterval)))return null;
         lastTap=now;return source;
     }
 }

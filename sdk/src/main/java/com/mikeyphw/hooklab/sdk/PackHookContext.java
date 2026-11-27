@@ -15,6 +15,7 @@ public final class PackHookContext {
         this.api=Objects.requireNonNull(api);this.host=Objects.requireNonNull(host);this.settings=context.settings;
     }
     public ModuleConfig.Filter wordMasterFilter(){return settings.wordMasterFilter();}
+    public ChatGptConfig.Options chatGptOptions(){if(!ChatGptConfig.TARGET.equals(packageName))throw new IllegalStateException("configuration scope refused");return settings.chatGptOptions();}
     public <T>T framework(Class<T> type){if(type!=PackHookApi.class)throw new IllegalArgumentException("unsupported pack API");return type.cast(api);}
     public <T>T appContext(Class<T> type){return type.cast(host);}
 }
