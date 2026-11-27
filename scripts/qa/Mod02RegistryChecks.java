@@ -49,6 +49,8 @@ public final class Mod02RegistryChecks {
         refuse(()->install(failState,a),"state interruption");check(store.state().versions().isEmpty(),"unreferenced verified archive not active");
         install(store,a);check(store.state().versions().get(MODULE).current.equals(aa),"idempotent import recovery");
         check(store.state().snapshot().choice(ID).equals(PackSnapshot.BUILTIN),"import alone default off");
+        PackStore.Catalog catalog=store.catalog();check(catalog.current.get(MODULE).archiveSha256.equals(aa)&&catalog.current.get(MODULE).version.equals("1.0.0")&&catalog.previous.isEmpty(),"verified metadata-only catalog");
+        check(catalog.current.get(MODULE).signer.equals(sha)&&catalog.current.get(MODULE).settingsSchema==1,"verified signer and schema projection");
         refuse(()->store.select(ID,false),"denied scope");store.select(ID,true);
         refuse(()->PackPublication.publish(store,remote),"scope refused before publication");check(remote.writes==0&&remote.commits==0,"no remote mutation");
         remote.scopes.add(PKG);remote.failWrite=true;refuse(()->PackPublication.publish(store,remote),"remote staged write failure");check(remote.commits==0,"failed publication keeps prior generation");
@@ -68,7 +70,8 @@ public final class Mod02RegistryChecks {
         remote.failCommit=false;PackStore failAck=new PackStore(root,stage->{if(stage.equals("PUBLISHED_RENAME"))throw new IOException("lost acknowledgement");});
         refuse(()->PackPublication.publish(failAck,remote),"ack crash");PackSnapshot updated=PackSnapshot.read(remote.state());check(updated.choice(ID).equals(bb)&&!store.acknowledged(updated),"remote ahead of local receipt");
         int commits=remote.commits;check(PackPublication.reconcile(new PackStore(root),remote)&&remote.commits==commits&&store.acknowledged(updated),"recovery observes, never replays");
-        store.rollback(MODULE);check(store.state().snapshot().choice(ID).equals(aa),"explicit retained rollback");PackPublication.publish(store,remote);refuse(()->install(store,a),"highwater survives rollback");
+        store.rollback(MODULE);check(store.state().snapshot().choice(ID).equals(aa),"explicit retained rollback");
+        PackStore.Catalog rolled=store.catalog();check(rolled.current.get(MODULE).version.equals("1.0.0")&&rolled.previous.get(MODULE).archiveSha256.equals(bb),"rollback metadata describes actual selected archive not high water");PackPublication.publish(store,remote);refuse(()->install(store,a),"highwater survives rollback");
         PackPublication.stop(remote);refuse(()->PackSnapshot.read(remote.state()),"independent safe mode");
         store.disable(ID);remote.scopes.clear();PackSnapshot disabled=PackPublication.publish(store,remote);check(disabled.choice(ID).equals(PackSnapshot.DISABLED),"disable with absent scope");
         store.remove(MODULE);check(store.state().versions().isEmpty()&&store.state().snapshot().choice(ID).equals(PackSnapshot.DISABLED),"removal no legacy resurrection");

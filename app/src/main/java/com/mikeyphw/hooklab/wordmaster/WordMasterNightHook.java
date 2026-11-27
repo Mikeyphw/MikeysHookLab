@@ -26,7 +26,7 @@ public final class WordMasterNightHook {
     private static final String ACTIVITY = "com.unity3d.player.UnityPlayerActivity";
     private static final String TAG = "hooklab.wordmaster.night.scrim.v1";
     // A moderate, neutral-navy overlay. Avoid strong opacity that hides gameplay.
-    private static final int FILTER = 0x64010712;
+    // The shared SDK defaults to the original 0x64010712 filter.
     private static final AtomicBoolean INSTALLED = new AtomicBoolean();
 
     private WordMasterNightHook() { }
@@ -36,7 +36,7 @@ public final class WordMasterNightHook {
     }
 
     /** Must be called on the Activity UI thread. Idempotent after resume/recreation. */
-    static void ensureShade(Activity activity) {
+    static void ensureShade(Activity activity,int filter) {
         if (!ACTIVITY.equals(activity.getClass().getName()) || activity.isFinishing()
                 || activity.isDestroyed()) return;
         View root = activity.getWindow().getDecorView();
@@ -44,12 +44,12 @@ public final class WordMasterNightHook {
         ViewGroup decor = (ViewGroup) root;
         View prior = decor.findViewWithTag(TAG);
         if (prior != null) {
-            prior.bringToFront();
+            prior.setBackgroundColor(filter);prior.bringToFront();
             return;
         }
         View shade = new View(activity);
         shade.setTag(TAG);
-        shade.setBackgroundColor(FILTER);
+        shade.setBackgroundColor(filter);
         shade.setClickable(false);
         shade.setLongClickable(false);
         shade.setFocusable(false);
@@ -74,6 +74,7 @@ public final class WordMasterNightHook {
         if (!matches(context.packageName, actual.getLongVersionCode(), actual.versionName)) {
             throw new SecurityException("Unverified Word Master host build");
         }
+        final int filter=context.wordMasterFilter().color();
         if (!INSTALLED.compareAndSet(false, true)) return;
         try {
             Class<?> target = Class.forName(ACTIVITY, false, context.classLoader);
@@ -87,7 +88,7 @@ public final class WordMasterNightHook {
                         if (current instanceof Activity) {
                             Activity activity = (Activity) current;
                             activity.runOnUiThread(() -> {
-                                try { ensureShade(activity); }
+                                try { ensureShade(activity,filter); }
                                 catch (Throwable failure) {
                                     TweakDiagnostics.rethrowFatal(failure);
                                     xp.log(Log.WARN, "HookLab", "WORD_MASTER_NIGHT_FILTER_REFUSED category="

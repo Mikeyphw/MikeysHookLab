@@ -272,7 +272,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	if len(args) != 2 || args[0] != "inspect" {
-		fmt.Fprintln(stderr, "usage: hooklabctl version | inspect <metadata.json> | module pack <manifest> <provenance> <dex> <private-key.der> <new.hookpack> | module verify|inspect <pack> <trusted-public-key.der>")
+		fmt.Fprintln(stderr, "usage: hooklabctl version | inspect <metadata.json> | module pack <manifest> <provenance> <dex> <private-key.der> <new.hookpack> [--ui-dex <dex>] [--ui-resources <json>] | module verify|inspect <pack> <trusted-public-key.der>")
 		return 2
 	}
 	before, e := os.Lstat(args[1])

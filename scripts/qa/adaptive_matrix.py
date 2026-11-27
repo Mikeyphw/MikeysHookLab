@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse, hashlib, json, math, os, re, shutil, subprocess, sys, time, xml.etree.ElementTree as ET, zipfile
 from pathlib import Path
 import native_smoke as n
+import secrets
+import rotation_bridge
 CASES={
  'api29-compact':(29,320,700,2.0,'light'),
  'api29-standard':(29,390,844,1.0,'dark'),
@@ -102,6 +104,16 @@ def catalog_readiness(source,test,phase):
   return row
  except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
 
+def rotation_readiness(source,phase):
+ if phase not in ('SEARCH_ROTATE_SETTLE','SEARCH_ROTATE_RETURN_SETTLE'):return None
+ try:
+  raw=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/rotation-readiness.json');require(0<len(raw)<=4096,'rotation readiness size')
+  row=json.loads(raw);flags={'single_resumed_main','window_ready','display_rotation','display_size','configuration_orientation','search_attached','search_focused','search_text_matches','search_visible','ime_hidden','hooks_navigation','stable_samples'}
+  if set(row)!=flags|{'schema','source','phase','test'} or row['schema']!='hooklab.uxr04.rotation-readiness.v1' or row['source']!=source or row['phase']!=phase or row['test']!='adaptiveJourney':return None
+  if not all(type(row[k]) is bool for k in flags-{'stable_samples'}) or type(row['stable_samples']) is not int or not 0<=row['stable_samples']<2:return None
+  return row
+ except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
+
 ROTATION_OBSERVATIONS=40
 ROTATION_REASSERT_AT=10
 ROTATION_POLL_SECONDS=.25
@@ -130,17 +142,37 @@ def lock_matrix_rotation(cfg):
  print('ROTATION_LOCK_REFUSED '+json.dumps({'api':cfg['api'],'requested':int(rotation),'wm_confirmed':wm_ok,'settings_confirmed':settings_ok,'stable_samples':stable,'observations':ROTATION_OBSERVATIONS},sort_keys=True),flush=True)
  require(wm_ok and settings_ok and stable==2,'matrix rotation lock/settings not stably confirmed')
 
+def run_instrumentation(test,cfg,source):
+ nonce=secrets.token_hex(16)
+ bridge=rotation_bridge.Bridge(cfg,source,nonce,lock_matrix_rotation) if test==JOURNEY else None
+ args=['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),'-e','uxr04_rotation_nonce',nonce,n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner']
+ if bridge:bridge.start()
+ try:
+  result=subprocess.run(args,capture_output=True,text=True,timeout=900)
+ except BaseException:
+  if bridge:bridge.finish(False)
+  raise
+ if bridge:
+  # A runner failure still retains the original status/partial checkpoint.
+  try:n.parse_instrumentation(result.stdout,test);complete=result.returncode==0
+  except ValueError:complete=False
+  if not bridge.finish(complete):
+   result.rotation_bridge_failed=True
+  result.rotation_bridge_diagnostic=bridge.diagnostic()
+ return result
+
 def instrument(test,cfg,source,out):
  lock_matrix_rotation(cfg)
  # A checkpoint from a different invocation must never be accepted as current.
  n.clear_failure_checkpoint()
- if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json')
- output='';rc=None;reason=None
+ if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json','files/uxr04-adaptive/rotation-request.json','files/uxr04-adaptive/rotation-request.tmp','files/uxr04-adaptive/rotation-readiness.json')
+ output='';rc=None;reason=None;result=None
  try:
-  result=subprocess.run(['adb','-s',n.SERIAL,'shell','am','instrument','-w','-r','-e','class',test,'-e','uxr04_theme',cfg['theme'],'-e','uxr04_source',source,'-e','uxr04_width_px',str(cfg['width_px']),'-e','uxr04_height_px',str(cfg['height_px']),'-e','uxr04_font_scale',str(cfg['font_scale']),n.PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=900)
+  result=run_instrumentation(test,cfg,source)
   rc=result.returncode;output=result.stdout
   require(rc==0,'instrument transport failed: '+test)
   n.parse_instrumentation(output,test)
+  if getattr(result,'rotation_bridge_failed',False):reason='ROTATION_BRIDGE_REFUSED'
  except subprocess.TimeoutExpired as error:
   output=error.stdout;reason='TIMEOUT'
  except OSError:
@@ -149,6 +181,11 @@ def instrument(test,cfg,source,out):
   reason=failure_info(output,test,rc)['reason']
  if reason is not None:
   failure=failure_info(output,test,rc,reason);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES)
+  # A test assertion and host-bridge failure are independent observations.
+  if result is not None and hasattr(result,'rotation_bridge_diagnostic'):
+   failure['rotation_bridge']=result.rotation_bridge_diagnostic
+  if test==JOURNEY and failure['checkpoint_phase'] in ('SEARCH_ROTATE_SETTLE','SEARCH_ROTATE_RETURN_SETTLE'):
+   failure['rotation_readiness']=rotation_readiness(source,failure['checkpoint_phase'])
   if test==JOURNEY and failure['checkpoint_phase']=='HOME_SCROLL':failure['home_target_geometry']=home_geometry_checkpoint(source)
   if failure['checkpoint_phase']=='VIEWPORT_READY':failure['viewport_geometry']=viewport_failure(source,test)
   if failure['checkpoint_phase'] in ('OPEN_HOOKS','SEARCH_OPEN'):failure['catalog_readiness']=catalog_readiness(source,test,failure['checkpoint_phase'])

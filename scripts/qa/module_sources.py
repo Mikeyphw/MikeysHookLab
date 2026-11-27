@@ -40,11 +40,11 @@ def project(module,root=ROOT):
           'NeoStoreHook':(('void poll(int token) {','if(!VerboseLogs.active()){stop();return;}'),('void tap(int token,Object shownRoute,SourcePolicy.Snapshot shown) {','if(!VerboseLogs.active())return;')),
           'ObtainXBridge':(('public static Outcome launch(Activity activity, SourcePolicy.Snapshot snapshot, String route) {','if(!VerboseLogs.active())return Outcome.LAUNCH_REFUSED;'),),
           'ChatGptTermuxHandoff':(('private static void openPreview(TermuxOfferGate b){','if(!VerboseLogs.active())return;'),('Object scope=a[0],c=a[1];','if(!VerboseLogs.active())return h.call(h.invoke3,delegate,scope,c,a[2]);')),
-          'WordMasterNightHook':(('try { ensureShade(activity); }',''),),
+          'WordMasterNightHook':(('try { ensureShade(activity,filter); }',''),),
         }
         for marker,guard in guards.get(name,()):
             if s.count(marker)!=1:raise ValueError('reviewed callback boundary drift: '+name)
-            if name=='WordMasterNightHook':s=s.replace(marker,'try { if(VerboseLogs.active())ensureShade(activity); }')
+            if name=='WordMasterNightHook':s=s.replace(marker,'try { if(VerboseLogs.active())ensureShade(activity,filter); }')
             else:s=s.replace(marker,marker+'\n            '+guard)
         output[name+'.java']=s
     installs='\n'.join('        if(context.settings.enabled("'+hook+'")){selected++; '+klass+'.install(host);}' for hook,klass in sorted(ROSTER[module]['install'].items()))
@@ -81,7 +81,10 @@ final class VerboseLogs {{
 '''
     return output
 
-def manifest(module,version='1.0.0',root=ROOT):
+def settings_schema(module):return 2 if module=='wordmaster' else 1
+
+def manifest(module,version=None,root=ROOT):
+    if version is None:version='1.1.0' if module=='wordmaster' else '1.0.0'
     registry=json.loads((root/'runtime/src/main/resources/META-INF/hooklab/builtin-registry.json').read_text())
     rows=[{k:r[k] for k in ('id','package','min_version','max_version')} for r in registry['hooks'] if r['module']==module]
     if {r['id'] for r in rows}!=set(ROSTER[module]['install']):raise ValueError('migration manifest roster drift')
@@ -89,7 +92,7 @@ def manifest(module,version='1.0.0',root=ROOT):
             'entrypoint':BASE+'.modules.'+module+'.Entrypoint','hooks':sorted(rows,key=lambda r:r['id'])}
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('module',choices=ROSTER);p.add_argument('--out',type=Path,required=True);p.add_argument('--version',default='1.0.0');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('module',choices=ROSTER);p.add_argument('--out',type=Path,required=True);p.add_argument('--version');a=p.parse_args()
     try:
         if a.out.exists():raise ValueError('fresh output directory required')
         a.out.mkdir(parents=True);dest=a.out/'src';dest.mkdir()

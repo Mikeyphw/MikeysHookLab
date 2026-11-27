@@ -17,6 +17,21 @@ public final class Mod02PackChecks {
         java.nio.ByteBuffer buffer=pack.directDex();
         if(!buffer.isDirect()||buffer.position()!=0||buffer.remaining()!=original.length)throw new AssertionError("invalid direct buffer");
         byte[] view=new byte[buffer.remaining()];buffer.get(view);if(!Arrays.equals(view,original))throw new AssertionError("direct buffer mismatch");
+        if(pack.hasUi()){
+            if(!pack.directUiDex().isDirect()||pack.directUiDex().remaining()==0||!pack.uiEntrypoint().equals("com.mikeyphw.hooklab.moduleui."+pack.moduleId+".Provider"))throw new AssertionError("UI DEX identity");
+            if("wordmaster".equals(pack.moduleId)){
+                try{PackPolicy.requireUiAdmission(pack,"0".repeat(64));throw new AssertionError("wrong approval accepted");}catch(IllegalArgumentException expected){}
+                if("personal".equals(pack.channel))PackPolicy.requireUiAdmission(pack,pack.archiveSha256);
+                else try{PackPolicy.requireUiAdmission(pack,pack.archiveSha256);throw new AssertionError("test UI admitted");}catch(IllegalArgumentException expected){}
+            }
+            if("probe".equals(pack.moduleId)){
+                if(!"Ajuda".equals(pack.uiResources.translation("probe","help",java.util.Locale.forLanguageTag("pt-BR"),"missing"))||!"Settings".equals(pack.uiResources.translation("probe","label",java.util.Locale.forLanguageTag("pt-BR"),"missing")))throw new AssertionError("resource locale fallback");
+                byte[] asset=pack.uiResources.asset("probe","guide").bytes();if(!"hello".equals(new String(asset,java.nio.charset.StandardCharsets.UTF_8)))throw new AssertionError("resource bytes");asset[0]^=1;
+                if(pack.uiResources.asset("probe","guide").bytes()[0]!='h')throw new AssertionError("mutable asset");
+                try{pack.uiResources.asset("other","guide");throw new AssertionError("foreign resource namespace accepted");}catch(IllegalArgumentException expected){}
+                System.out.println("JAVA_PACK_UI_RESOURCES_PASS");
+            }
+        }
         System.out.println("JAVA_PACK_VERIFIED "+pack.moduleId+" "+pack.version+" "+pack.signer+" "+pack.archiveSha256);
     }
 }

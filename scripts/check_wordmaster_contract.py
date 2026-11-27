@@ -37,7 +37,8 @@ for forbidden in ('su ', 'Runtime.getRuntime()', 'FileOutputStream',
                   'UnitySendMessage(', 'de.robv.android.xposed',
                   'startActivity(', 'getSharedPreferences('):
     assert forbidden not in source, 'FORBIDDEN: ' + forbidden
-assert re.search(r'FILTER\s*=\s*0x64010712;', source)
+assert 'context.wordMasterFilter().color()' in source and 'shade.setBackgroundColor(filter)' in source
+assert 'if(!custom)return 0x64010712' in read('sdk/src/main/java/com/mikeyphw/hooklab/sdk/ModuleConfig.java')
 assert 'WordMasterNightHook::install' in catalog
 assert 'WordMasterNightHook.TWEAK_ID' in catalog
 assert 'WordMasterNightHook.VERSION_CODE, WordMasterNightHook.VERSION_CODE' in catalog

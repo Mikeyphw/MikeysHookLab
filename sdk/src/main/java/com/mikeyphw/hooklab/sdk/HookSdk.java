@@ -36,13 +36,17 @@ public final class HookSdk {
 
     public static final class Settings {
         private final Map<String,Boolean> flags;
-        public Settings(Map<String,Boolean> values) {
+        private final ModuleConfig.Filter filter;
+        public Settings(Map<String,Boolean> values){this(values,ModuleConfig.defaultsFilter());}
+        public Settings(Map<String,Boolean> values,ModuleConfig.Filter filter) {
+            this.filter=Objects.requireNonNull(filter);
             Map<String,Boolean> copy = new LinkedHashMap<>();
             for (Map.Entry<String,Boolean> value : Objects.requireNonNull(values).entrySet()) {
                 copy.put(HookDescriptor.identifier(value.getKey()), Objects.requireNonNull(value.getValue()));
             }
             flags = Collections.unmodifiableMap(copy);
         }
+        public ModuleConfig.Filter wordMasterFilter(){if(!enabled(ModuleConfig.HOOK))throw new IllegalStateException("configuration scope refused");return filter;}
         public boolean enabled(String key) { return Boolean.TRUE.equals(flags.get(HookDescriptor.identifier(key))); }
     }
     public static final class Context {

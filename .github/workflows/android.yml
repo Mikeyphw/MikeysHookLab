@@ -6,6 +6,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
+  pull-requests: read
 concurrency:
   group: hooklab-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -131,13 +133,19 @@ jobs:
           ref: ${{ env.SOURCE_SHA }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Install prior evidence verifier dependencies
+        if: github.event_name == 'push'
+        continue-on-error: true
+        run: python3 -m pip install --user Pillow==11.3.0
       - name: Compute exact Git-tree impact
         id: plan
-        run: python3 -B scripts/qa/qualification.py plan --head "$SOURCE_SHA" --base "$BASE_SHA" --event "$EVENT_NAME" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --plan "$RUNNER_TEMP/qualification/plan.json" --github-output "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/qa/qualification.py plan --head "$SOURCE_SHA" --base "$BASE_SHA" --event "$EVENT_NAME" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --plan "$RUNNER_TEMP/qualification/plan.json" --github-output "$GITHUB_OUTPUT" --reuse "$RUNNER_TEMP/qualification/reuse.json"
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: hooklab-impact-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/qualification/plan.json
+          path: ${{ runner.temp }}/qualification/
           if-no-files-found: error
           retention-days: 14
   source:
@@ -293,14 +301,19 @@ jobs:
         with:
           name: hooklab-impact-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/qualification
+      - name: Install prior evidence verifier dependencies
+        if: github.event_name == 'push'
+        continue-on-error: true
+        run: python3 -m pip install --user Pillow==11.3.0
       - name: Recompute impact and verify every required or excluded gate
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -Eeuo pipefail
           printf '%s' "$NEEDS_JSON" | jq -e '.impact.result == "success"' >/dev/null
           jobs=$(printf '%s' "$NEEDS_JSON" | jq -c 'del(.impact) | map_values(.result)')
-          python3 -B scripts/qa/qualification.py aggregate --head "$SOURCE_SHA" --base "$BASE_SHA" --event "$EVENT_NAME" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --plan "$RUNNER_TEMP/qualification/plan.json" --receipt "$RUNNER_TEMP/qualification/receipt.json" --jobs "$jobs"
+          python3 -B scripts/qa/qualification.py aggregate --head "$SOURCE_SHA" --base "$BASE_SHA" --event "$EVENT_NAME" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --plan "$RUNNER_TEMP/qualification/plan.json" --receipt "$RUNNER_TEMP/qualification/receipt.json" --jobs "$jobs" --reuse "$RUNNER_TEMP/qualification/reuse.json"
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:

@@ -28,6 +28,27 @@ final class FrameworkPackRemote implements PackPublication.Remote {
     private SharedPreferences prefs()throws IOException{require();return service.getRemotePreferences(PackSnapshot.GROUP);}
     @Override public Map<String,?> state()throws IOException{Map<String,?> result=new HashMap<>(prefs().getAll());require();return result;}
     @Override public Set<String> scope()throws IOException{require();List<String> scope=service.getScope();require();if(scope==null)throw new IOException("framework scope unavailable");return new HashSet<>(scope);}
+    /** Read-only observed opt-in/lock state, from the same bound framework. */
+    Map<String,Boolean> flags(String group,boolean safety)throws IOException {
+        require();Map<String,?> observed=service.getRemotePreferences(group).getAll();require();
+        Map<String,Boolean> flags=new HashMap<>();
+        for(String id:com.mikeyphw.hooklab.runtime.pack.PackPolicy.hooks().keySet()){
+            String key=safety?com.mikeyphw.hooklab.core.TweakDiagnostics.quarantineKey(id):com.mikeyphw.hooklab.core.TweakKeys.enabled(id);
+            Object value=observed.get(key);if(value!=null&&!(value instanceof Boolean))throw new IOException("invalid hook flag");
+            flags.put(id,Boolean.TRUE.equals(value));
+        }return flags;
+    }
+    com.mikeyphw.hooklab.sdk.ModuleConfig.Frame configuration()throws IOException {
+        require();Map<String,?> state=service.getRemotePreferences(com.mikeyphw.hooklab.sdk.ModuleConfig.GROUP).getAll();require();return com.mikeyphw.hooklab.sdk.ModuleConfig.read(state);
+    }
+    void configuration(com.mikeyphw.hooklab.sdk.ModuleConfig.Frame expected,com.mikeyphw.hooklab.sdk.ModuleConfig.Document update)throws IOException {
+        if(!configuration().same(expected))throw new IOException("configuration changed; refresh first");
+        Map<String,String> values=com.mikeyphw.hooklab.sdk.ModuleConfig.replacement(expected,update);
+        require();SharedPreferences.Editor editor=service.getRemotePreferences(com.mikeyphw.hooklab.sdk.ModuleConfig.GROUP).edit();
+        for(Map.Entry<String,String> e:values.entrySet())editor.putString(e.getKey(),e.getValue());
+        if(!editor.commit())throw new IOException("configuration commit refused");require();
+        if(!configuration().same(com.mikeyphw.hooklab.sdk.ModuleConfig.read(values)))throw new IOException("configuration readback refused");
+    }
     @Override public void write(String name,byte[] bytes)throws IOException{
         require();if(!name.matches("hookpack-[0-9a-f]{64}")||bytes.length>HookPack.MAX_ARCHIVE)throw new IOException("remote file identity");
         try(ParcelFileDescriptor.AutoCloseOutputStream out=new ParcelFileDescriptor.AutoCloseOutputStream(service.openRemoteFile(name))){Os.ftruncate(out.getFD(),0);Os.lseek(out.getFD(),0,OsConstants.SEEK_SET);out.write(bytes);out.flush();Os.fsync(out.getFD());}

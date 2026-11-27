@@ -39,7 +39,16 @@ public final class PackPolicy {
         }
         if(!expected.isEmpty())throw new IllegalArgumentException("pack hook roster incomplete");
         Map<?,?> provenance=(Map<?,?>)HookSdk.StrictJson.read(pack.provenance());
-        if(!Long.valueOf(1).equals(provenance.get("settings_schema")))throw new IllegalArgumentException("unsupported pack settings migration");
+        long schema=(Long)provenance.get("settings_schema");
+        if(schema!=1&&(schema!=2||!"wordmaster".equals(pack.moduleId)||compareVersions(pack.version,"1.1.0")<0))throw new IllegalArgumentException("unsupported pack settings migration");
+    }
+    /** This is explicit trust admission, NOT an isolation or sandbox guarantee. */
+    public static void requireUiAdmission(HookPack.Verified pack,String confirmedDigest){
+        verifyMigration(pack);requireHash(confirmedDigest);
+        if(!pack.hasUi()||!"personal".equals(pack.channel)||!confirmedDigest.equals(pack.archiveSha256))throw new IllegalArgumentException("personal reviewed UI admission refused");
+    }
+    public static long settingsSchema(HookPack.Verified pack){
+        return (Long)((Map<?,?>)HookSdk.StrictJson.read(pack.provenance())).get("settings_schema");
     }
     public static int compareVersions(String a,String b) {
         String pattern="(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})";
