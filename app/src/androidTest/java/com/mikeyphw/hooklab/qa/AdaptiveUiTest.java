@@ -259,25 +259,35 @@ public final class AdaptiveUiTest {
         int expectedWidth=rotation==android.view.Surface.ROTATION_90?Math.max(w,h):Math.min(w,h);
         int expectedHeight=rotation==android.view.Surface.ROTATION_90?Math.min(w,h):Math.max(w,h);
         final View[] previous={null};int stable=0;
+        final String[] flags={"single_resumed_main","window_ready","display_rotation","display_size","configuration_orientation","search_attached","search_focused","search_text_matches","search_visible","ime_hidden","hooks_navigation"};
+        final boolean[] sample=new boolean[flags.length];
         for(int i=0;i<50;i++){
             final View[] observed={null};
             ins.runOnMainSync(()->{
+                java.util.Arrays.fill(sample,false);
                 java.util.Collection<android.app.Activity> resumed=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED);
                 if(resumed.size()!=1)return;
                 android.app.Activity a=resumed.iterator().next();if(!(a instanceof MainActivity)||a.isFinishing()||a.isDestroyed())return;
+                sample[0]=true;
                 View root=a.getWindow().getDecorView();android.view.Display display=a.getWindowManager().getDefaultDisplay();android.graphics.Point size=new android.graphics.Point();display.getRealSize(size);
                 android.widget.EditText field=root.findViewById(R.id.hooklab_catalog_search);NavigationBarView nav=root.findViewById(R.id.hooklab_primary_navigation);
                 androidx.core.view.WindowInsetsCompat insets=androidx.core.view.ViewCompat.getRootWindowInsets(root);Rect bounds=new Rect();
-                if(root.isAttachedToWindow()&&root.hasWindowFocus()&&display.getRotation()==rotation&&size.x==expectedWidth&&size.y==expectedHeight
-                    &&a.getResources().getConfiguration().orientation==(rotation==android.view.Surface.ROTATION_90?2:1)
-                    &&field!=null&&field.isAttachedToWindow()&&field.isShown()&&field.hasFocus()&&query.contentEquals(field.getText())
-                    &&field.getGlobalVisibleRect(bounds)&&bounds.height()>=Math.round(48*a.getResources().getDisplayMetrics().density)
-                    &&insets!=null&&!insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
-                    &&nav!=null&&nav.getSelectedItemId()==202&&nav.isShown())observed[0]=root;
+                sample[1]=root.isAttachedToWindow()&&root.hasWindowFocus();sample[2]=display.getRotation()==rotation;sample[3]=size.x==expectedWidth&&size.y==expectedHeight;
+                sample[4]=a.getResources().getConfiguration().orientation==(rotation==android.view.Surface.ROTATION_90?2:1);
+                sample[5]=field!=null&&field.isAttachedToWindow()&&field.isShown();sample[6]=field!=null&&field.hasFocus();sample[7]=field!=null&&query.contentEquals(field.getText());
+                sample[8]=field!=null&&field.getGlobalVisibleRect(bounds)&&bounds.height()>=Math.round(48*a.getResources().getDisplayMetrics().density);
+                sample[9]=insets!=null&&!insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime());sample[10]=nav!=null&&nav.getSelectedItemId()==202&&nav.isShown();
+                for(boolean ready:sample)if(!ready)return;
+                observed[0]=root;
             });
             if(observed[0]!=null&&observed[0]==previous[0]){if(++stable>=2)return;}else stable=0;
             previous[0]=observed[0];SystemClock.sleep(200);
         }
+        // Export only fixed booleans and a bounded count, never query or view content.
+        JSONObject readiness=new JSONObject().put("schema","hooklab.uxr04.rotation-readiness.v1")
+            .put("source",args.getString("uxr04_source", "")).put("test",activeTest).put("phase",phase).put("stable_samples",stable);
+        for(int i=0;i<flags.length;i++)readiness.put(flags[i],sample[i]);
+        Files.write(new File(folder,"rotation-readiness.json").toPath(),readiness.toString().getBytes(StandardCharsets.UTF_8));
         fail("rotated Activity, real display, search focus, text or IME not stably observed");
     }
     private int rotationSequence;

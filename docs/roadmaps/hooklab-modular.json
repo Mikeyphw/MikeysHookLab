@@ -350,8 +350,8 @@
       "parent_id": "MOD-02"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Source candidate includes native module workspace, Word Master configuration, signed personal native UI with explicit trust-only admission and PAT gated, signed resources, visual candidate, rotation boundary and tree-bound CI reuse. Native/hosted/physical/release and visual approval pending; same-UID isolation is not claimed.",
+      "acceptance": "FAILED",
+      "blocker": "PR #38 run 46026702538 attempt 1: all ten adaptive cases failed SEARCH_ROTATE_SETTLE; aggregate and targeted qualification refused; hosted repair and device acceptance pending.",
       "counted": true,
       "dependencies": [
         "MOD-02"
@@ -361,6 +361,19 @@
       "kind": "OVERLAY",
       "name": "Native Module UI & Configuration",
       "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-head ten-case adaptive matrix, independent CI/artifact checks, physical device and visual/release acceptance pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-03"
+      ],
+      "id": "MOD-03-F01",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Adaptive Rotation Transport & Failure Evidence Repair",
+      "parent_id": "MOD-03"
     },
     {
       "acceptance": "PENDING",
@@ -484,5 +497,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-03"
+  "version": "2.0-MOD-03-F01"
 }

@@ -144,6 +144,18 @@ class AdaptiveMatrixTests(unittest.TestCase):
      row=json.loads((out/'failure.json').read_text());self.assertEqual(row['reason'],expected);self.assertFalse(row['terminal_result_present']);self.assertNotIn('PRIVATE',json.dumps(row));self.assertEqual(row['checkpoint_phase'],'SEARCH_ROTATE_REQUEST')
      if expected=='TERMINAL_RESULT_MISSING':self.assertEqual(row['termination_markers'],['PROCESS_CRASH_REPORTED']);self.assertEqual(row['transport_exit'],0)
     child.assert_called_once()
+ def test_rotation_assertion_retains_bridge_and_readiness_diagnostics(self):
+  from unittest.mock import patch
+  import subprocess
+  cls,method=a.JOURNEY.split('#');output=f'INSTRUMENTATION_STATUS: class={cls}\nINSTRUMENTATION_STATUS: test={method}\nINSTRUMENTATION_STATUS_CODE: 1\nINSTRUMENTATION_STATUS_CODE: -2\nINSTRUMENTATION_CODE: -1\n'
+  result=subprocess.CompletedProcess([],0,output,'');result.rotation_bridge_failed=True;result.rotation_bridge_diagnostic={'schema':'hooklab.rotation-bridge-diagnostic.v1','source':'a'*40,'stage':'POLL_REQUEST','failure':'ROTATION_BRIDGE_REFUSED','sequence':1,'completed':0,'absent_polls':0,'worker_alive':False}
+  ready={'schema':'hooklab.uxr04.rotation-readiness.v1','source':'a'*40,'phase':'SEARCH_ROTATE_SETTLE','test':'adaptiveJourney','stable_samples':0,**{k:False for k in ('single_resumed_main','window_ready','display_rotation','display_size','configuration_orientation','search_attached','search_focused','search_text_matches','search_visible','ime_hidden','hooks_navigation')}}
+  with tempfile.TemporaryDirectory() as tmp,patch.object(a,'lock_matrix_rotation'),patch.object(a.n,'clear_failure_checkpoint'),patch.object(a.n,'adb'),patch.object(a,'checkpoint_phase',return_value='SEARCH_ROTATE_SETTLE'),patch.object(a.n,'failure_checkpoint',return_value=None),patch.object(a,'run_instrumentation',return_value=result),patch.object(a.n,'raw',return_value=json.dumps(ready).encode()):
+   out=Path(tmp)
+   with self.assertRaises(ValueError):a.instrument(a.JOURNEY,a.config('api29-compact'),'a'*40,out)
+   row=json.loads((out/'failure.json').read_text());self.assertEqual(row['reason'],'TEST_FAILED');self.assertTrue(row['terminal_result_present']);self.assertEqual(row['rotation_bridge'],result.rotation_bridge_diagnostic);self.assertEqual(row['rotation_readiness'],ready)
+  with patch.object(a.n,'raw',side_effect=lambda *args:json.dumps(ready).encode()):
+   self.assertEqual(a.rotation_readiness('a'*40,'SEARCH_ROTATE_SETTLE'),ready);self.assertIsNone(a.rotation_readiness('b'*40,'SEARCH_ROTATE_SETTLE'));self.assertIsNone(a.rotation_readiness('a'*40,'SEARCH_ROTATE_RETURN_SETTLE'));ready['search_text_matches']='PRIVATE';self.assertIsNone(a.rotation_readiness('a'*40,'SEARCH_ROTATE_SETTLE'))
  def test_home_uses_semantic_action_and_keeps_full_accessibility_gate(self):
   root=Path(__file__).resolve().parents[2];test=(root/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text();activity=(root/'app/src/main/java/com/mikeyphw/hooklab/ui/MainActivity.java').read_text()
   home=test.split('phase("HOME_SCROLL")',1)[1].split('phase("OPEN_HOOKS")',1)[0]

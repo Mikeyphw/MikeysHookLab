@@ -104,6 +104,16 @@ def catalog_readiness(source,test,phase):
   return row
  except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
 
+def rotation_readiness(source,phase):
+ if phase not in ('SEARCH_ROTATE_SETTLE','SEARCH_ROTATE_RETURN_SETTLE'):return None
+ try:
+  raw=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/rotation-readiness.json');require(0<len(raw)<=4096,'rotation readiness size')
+  row=json.loads(raw);flags={'single_resumed_main','window_ready','display_rotation','display_size','configuration_orientation','search_attached','search_focused','search_text_matches','search_visible','ime_hidden','hooks_navigation','stable_samples'}
+  if set(row)!=flags|{'schema','source','phase','test'} or row['schema']!='hooklab.uxr04.rotation-readiness.v1' or row['source']!=source or row['phase']!=phase or row['test']!='adaptiveJourney':return None
+  if not all(type(row[k]) is bool for k in flags-{'stable_samples'}) or type(row['stable_samples']) is not int or not 0<=row['stable_samples']<2:return None
+  return row
+ except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
+
 ROTATION_OBSERVATIONS=40
 ROTATION_REASSERT_AT=10
 ROTATION_POLL_SECONDS=.25
@@ -148,14 +158,15 @@ def run_instrumentation(test,cfg,source):
   except ValueError:complete=False
   if not bridge.finish(complete):
    result.rotation_bridge_failed=True
+  result.rotation_bridge_diagnostic=bridge.diagnostic()
  return result
 
 def instrument(test,cfg,source,out):
  lock_matrix_rotation(cfg)
  # A checkpoint from a different invocation must never be accepted as current.
  n.clear_failure_checkpoint()
- if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json','files/uxr04-adaptive/rotation-request.json','files/uxr04-adaptive/rotation-request.tmp')
- output='';rc=None;reason=None
+ if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json','files/uxr04-adaptive/rotation-request.json','files/uxr04-adaptive/rotation-request.tmp','files/uxr04-adaptive/rotation-readiness.json')
+ output='';rc=None;reason=None;result=None
  try:
   result=run_instrumentation(test,cfg,source)
   rc=result.returncode;output=result.stdout
@@ -170,6 +181,11 @@ def instrument(test,cfg,source,out):
   reason=failure_info(output,test,rc)['reason']
  if reason is not None:
   failure=failure_info(output,test,rc,reason);failure['checkpoint_phase']=checkpoint_phase(source,test);failure['cause_checkpoint']=n.failure_checkpoint(source,test,PHASES|n.FAILURE_STAGES)
+  # A test assertion and host-bridge failure are independent observations.
+  if result is not None and hasattr(result,'rotation_bridge_diagnostic'):
+   failure['rotation_bridge']=result.rotation_bridge_diagnostic
+  if test==JOURNEY and failure['checkpoint_phase'] in ('SEARCH_ROTATE_SETTLE','SEARCH_ROTATE_RETURN_SETTLE'):
+   failure['rotation_readiness']=rotation_readiness(source,failure['checkpoint_phase'])
   if test==JOURNEY and failure['checkpoint_phase']=='HOME_SCROLL':failure['home_target_geometry']=home_geometry_checkpoint(source)
   if failure['checkpoint_phase']=='VIEWPORT_READY':failure['viewport_geometry']=viewport_failure(source,test)
   if failure['checkpoint_phase'] in ('OPEN_HOOKS','SEARCH_OPEN'):failure['catalog_readiness']=catalog_readiness(source,test,failure['checkpoint_phase'])
