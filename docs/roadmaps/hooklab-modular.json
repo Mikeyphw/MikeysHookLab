@@ -376,8 +376,8 @@
       "parent_id": "MOD-03"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-source hosted qualification and physical ChatGPT profile/readback, signed provider, release and visual approval remain pending; Word Master rendering defect not waived.",
+      "acceptance": "FAILED",
+      "blocker": "PR #39 exact head be4d6298bb8bf1727a3ed7b9fb87f7dfbde8bf62 run 46074183389 attempt 1: 40 success, 4 failures, 3 skipped; native module instrumentation and API36-390 MCC_CANCEL NoMatchingViewException failed, then adaptive aggregate and final qualification refused. Rotation bridge completed both requests. Physical acceptance pending.",
       "counted": false,
       "dependencies": [
         "MOD-03-F01"
@@ -386,6 +386,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "ChatGPT Typed Profiles & Physical Acceptance Substitution",
+      "parent_id": "MOD-03"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-head native module visual, complete adaptive matrix and CI24 qualification; physical ChatGPT configuration and remaining Word Master defect pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-03-F02"
+      ],
+      "id": "MOD-03-F03",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Module Editor Assertion and Help Return Readiness Repair",
       "parent_id": "MOD-03"
     },
     {
@@ -510,5 +523,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-03-F02"
+  "version": "2.0-MOD-03-F03"
 }

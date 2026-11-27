@@ -1,0 +1,8 @@
+# MOD-03-F03 — Module editor assertion and Help return readiness repair
+
+Exact failed PR #39 head `be4d6298bb8bf1727a3ed7b9fb87f7dfbde8bf62`, tree `7340f14b279efa6c927057e41b168051f4bfb163`, run 46074183389 attempt 1: 40 successful jobs, four failed, three skipped. API36-390 failed `MCC_CANCEL` at the text-only click after privacy Activity recreation and Back; both rotation bridge requests completed. Native module visual instrumentation failed; its runner discarded the detailed exception. No claim that the historical module exception is proven.
+
+* Correct the concrete CompoundButton fixture bug: verify toggle state and regenerated UI and saved draft, not the ordinary View click-consumption boolean. Preserve every existing module and runtime assertion, cancellation/admission/recreation, actual screenshots and no activation proof.
+* After real privacy recreation and Back, await the focused Help route, exact semantic MCC row and two stable samples; bind Espresso to that root and click the actual action owner. No extra Back, manual route change, replay, forced focus or disabled check. Failure records source-bound boolean state, not private UI content.
+* Preserve source/run/attempt/APK-bound sanitized module failure evidence with explicit allowlisted phases and source frames. Failure artifact is separate from candidate success evidence. Never accept a failed or missing terminal result.
+* Full fresh native visual, 10 adaptive cases, CI24 and required qualification remain mandatory. No physical, release or visual approval claim. Word Master defect remains open; ChatGPT physical checks still pending.

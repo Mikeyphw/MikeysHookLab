@@ -33,6 +33,7 @@ public final class Mod03ModuleUiTest {
     private static final android.app.Instrumentation INS=InstrumentationRegistry.getInstrumentation();
     private static final Context APP=INS.getTargetContext();
     private static final File DIR=new File(APP.getFilesDir(),"mod03-test");
+    private String phase="SETUP";
     private static void tap(int id){onView(allOf(isAssignableFrom(Button.class),withText(id))).perform(scrollTo(),click());}
     private static void waitFor(int id)throws Exception{
         long until=android.os.SystemClock.elapsedRealtime()+15000;
@@ -56,7 +57,11 @@ public final class Mod03ModuleUiTest {
         try(FileOutputStream out=new FileOutputStream(new File(DIR,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}finally{bitmap.recycle();}
     }
     @Test public void realModuleScreensAndExplicitProvider()throws Exception{
-        assertNull(((HookLabApp)APP.getApplicationContext()).currentService());
+        try{runModuleJourney();}
+        catch(Exception|AssertionError failure){QaFailureEvidence.record(APP,"realModuleScreensAndExplicitProvider",phase,failure);throw new AssertionError("MODULE_PHASE_"+phase,failure);}
+    }
+    private void runModuleJourney()throws Exception{
+        phase="SETUP";assertNull(((HookLabApp)APP.getApplicationContext()).currentService());
         PackStore store=new PackStore(new File(APP.getFilesDir(),"hookpacks").toPath());
         assertNull("fresh hosted pack store only",store.state().key());
         byte[] key=Files.readAllBytes(new File(DIR,"publisher.der").toPath());
@@ -64,30 +69,30 @@ public final class Mod03ModuleUiTest {
         HookPack.Verified pack=HookPack.verify(bytes,key);PackPolicy.requireUiAdmission(pack,pack.archiveSha256);
         store.trust(key,pack.signer,"personal");
         for(String module:java.util.List.of("wordmaster","chatgpt")){
-            byte[] archive=Files.readAllBytes(new File(DIR,module+".hookpack").toPath());
+            phase=module.toUpperCase(java.util.Locale.ROOT)+"_ADMISSION";byte[] archive=Files.readAllBytes(new File(DIR,module+".hookpack").toPath());
             HookPack.Verified admitted=HookPack.verify(archive,key);PackPolicy.requireUiAdmission(admitted,admitted.archiveSha256);
             assertEquals(module,admitted.moduleId);store.install(new ByteArrayInputStream(archive),admitted.archiveSha256);
             exercise(module);
         }
-        for(String id:java.util.List.of("wordmaster.night.filter","chatgpt.codeblock.copy.probe","chatgpt.codeblock.termux.handoff"))assertEquals("module navigation must not activate runtime","builtin",store.state().modes().get(id));
+        phase="RUNTIME_UNCHANGED";for(String id:java.util.List.of("wordmaster.night.filter","chatgpt.codeblock.copy.probe","chatgpt.codeblock.termux.handoff"))assertEquals("module navigation must not activate runtime","builtin",store.state().modes().get(id));
     }
-    private static void exercise(String module)throws Exception{
-        boolean chat="chatgpt".equals(module);String prefix=chat?"chatgpt-":"";
+    private void exercise(String module)throws Exception{
+        boolean chat="chatgpt".equals(module);String prefix=chat?"chatgpt-":"",stage=chat?"CHATGPT_":"WORDMASTER_";phase=stage+"LAUNCH";
         try(ActivityScenario<PackManagerActivity> activity=ActivityScenario.launch(PackManagerActivity.moduleIntent(APP,module))){
-            waitFor(R.string.mod03_configure);capture(activity,prefix+"overview",R.string.mod03_overview);
-            tap(R.string.mod03_configure);waitFor(R.string.mod03_ui_open);capture(activity,prefix+"configure",R.string.mod03_configure);
-            tap(R.string.mod03_ui_open);onView(withText(android.R.string.cancel)).perform(click());
+            phase=stage+"OVERVIEW";waitFor(R.string.mod03_configure);capture(activity,prefix+"overview",R.string.mod03_overview);
+            phase=stage+"CONFIGURE";tap(R.string.mod03_configure);waitFor(R.string.mod03_ui_open);capture(activity,prefix+"configure",R.string.mod03_configure);
+            phase=stage+"CANCEL";tap(R.string.mod03_ui_open);onView(withText(android.R.string.cancel)).perform(click());
             onView(withText(R.string.mod03_ui_close)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist());
-            tap(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_consent)).perform(click());waitFor(R.string.mod03_ui_close);
-            onView(withText(chat?"ChatGPT custom settings":"Word Master custom settings")).perform(scrollTo()).check(matches(isDisplayed()));
+            phase=stage+"ADMIT";tap(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_consent)).perform(click());waitFor(R.string.mod03_ui_close);
+            phase=stage+"CONTENT";onView(withText(chat?"ChatGPT custom settings":"Word Master custom settings")).perform(scrollTo()).check(matches(isDisplayed()));
             onView(withText(chat?"Review and restart ChatGPT. Existing execution consent is unchanged. Profiles cannot enable direct execution.":"Changes require review and a host restart.")).perform(scrollTo()).check(matches(isDisplayed()));
-            tap(R.string.mod03_ui_close);onView(withText(R.string.mod03_ui_close)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist());
-            tap(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_consent)).perform(click());waitFor(R.string.mod03_ui_close);
-            activity.recreate();waitFor(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_close)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist());
-            tap(R.string.mod03_logs);capture(activity,prefix+"logs",R.string.mod03_logs);
-            tap(R.string.mod03_versions);capture(activity,prefix+"versions",R.string.mod03_versions);
+            phase=stage+"CLOSE";tap(R.string.mod03_ui_close);onView(withText(R.string.mod03_ui_close)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist());
+            phase=stage+"READMIT";tap(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_consent)).perform(click());waitFor(R.string.mod03_ui_close);
+            phase=stage+"RECREATE";activity.recreate();waitFor(R.string.mod03_ui_open);onView(withText(R.string.mod03_ui_close)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist());
+            phase=stage+"LOGS";tap(R.string.mod03_logs);capture(activity,prefix+"logs",R.string.mod03_logs);
+            phase=stage+"VERSIONS";tap(R.string.mod03_versions);capture(activity,prefix+"versions",R.string.mod03_versions);
             activity.onActivity(a->{assertFalse(a.isFinishing());});
-            if(chat)com.mikeyphw.hooklab.packs.ChatGptProfileFixture.exercise(activity);
+            if(chat){phase="CHATGPT_EDITOR";com.mikeyphw.hooklab.packs.ChatGptProfileFixture.exercise(activity);}
         }
     }
 }

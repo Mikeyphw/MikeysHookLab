@@ -1,5 +1,6 @@
 """Hosted candidate-only browser and native module evidence; not visual approval."""
-import argparse, hashlib, json, os, subprocess, sys
+import argparse, hashlib, json, os, re, subprocess, sys
+import native_smoke as n
 from pathlib import Path
 from mod02_hosted_packs import identity, sha, run
 from qualification import canonical, require, strict_json
@@ -32,6 +33,31 @@ def validate_images(out, hosted=False):
                 require(any(lo!=hi for lo,hi in im.convert('RGB').getextrema()),'blank screenshot')
     return {name:sha(out/name) for name in sorted(expected)}
 
+MODULE_PHASES=frozenset(('SETUP','RUNTIME_UNCHANGED','CHATGPT_EDITOR')+tuple(module+'_'+phase for module in ('WORDMASTER','CHATGPT') for phase in ('ADMISSION','LAUNCH','OVERVIEW','CONFIGURE','CANCEL','ADMIT','CONTENT','CLOSE','READMIT','RECREATE','LOGS','VERSIONS')))
+
+def run_module_instrumentation(out,ident,app_hash,test_hash):
+    output='';rc=None;reason='TRANSPORT_FAILED'
+    try:
+        n.clear_failure_checkpoint()
+        result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',TEST,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=240)
+        rc=result.returncode;output=result.stdout
+        require(rc==0,'module instrumentation transport failed')
+        reason='TEST_FAILED';parse_instrumentation(output,TEST)
+        return
+    except (ValueError,OSError,subprocess.SubprocessError) as failure:
+        if isinstance(failure,subprocess.TimeoutExpired):reason='TIMEOUT';output=failure.stdout or ''
+        elif isinstance(failure,OSError):reason='SPAWN_FAILED'
+        if isinstance(output,bytes):output=output.decode('utf-8','replace')
+        codes=[]
+        for line in (output or '').splitlines():
+            match=re.fullmatch(r'INSTRUMENTATION_(STATUS_CODE|CODE): (-?\d{1,3})',line.strip())
+            if match and len(codes)<32:codes.append([match[1],int(match[2])])
+        cause=n.failure_checkpoint(ident['source_sha'],TEST,MODULE_PHASES)
+        report={'schema':'hooklab.mod03.instrumentation-failure.v1',**ident,'test':TEST,'status':'FAILED_NOT_APPROVAL','manager_apk_sha256':app_hash,'instrumentation_apk_sha256':test_hash,'reason':reason,'transport_exit':rc,'status_codes':codes,'cause_checkpoint':cause}
+        (out/'receipt.json').write_bytes(canonical(report)+b'\n')
+        print('MOD03_INSTRUMENTATION_FAILURE '+json.dumps(report,sort_keys=True),file=sys.stderr,flush=True)
+        raise ValueError('module instrumentation '+reason) from None
+
 def capture(out,fixture):
     ident=identity();contract();guard();require(not out.exists(),'fresh evidence directory required');out.mkdir(parents=True)
     require({p.name for p in fixture.iterdir()}=={'publisher.der','wordmaster.hookpack','chatgpt.hookpack'},'private fixture inventory')
@@ -40,8 +66,7 @@ def capture(out,fixture):
     for name in ('publisher.der','wordmaster.hookpack','chatgpt.hookpack'):
         with (fixture/name).open('rb') as source:run('adb','-s',SERIAL,'shell','-T','run-as',PKG,'sh','-c',f"'mkdir -p files/mod03-test && cat > files/mod03-test/{name}'",stdin=source)
         require(hashlib.sha256(raw('exec-out','run-as',PKG,'cat','files/mod03-test/'+name)).hexdigest()==sha(fixture/name),'UI fixture digest mismatch')
-    result=run('adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',TEST,PKG+'.test/androidx.test.runner.AndroidJUnitRunner',capture_output=True,text=True)
-    parse_instrumentation(result.stdout,TEST)
+    run_module_instrumentation(out,ident,app_hash,test_hash)
     for prefix in REFERENCES:
         for route in ROUTES:(out/f'native-{prefix}{route}.png').write_bytes(raw('exec-out','run-as',PKG,'cat',f'files/mod03-test/{prefix}{route}.png'))
     from playwright.sync_api import sync_playwright

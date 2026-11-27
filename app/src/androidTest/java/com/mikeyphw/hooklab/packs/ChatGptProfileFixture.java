@@ -26,7 +26,11 @@ public final class ChatGptProfileFixture {
             View root=editor.create();editor.resume();
             try{
                 SwitchMaterial show=(SwitchMaterial)control(root,activity.getString(R.string.mod03_chatgpt_show_run),SwitchMaterial.class);assertNotNull(show);assertTrue(show.isChecked());
-                assertTrue(show.performClick());assertFalse(editor.draft().profiles().get("quiet").showRun);
+                assertTrue(show.isEnabled()&&show.isClickable());
+                show.performClick(); // CompoundButton toggles independently of View.performClick's return value.
+                assertFalse(show.isChecked());assertFalse(editor.draft().profiles().get("quiet").showRun);
+                SwitchMaterial refreshed=(SwitchMaterial)control(root,activity.getString(R.string.mod03_chatgpt_show_run),SwitchMaterial.class);
+                assertNotNull(refreshed);assertNotSame(show,refreshed);assertFalse(refreshed.isChecked());
                 assertNull(control(root,activity.getString(R.string.mod03_chatgpt_layout_diagnostics),SwitchMaterial.class));
                 Button save=(Button)control(root,activity.getString(R.string.mod03_save_profile),Button.class);assertNotNull(save);
                 editor.pause();assertFalse(save.isEnabled());editor.resume();assertTrue(save.performClick());
