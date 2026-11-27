@@ -11,6 +11,8 @@ FRAMEWORK_TEST='com.mikeyphw.hooklab.ui.FrameworkFixtureTest#connectedCommandsSt
 TERMUX_TEST='com.mikeyphw.hooklab.termux.TermuxBridgeFixtureTest#syntheticAuthorizationAndReceipt'
 PROBE_TEST='com.mikeyphw.hooklab.qa.ProbeArtFixtureTest#verifiedDexAndBothProbeWindows'
 PROBE_TARGET='com.mikeyphw.hooklab.probetarget'
+# Exact owned test APK roster, shared by installation and installed-byte verification.
+OWNED_PACKAGES=(PKG, PKG+'.test', PROBE_TARGET)
 TESTS=[TEST,TEST,FIXTURE,FRAMEWORK_TEST,TERMUX_TEST,PROBE_TEST]
 FRAMEWORK_EVIDENCE={'schema':'hooklab.framework.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'assertions':['connected_actual_activity','confirmed_write_readback','denied_write_no_optimism','scope_denial','scope_pending_across_recreation','stale_callback_rejected','scope_approval_readback','same_package_independent_hooks','injected_clock_capture_marker','capture_restart_same_route','health_exact_same_package_routes','health_navigation_no_writes','filtered_multi_app_route','catalog_recreate_and_return','catalog_navigation_no_writes','installed_package_icon_identity','missing_and_unknown_icon_states','no_real_framework']}
 FIXTURE_EVIDENCE={'schema':'hooklab.diagnostics.fixture.v1','synthetic':True,'runtime_qualified':False,'real_activity':True,'framework_disconnected':True,'assertions':['three_normalized_events','actual_timeline_projection','filter_one_of_three','raw_marker_not_rendered','store_unchanged','no_framework_service','filter_cancel_preserves_applied','stable_inspector_identity_recreate','isolated_workspaces','clear_filter','single_import_sheet_cancel','unsafe_uri_refused','redaction_preview_cancel_clipboard_unchanged']}
@@ -47,7 +49,7 @@ def install_apk(apk):
     require(not result.stderr.strip() and output in (['Success'],['Performing Streamed Install','Success'],['Performing Push Install','Success']),'APK installation did not report unambiguous success')
 
 def installed_path(package):
-    require(package in (PKG, PKG+'.test'),'unexpected package identity')
+    require(package in OWNED_PACKAGES,'unexpected package identity')
     result=subprocess.run(['adb','-s',SERIAL,'shell','-T','pm','path','--user','0',package],capture_output=True,text=True,timeout=30)
     require(result.returncode==0 and not result.stderr.strip(),'installed package path query failed '+package)
     path=result.stdout.strip()
@@ -305,7 +307,7 @@ def compare_native_repeats(out,ident,completed,records,repeat_records):
 def run(out,probe_dir):
     ident=expected_identity();require(not out.exists(),'fresh output required');out.mkdir(parents=True);(out/'receipt.json').write_text(json.dumps({**ident,'status':'IN_PROGRESS','completed_tests':[]}));guard()
     configured_renderer=configure_renderer()
-    for name in (PKG,PKG+'.test',PROBE_TARGET):
+    for name in OWNED_PACKAGES:
         res=subprocess.run(['adb','-s',SERIAL,'shell','pm','path',name],capture_output=True,text=True,timeout=20);require(not res.stdout.strip(),'preexisting app refused')
     app=one('app/build/outputs/apk/debug/*.apk');test=one('app/build/outputs/apk/androidTest/debug/*.apk')
     cert=subprocess.check_output([str(Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0/apksigner'),'verify','--print-certs',str(app)],text=True,timeout=30)

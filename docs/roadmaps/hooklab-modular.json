@@ -272,8 +272,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "New exact-source hosted ART and system-inset checks, CI24 and Vector device acceptance required.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Run 45913987375 attempt 1: 42 successful jobs, visual refused owned probe APK package before ART, final gate failed; CI24 and Android passed. F09 required.",
       "counted": false,
       "dependencies": [
         "MOD-01-F07"
@@ -282,6 +282,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Vector DEX Buffer and Probe Window Insets Repair",
+      "parent_id": "MOD-01"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Fresh exact-source hosted ART, visual, CI24 and Vector device qualification required.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F08"
+      ],
+      "id": "MOD-01-F09",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Owned Probe APK Verification Integration Repair",
       "parent_id": "MOD-01"
     },
     {
@@ -432,5 +445,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F08"
+  "version": "2.0-MOD-01-F09"
 }
