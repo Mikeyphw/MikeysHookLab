@@ -58,7 +58,7 @@ func TestSignedPack(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	dex := testDex("Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;")
+	dex := testDex("Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;", "Lcom/mikeyphw/hooklab/modules/probe/Callback-IA;", "Lcom/mikeyphw/hooklab/modules/probe/Callback-CC;")
 	a, e := createPack(packManifest, packProvenance, dex, key)
 	if e != nil {
 		t.Fatal(e)
@@ -95,7 +95,7 @@ func TestSignedPack(t *testing.T) {
 	if _, e := verifyPack(bad, pub); e == nil {
 		t.Fatal("central directory mutation accepted")
 	}
-	for _, d := range [][]byte{testDex("Lcom/mikeyphw/hooklab/sdk/HookSdk;"), testDex("Lcom/mikeyphw/hooklab/modules/probe/Other;"), testDex("Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;", "Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;")} {
+	for _, d := range [][]byte{testDex("Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;", "Lcom/mikeyphw/hooklab/modules/foreign/Callback-IA;"), testDex("Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;", "Lcom/mikeyphw/hooklab/modules/probe//Callback-IA;"), testDex("Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;", "Lcom/mikeyphw/hooklab/modules/probe/Callback.IA;"), testDex("Lcom/mikeyphw/hooklab/sdk/HookSdk;"), testDex("Lcom/mikeyphw/hooklab/modules/probe/Other;"), testDex("Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;", "Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;")} {
 		if _, e := createPack(packManifest, packProvenance, d, key); e == nil {
 			t.Fatal("class inventory accepted")
 		}

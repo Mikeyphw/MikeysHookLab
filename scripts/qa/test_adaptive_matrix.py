@@ -90,7 +90,11 @@ class AdaptiveMatrixTests(unittest.TestCase):
   for check in ('root.hasWindowFocus()','nav.getSelectedItemId()==202','R.string.ui_hooks','field.isAttachedToWindow()','field.getHeight()','i<50'):
    self.assertIn(check,helper)
   for prohibited in ('.perform(','.requestFocus(','.setText(','.setSelectedItemId(','.setRotation('):self.assertNotIn(prohibited,helper)
+  navigation=source.split('private View awaitPrimaryNavTarget(',1)[1].split('private View awaitCatalogRoot(',1)[0]
+  for check in ('root.hasWindowFocus()','item.isAttachedToWindow()','item.isClickable()','bounds.equals(previousBounds)','++stable>=2','i<50','getLocalVisibleRect','getLocationOnScreen'):self.assertIn(check,navigation)
+  for prohibited in ('.performClick(','.setSelectedItemId(','.requestFocus('):self.assertNotIn(prohibited,navigation)
   journey=source.split('phase("OPEN_HOOKS")',1)[1].split('phase("SEARCH_TYPE")',1)[0]
+  self.assertIn('awaitPrimaryNavTarget(s)',journey);self.assertIn('GeneralClickAction',journey);self.assertIn('Tap.SINGLE',journey);self.assertIn('visibleTouchCenter',journey)
   self.assertIn('isDescendantOfA(withId(R.id.hooklab_primary_navigation))',journey);self.assertIn('awaitCatalogRoot(s);capture(s,"hooks",records)',journey);self.assertIn('RootMatchers.withDecorView',journey);self.assertIn('.perform(scrollTo(),click())',journey);self.assertIn('awaitSearch(s,true,"")',journey)
  def test_catalog_readiness_is_source_phase_bound_and_safe(self):
   from unittest.mock import patch

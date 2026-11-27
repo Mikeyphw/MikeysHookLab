@@ -72,6 +72,7 @@ def build(out,personal):
             jar=home/'payload.jar';run('jar','--create','--file',jar,'-C',compiled,'.')
             run(d8,'--release','--min-api','29','--lib',android,'--classpath',sdkjar,'--output',dexdir,jar)
             require({x.name for x in dexdir.iterdir()}=={'classes.dex'},'single DEX expected')
+            print(f'MOD02_HOSTED_DEX_READY module={module} sha256={sha(dexdir/"classes.dex")} bytes={(dexdir/"classes.dex").stat().st_size}',flush=True)
             pack=out/(module+'.hookpack');run(cli,'module','pack',mf,provenance,dexdir/'classes.dex',private,pack)
             personal_module=personal/module;personal_module.mkdir()
             (personal_module/'manifest.json').write_bytes(mf.read_bytes());(personal_module/'classes.dex').write_bytes((dexdir/'classes.dex').read_bytes())

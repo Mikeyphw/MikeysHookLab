@@ -110,7 +110,8 @@ func canonicalProvenance(b []byte) ([]byte, error) {
 	return json.Marshal(o)
 }
 
-var dexDescriptor = regexp.MustCompile(`^L[A-Za-z0-9_$/]+;$`)
+// D8 interface desugaring emits -IA/-CC class names; keep package segments strict.
+var dexDescriptor = regexp.MustCompile(`^L(?:[A-Za-z0-9_$]+/)+[A-Za-z0-9_$-]+;$`)
 
 func validPackDex(b, manifest []byte) bool {
 	if len(b) < 112 || len(b) > dexMax || !bytes.Equal(b[:4], []byte("dex\n")) || b[7] != 0 {
@@ -430,6 +431,19 @@ func packCommand(args []string, stdout, stderr io.Writer) int {
 		key, ok := parsed.(*rsa.PrivateKey)
 		if !ok {
 			return fail("private_key_type", nil)
+		}
+		canonical, e := canonicalManifest(m)
+		if e != nil {
+			return fail("validate_manifest", e)
+		}
+		if _, e = canonicalProvenance(p); e != nil {
+			return fail("validate_provenance", e)
+		}
+		if !validPackDex(d, canonical) {
+			return fail("validate_dex_profile", packRefused)
+		}
+		if key.Validate() != nil || key.N.BitLen() != 3072 || key.E != 65537 {
+			return fail("validate_private_key", packRefused)
 		}
 		b, e := createPack(m, p, d, key)
 		if e != nil {

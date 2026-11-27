@@ -170,7 +170,7 @@ public final class HookPack {
         while(true){require(pos<dex.length && shift<=21,"DEX string length");int v=dex[pos++]&255;count|=(v&127)<<shift;if((v&128)==0)break;shift+=7;}
         require(count>0&&count<=256&&pos+count<dex.length&&dex[pos+count]==0,"DEX descriptor bound");
         String text=new String(dex,pos,count,StandardCharsets.US_ASCII);
-        require(text.matches("L[A-Za-z0-9_$/]+;"),"DEX class descriptor");return text;
+        require(text.matches("L(?:[A-Za-z0-9_$]+/)+[A-Za-z0-9_$-]+;"),"DEX class descriptor");return text;
     }
     private static void validateDex(byte[] dex,byte[] manifest) throws GeneralSecurityException {
         require(dex.length>=112 && dex.length<=MAX_DEX && dex[0]=='d' && dex[1]=='e' && dex[2]=='x' && dex[3]=='\n' && dex[7]==0,"DEX header");

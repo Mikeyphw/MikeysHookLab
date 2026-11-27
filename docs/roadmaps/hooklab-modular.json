@@ -311,8 +311,8 @@
       "parent_id": null
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Hard-link restriction reproduced in a real restricted Linux process; atomic no-replace publication and bounded stage diagnostics repaired. Fresh native, hosted ART/CI24 and physical Vector acceptance pending.",
+      "acceptance": "FAILED",
+      "blocker": "Hosted run 45938203070 attempt 1 failed in signed pack creation and API36 600dp navigation; native delivery to PR 37 succeeded. Retained failure evidence.",
       "counted": false,
       "dependencies": [
         "MOD-02"
@@ -321,6 +321,19 @@
       "implementation": "SOURCE_COMPLETE",
       "kind": "HOTFIX",
       "name": "Termux Atomic Pack Publication & Retained Apply Recovery",
+      "parent_id": "MOD-02"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "D8 synthetic class descriptor profile and real navigation gesture stabilization; fresh hosted ART, adaptive matrix and physical Vector acceptance pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-02-F01"
+      ],
+      "id": "MOD-02-F02",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "D8 Synthetic Descriptor & Adaptive Navigation Repair",
       "parent_id": "MOD-02"
     },
     {
@@ -458,5 +471,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-02-F01"
+  "version": "2.0-MOD-02-F02"
 }

@@ -2,10 +2,15 @@
 import hashlib, json, os, pathlib, platform, struct, subprocess, sys, tempfile, unittest, zipfile, zlib
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 
-def fixture_dex(name=b'Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;'):
-    b=bytearray(152);b[:8]=b'dex\n035\0'
-    for p,v in [(36,112),(40,0x12345678),(56,1),(60,112),(64,1),(68,116),(96,1),(100,120),(112,152)]:struct.pack_into('<I',b,p,v)
-    b.extend(bytes([len(name)])+name+b'\0');struct.pack_into('<I',b,32,len(b));b[12:32]=hashlib.sha1(b[32:]).digest();struct.pack_into('<I',b,8,zlib.adler32(b[12:])&0xffffffff)
+def fixture_dex(name=b'Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;', *extra):
+    names=(name,)+extra;n=len(names);so,to,co=112,112+4*n,112+8*n
+    b=bytearray(112+40*n);b[:8]=b'dex\n039\0'
+    for p,v in [(36,112),(40,0x12345678),(56,n),(60,so),(64,n),(68,to),(96,n),(100,co)]:struct.pack_into('<I',b,p,v)
+    for i,descriptor in enumerate(names):
+        assert 0<len(descriptor)<128
+        struct.pack_into('<I',b,so+4*i,len(b));struct.pack_into('<I',b,to+4*i,i);struct.pack_into('<I',b,co+32*i,i)
+        b.extend(bytes([len(descriptor)])+descriptor+b'\0')
+    struct.pack_into('<I',b,32,len(b));b[12:32]=hashlib.sha1(b[32:]).digest();struct.pack_into('<I',b,8,zlib.adler32(b[12:])&0xffffffff)
     return bytes(b)
 
 # Run an actual process with Linux hard-link syscalls denied, reproducing the
@@ -40,7 +45,7 @@ class PackInterop(unittest.TestCase):
             sources=sorted(ROOT.glob('sdk/src/main/java/**/*.java'))+sorted(ROOT.glob('runtime/src/main/java/**/*.java'))+[ROOT/'scripts/qa/Mod02PackChecks.java',ROOT/'scripts/qa/Mod02RegistryChecks.java',ROOT/'scripts/qa/Mod02HookTransactionChecks.java']
             run('javac','--release','17','-Xlint:all','-Werror','-d',classes,*sources)
             manifest=p/'manifest.json';manifest.write_text(json.dumps({'schema':'hooklab.module.manifest.v1','module_id':'probe','version':'1.0.0','sdk_min':1,'sdk_max':1,'api':102,'entrypoint':'com.mikeyphw.hooklab.modules.probe.ProbeEntrypoint','hooks':[{'id':'hooklab.probe.marker','package':'com.mikeyphw.hooklab.probetarget','min_version':1,'max_version':1}]}))
-            provenance=p/'provenance.json';provenance.write_text(json.dumps({'schema':'hooklab.pack.provenance.v1','source_sha':'a'*40,'source_tree':'b'*40,'run_id':1,'run_attempt':1,'settings_schema':1,'channel':'test'}));dex=p/'classes.dex';dex.write_bytes(fixture_dex())
+            provenance=p/'provenance.json';provenance.write_text(json.dumps({'schema':'hooklab.pack.provenance.v1','source_sha':'a'*40,'source_tree':'b'*40,'run_id':1,'run_attempt':1,'settings_schema':1,'channel':'test'}));dex=p/'classes.dex';dex.write_bytes(fixture_dex(b'Lcom/mikeyphw/hooklab/modules/probe/ProbeEntrypoint;',b'Lcom/mikeyphw/hooklab/modules/probe/Callback-IA;',b'Lcom/mikeyphw/hooklab/modules/probe/Callback-CC;'))
             a=p/'a.hookpack';b=p/'b.hookpack'
             for dst in (a,b):run(cli,'module','pack',manifest,provenance,dex,private,dst)
             self.assertEqual(a.read_bytes(),b.read_bytes());self.assertIn('HOOKPACK_SIGNATURE_VERIFIED_NOT_ACTIVATED',run(cli,'module','verify',a,public));self.assertIn('JAVA_PACK_VERIFIED probe 1.0.0',run('java','-cp',classes,'Mod02PackChecks',a,public))

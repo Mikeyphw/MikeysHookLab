@@ -30,3 +30,5 @@ F06 run `45902345026` attempt 1 restored both historical Gradle caches, then the
 ## F09 — cross-package integration
 
 LRN-45: The exact package roster must drive both installation and installed byte verification. When introducing an owned test package, exercise the actual production `run()` through install and digest verification before declaring readiness. Test all permitted package identities and reject unrelated, prefix-confusable, split, drifted and digest-mismatched APKs. Host-side ADB fixtures do not qualify ART, device or visual acceptance. F08 run 45913987375 failed before instrumentation; keep PR #36 and all real gates.
+
+- MOD-02-F02: retain F01 run 45938203070 failure; accept bounded D8 synthetic class names in independent pack readers; require exact decor, stable navigation geometry and visible-center real touch for the unchanged adaptive catalog gate. No hosted acceptance is inferred from structural fixtures.

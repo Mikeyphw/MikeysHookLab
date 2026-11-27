@@ -204,6 +204,28 @@ public final class AdaptiveUiTest {
         }
         fail("actual Activity orientation did not change");
     }
+    private View awaitPrimaryNavTarget(ActivityScenario<MainActivity> scenario) {
+        final View[] previous={null,null};final Rect previousBounds=new Rect();int stable=0;
+        for(int i=0;i<50;i++){
+            ins.waitForIdleSync();final View[] observed={null,null};final Rect bounds=new Rect();
+            scenario.onActivity(a->{
+                View root=a.getWindow().getDecorView();NavigationBarView nav=root.findViewById(R.id.hooklab_primary_navigation);
+                View item=nav==null?null:nav.findViewById(202);int min=Math.round(48*a.getResources().getDisplayMetrics().density);
+                if(root.hasWindowFocus()&&item!=null&&item.isAttachedToWindow()&&item.isShown()&&item.isEnabled()&&item.isClickable()
+                    &&item.getGlobalVisibleRect(bounds)&&bounds.width()>=min&&bounds.height()>=min){observed[0]=root;observed[1]=item;}
+            });
+            if(observed[0]!=null&&observed[0]==previous[0]&&observed[1]==previous[1]&&bounds.equals(previousBounds)){
+                if(++stable>=2)return observed[0];
+            }else stable=0;
+            previous[0]=observed[0];previous[1]=observed[1];previousBounds.set(bounds);SystemClock.sleep(200);
+        }
+        throw new AssertionError("stable primary navigation target missing");
+    }
+    private static float[] visibleTouchCenter(View view){
+        Rect visible=new Rect();if(!view.getLocalVisibleRect(visible)||visible.isEmpty())throw new AssertionError("navigation target not visible");
+        int[] screen=new int[2];view.getLocationOnScreen(screen);
+        return new float[]{screen[0]+visible.exactCenterX(),screen[1]+visible.exactCenterY()};
+    }
     private View awaitCatalogRoot(ActivityScenario<MainActivity> scenario)throws Exception {
         // A successful click or screenshot is not proof that the destination
         // Activity window is current. Wait for the real Hooks selection and a
@@ -311,7 +333,10 @@ public final class AdaptiveUiTest {
                 assertNotNull(target);assertTrue(target.isEnabled()&&target.isClickable()&&target.isFocusable());
                 assertTrue(target.getContentDescription()!=null&&target.getContentDescription().length()>0);
             });capture(s,"home",records);
-            phase("OPEN_HOOKS");onView(org.hamcrest.Matchers.allOf(withId(202),isDescendantOfA(withId(R.id.hooklab_primary_navigation)),isDisplayed())).perform(click());
+            phase("OPEN_HOOKS");View navigationRoot=awaitPrimaryNavTarget(s);
+            onView(org.hamcrest.Matchers.allOf(withId(202),isDescendantOfA(withId(R.id.hooklab_primary_navigation)),isDisplayed()))
+                .inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.is(navigationRoot)))
+                .perform(new androidx.test.espresso.action.GeneralClickAction(androidx.test.espresso.action.Tap.SINGLE,AdaptiveUiTest::visibleTouchCenter,androidx.test.espresso.action.Press.FINGER));
             awaitCatalogRoot(s);capture(s,"hooks",records);
             phase("SEARCH_OPEN");View catalogRoot=awaitCatalogRoot(s);
             onView(withId(R.id.hooklab_catalog_search)).inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.is(catalogRoot))).perform(scrollTo(),click());
