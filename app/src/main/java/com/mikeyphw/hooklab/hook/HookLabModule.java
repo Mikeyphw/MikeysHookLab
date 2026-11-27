@@ -113,13 +113,19 @@ public final class HookLabModule extends XposedModule {
         HookContext context = new HookContext(pkg, process, version, loader, this, ctx,
                 event -> log(Log.INFO,"HookLab","SDK event="+event.name()));
         final java.util.List<TweakEngine.Entry<HookContext>> entries=TweakCatalog.entries();
+        final PackRuntime packs=new PackRuntime(this,ctx,pkg,process,version,loader,settings,safety,failedInProcess);
+        final java.util.List<TweakEngine.Entry<HookContext>> resolved=new java.util.ArrayList<>();
+        for(TweakEngine.Entry<HookContext> entry:entries){
+            if(packs.usesPack(entry.spec.id))resolved.add(new TweakEngine.Entry<>(entry.spec,entry.title,entry.description,ignored->packs.install(entry.spec.id)));
+            else resolved.add(entry);
+        }
         final HostFlagSnapshot snapshot=HostFlagSnapshot.capture(entries,pkg,process,version,
                 id -> settings.getBoolean(TweakKeys.enabled(id), false),
                 id -> safety.getBoolean(TweakDiagnostics.quarantineKey(id), false));
         if (!RegistryGeneration.matches(BuiltinRegistry.current().generation,
                 () -> getRemotePreferences(RegistryGeneration.GROUP).getString(RegistryGeneration.KEY,null))) return;
-        TweakEngine.dispatch(entries, pkg, process, version,
-                snapshot::enabled, context,
+        TweakEngine.dispatch(resolved, pkg, process, version,
+                id -> packs.eligible(id) && snapshot.enabled(id), context,
                 (id, failure) -> log(Log.ERROR, "HookLab",
                         "Tweak failure id=" + id + " category=" + TweakDiagnostics.failureCategory(failure)),
                 new TweakEngine.FaultPolicy() {

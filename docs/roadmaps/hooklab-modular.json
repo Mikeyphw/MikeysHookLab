@@ -168,8 +168,8 @@
       "parent_id": "MOD-00"
     },
     {
-      "acceptance": "FAILED",
-      "blocker": "PR #35 merged at bc6deb2bc12185ee6e5011ff16521dc1981507df; F07 run 45907940297 attempt 1 and merged main run 45909924721 passed. Physical transport failed: Vector 2.2 (3119) 6f6b976e API 102 properties 7, scoped/enabled true; target BASE, MOD01_PROBE_REFUSED category=ReadOnlyBufferException; both probe windows overlap status bar. F08 repair and repeat device qualification required.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "PR #36 merged at b05086f2134f0feb4c35d4eb361b4eb08e78b6e6; F09 run 45923453698 attempt 1 and merged main run 45925829259 attempt 1 passed. User confirmed physical Vector marker, disable/removal and both inset checks. Historical F07/F08 failures retained; final release and visual approval pending. MOD-02 transport prerequisite satisfied.",
       "counted": true,
       "dependencies": [
         "MOD-00"
@@ -273,7 +273,7 @@
     },
     {
       "acceptance": "PARTIALLY_VERIFIED",
-      "blocker": "Run 45913987375 attempt 1: 42 successful jobs, visual refused owned probe APK package before ART, final gate failed; CI24 and Android passed. F09 required.",
+      "blocker": "Historical run 45913987375 attempt 1 failed native owned probe APK verification; successor F09 passed hosted and user-confirmed physical checks. Final release and visual approval pending.",
       "counted": false,
       "dependencies": [
         "MOD-01-F07"
@@ -285,8 +285,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-source hosted ART, visual, CI24 and Vector device qualification required.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Hosted run 45923453698 and merged main run 45925829259 attempt 1 passed; user confirmed physical transport and both inset checks; final release and visual approval pending.",
       "counted": false,
       "dependencies": [
         "MOD-01-F08"
@@ -298,17 +298,30 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "MOD-01-P08 device transport gate failed; F08 plus successful physical transport sequence required; do not advance.",
+      "acceptance": "FAILED",
+      "blocker": "MOD-02 native apply transaction 20261127T033418Z-f4866c834fc3 failed in the real Go pack interop test (HOOKPACK_REFUSED), before commit or delivery; retained history must be reconciled. F01 cumulative repair from the unchanged merged base preserves the failed checkout.",
       "counted": true,
       "dependencies": [
         "MOD-01"
       ],
       "id": "MOD-02",
-      "implementation": "PLANNED",
+      "implementation": "SOURCE_COMPLETE",
       "kind": "OVERLAY",
       "name": "Hook Pack Runtime & Migration",
       "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Hard-link restriction reproduced in a real restricted Linux process; atomic no-replace publication and bounded stage diagnostics repaired. Fresh native, hosted ART/CI24 and physical Vector acceptance pending.",
+      "counted": false,
+      "dependencies": [
+        "MOD-02"
+      ],
+      "id": "MOD-02-F01",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Termux Atomic Pack Publication & Retained Apply Recovery",
+      "parent_id": "MOD-02"
     },
     {
       "acceptance": "PENDING",
@@ -445,5 +458,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F09"
+  "version": "2.0-MOD-02-F01"
 }

@@ -1,7 +1,5 @@
 package com.mikeyphw.hooklab.termux;
 
-import java.nio.charset.StandardCharsets;
-
 /** TB01 command validation, extended for the native inline action. Never executes code. */
 public final class TermuxCommandPolicy {
     public static final String HOME="/data/data/com.termux/files/home";
@@ -90,21 +88,9 @@ public final class TermuxCommandPolicy {
         _hooklab_r06_run_once
         unfunction _hooklab_r06_run_once
         """;
-    public static final int MAX_BYTES=48*1024;
+    public static final int MAX_BYTES=com.mikeyphw.hooklab.sdk.PackPreviewContract.MAX_BYTES;
     private TermuxCommandPolicy() {}
-    public static String checkedCommand(String text) {
-        if(text==null || text.length()>MAX_BYTES || text.trim().isEmpty())throw new IllegalArgumentException("Empty or oversized command");
-        for(int i=0;i<text.length();i++) {
-            char c=text.charAt(i);
-            if(Character.isHighSurrogate(c)) {
-                if(++i>=text.length()||!Character.isLowSurrogate(text.charAt(i)))throw new IllegalArgumentException("Invalid Unicode");
-            } else if(Character.isLowSurrogate(c))throw new IllegalArgumentException("Invalid Unicode");
-            if((Character.isISOControl(c)&&c!='\n'&&c!='\t')||Character.getType(c)==Character.FORMAT)
-                throw new IllegalArgumentException("Unsupported invisible character");
-        }
-        if(text.getBytes(StandardCharsets.UTF_8).length>MAX_BYTES)throw new IllegalArgumentException("Command exceeds 48 KiB UTF-8 limit");
-        return text;
-    }
+    public static String checkedCommand(String text) {return com.mikeyphw.hooklab.sdk.PackPreviewContract.checkedCommand(text);}
     public static String checkedWorkingDirectory(String input) {
         if(input==null||input.trim().isEmpty()||input.trim().equals("~"))return HOME;
         String p=input.trim();if(p.startsWith("~/"))p=HOME+p.substring(1);

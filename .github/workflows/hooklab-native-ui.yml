@@ -84,6 +84,24 @@ jobs:
           python3 -B scripts/qa/visual.py bind --reference "$RUNNER_TEMP/hooklab-comparison-reference/first"
           python3 -B scripts/qa/visual_image_checks.py
           python3 -B scripts/qa/visual_report_checks.py --reference "$RUNNER_TEMP/hooklab-comparison-reference/first"
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/hooklabctl/go.mod
+          cache: false
+      - name: Build independently signed migration test packs (hosted D8 only)
+        run: python3 -B scripts/qa/mod02_hosted_packs.py build --out "$RUNNER_TEMP/mod02-packs" --personal "$RUNNER_TEMP/mod02-personal"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-mod02-test-packs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mod02-packs/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-mod02-personal-signing-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mod02-personal/
+          if-no-files-found: error
+          retention-days: 14
       - name: Real Activity on isolated API36 emulator (candidate baseline)
         id: native_capture
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
@@ -97,7 +115,19 @@ jobs:
           disk-size: 3072M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: python3 -B scripts/qa/native_smoke.py run --out "$RUNNER_TEMP/hooklab-native-smoke" --probe-dir "$RUNNER_TEMP/mod01-probe"
+          script: >-
+            python3 -B scripts/qa/native_smoke.py run --out "$RUNNER_TEMP/hooklab-native-smoke" --probe-dir "$RUNNER_TEMP/mod01-probe"
+            && python3 -B scripts/qa/mod02_hosted_packs.py art --out "$RUNNER_TEMP/mod02-packs" --evidence "$RUNNER_TEMP/mod02-art.json"
+      - name: Verify exact pack, unsigned inputs and ART receipt (independent Go reader)
+        run: |
+          go -C tools/hooklabctl build -o "$RUNNER_TEMP/hooklabctl-mod02-verify" ./cmd/hooklabctl
+          python3 -B scripts/qa/mod02_hosted_packs.py verify --out "$RUNNER_TEMP/mod02-packs" --personal "$RUNNER_TEMP/mod02-personal" --evidence "$RUNNER_TEMP/mod02-art.json" --cli "$RUNNER_TEMP/hooklabctl-mod02-verify"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: hooklab-mod02-art-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mod02-art.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Independently verify screenshot hashes, identity and route evidence
         run: python3 -B scripts/qa/native_smoke.py verify --out "$RUNNER_TEMP/hooklab-native-smoke"
       - name: Compare candidate native screens and independently recompute report

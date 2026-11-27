@@ -1769,6 +1769,8 @@ public final class MainActivity extends AppCompatActivity {
         row(framework,R.string.r03_scope,getString(R.string.ui07_scope_warning),v->goTo(SCOPE));
         row(framework,R.string.ui07_open_hooks,getString(R.string.ui_catalog_intro),v->goTo(APPS));
         verboseLogging(); // Existing framework-owned preference + verified commit/readback.
+        LinearLayout packCard=card(getString(R.string.pack_title),getString(R.string.pack_settings_detail));
+        button(packCard,R.string.pack_title,v->startActivity(new Intent(this,com.mikeyphw.hooklab.packs.PackManagerActivity.class)));
         LinearLayout termux=card(getString(R.string.termux_r05_settings_label),
                 getString(R.string.termux_r05_settings_description));
         button(termux,R.string.termux_r05_settings_label,v -> startActivity(

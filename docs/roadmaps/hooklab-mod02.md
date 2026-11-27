@@ -1,0 +1,16 @@
+# MOD-02 — Hook Pack Runtime & Migration
+
+Base: merged PR #36 `b05086f2134f0feb4c35d4eb361b4eb08e78b6e6`, tree `718ed00bd82a17bf21c7a09fb0c2728b2c439243`. Hosted F09 run 45923453698 and merged main run 45925829259 attempt 1 succeeded. User confirmed the owned Vector probe marker, disable, removal and both inset checks. This is the prerequisite only, not physical evidence for the new runtime.
+
+## Candidate source and acceptance boundary
+
+- P01: canonical five-member bounded STORED ZIP32, exact digest inventory and RSA-3072 SHA-256 signatures. Independent Go and Java readers; structural fixtures are not Android executable evidence.
+- P02/P03: document and share preview; explicit public DER fingerprint enrollment; one personal trust root (or debug test root). Separate from APK signing. Import alone does not execute. Trusted code is not sandboxed; a signing key owner can authorize executable code. Never import a private key into the manager.
+- P04: manager-private immutable verified archives, locked atomic state, retained previous selection, high-water mark, digest-addressed framework publication/readback and interrupted-publication reconciliation. Local archive retention is bounded at 16; reclaim only verified unreferenced store-owned archives, preserve current/previous and acknowledged or in-flight generations, and refuse malformed retention evidence. Exact abandoned private stage files are removed only while holding the process and file locks.
+- P05/P06/P07/P08: exact scope, target package/version/process and existing per-hook opt-in; fail closed for stale or malformed generation, unknown trust or quarantine. Parent-owned SDK port registers handles (Vector API-protection boundary), verifies private direct-buffer DEX and rolls back partially installed hooks. Callbacks check eligibility; full unloading is not promised. Safe mode disables new migration-eligible dispatch. Restart targets after publish, disable, revoke, rollback or remove. MCC remains independent.
+- P09: deterministic reviewed source projection for NeoStore/Droidify ObtainX, Word Master and two ChatGPT hooks; stable existing IDs and settings, no duplicate built-in/signed selection. Built-in route remains until explicit selection. DEX build, behavior parity and actual Vector execution of migrated payloads remain pending.
+- P10: Go `hooklabctl module pack MANIFEST PROVENANCE DEX PRIVATE_PKCS8_DER DEST`, `module verify PACK PUBLIC_DER`, `module inspect PACK PUBLIC_DER`; private key mode 0600, no overwrite. Hosted-only JDK/SDK/D8 and API36 ART fixture; ephemeral testing key stays in temporary build storage. Separate unsigned personal signing inputs cannot be installed until the user signs them. Actual hosted artifacts must be independently validated for source/tree/run/attempt, signatures, DEX parity and ART receipt.
+
+## Recovery and test boundaries
+
+Local tests exercise production archive, registry and transaction classes using synthetic DEX and fake framework transport. The real host path still requires Android compilation, ART and physical scoped Vector acceptance. No stable distribution, release signing, automatic scope change or auto-merge is authorized. Do not advance MOD-03 or claim MOD-02 acceptance until the defined gates are reconciled.
