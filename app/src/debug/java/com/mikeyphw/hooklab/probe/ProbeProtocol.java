@@ -3,6 +3,7 @@ package com.mikeyphw.hooklab.probe;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -28,5 +29,15 @@ public final class ProbeProtocol {
         catch(NoSuchAlgorithmException e){throw new IllegalStateException("SHA-256 unavailable",e);}
     }
     public static String file(String digest){if(digest==null||!digest.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("probe digest");return "mod01-probe-"+digest;}
+    /** ART accesses array() on non-direct buffers. Keep an independently copied,
+     * direct buffer private to the fixed debug loader, after exact byte verification. */
+    public static ByteBuffer verifiedDexBuffer(byte[] expected,byte[] observed,String claimed) {
+        if(expected.length<112 || !matches(expected,observed,claimed))
+            throw new IllegalArgumentException("probe payload identity refused");
+        ByteBuffer buffer=ByteBuffer.allocateDirect(observed.length);
+        buffer.put(observed);
+        buffer.flip();
+        return buffer;
+    }
     public static boolean matches(byte[] expected,byte[] observed,String claimed){return expected.length<=MAX_BYTES&&observed.length<=MAX_BYTES&&digest(expected).equals(claimed)&&Arrays.equals(expected,observed);}
 }

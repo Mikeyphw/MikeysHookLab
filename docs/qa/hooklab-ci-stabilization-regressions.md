@@ -26,3 +26,7 @@ The exact F05 run `45896260206` attempt 1 passed metadata admission and then fai
 ## F07 follow-up: execute the actual workflow CLI boundary
 
 F06 run `45902345026` attempt 1 restored both historical Gradle caches, then the composite `seed-standard` invocation omitted the mandatory explicit `--state` argument. The library function regression did not cover this production entrypoint. `test_dependency_cli.py` executes the actual composite run commands with isolated fixture caches, checks owner/consumer/shell argument rosters, and verifies rejection on missing or unsafe state and source drift. The fixture is not a Gradle build or a hosted qualification receipt. Preserve resolver digest and readiness rules.
+
+## F09 — cross-package integration
+
+LRN-45: The exact package roster must drive both installation and installed byte verification. When introducing an owned test package, exercise the actual production `run()` through install and digest verification before declaring readiness. Test all permitted package identities and reject unrelated, prefix-confusable, split, drifted and digest-mismatched APKs. Host-side ADB fixtures do not qualify ART, device or visual acceptance. F08 run 45913987375 failed before instrumentation; keep PR #36 and all real gates.

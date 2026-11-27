@@ -169,7 +169,7 @@
     },
     {
       "acceptance": "FAILED",
-      "blocker": "PR #35 head 5a3c20b0e9f954145fb57a2ae29548b43b4e88f8 run 45861027352 attempt 1 failed during Gradle evaluation (Android plus 20 CI24 shards); four shards exhausted verified Maven Central HTTP 429 backoff. MOD-01-F01 successor qualification pending; physical-device probe and visual/release acceptance remain pending.",
+      "blocker": "PR #35 merged at bc6deb2bc12185ee6e5011ff16521dc1981507df; F07 run 45907940297 attempt 1 and merged main run 45909924721 passed. Physical transport failed: Vector 2.2 (3119) 6f6b976e API 102 properties 7, scoped/enabled true; target BASE, MOD01_PROBE_REFUSED category=ReadOnlyBufferException; both probe windows overlap status bar. F08 repair and repeat device qualification required.",
       "counted": true,
       "dependencies": [
         "MOD-00"
@@ -259,8 +259,8 @@
       "parent_id": "MOD-01"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-source Android/offline graph, CI24 and applicable runtime/device/release qualification pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Exact F07 head 8e6172e0d5cde892732293d609d5d8f1c951c9d0 hosted run 45907940297 attempt 1 passed 44 jobs including 24/24 CI24, 3 excluded; PR #35 merged bc6deb2bc12185ee6e5011ff16521dc1981507df; physical transport failed (ReadOnlyBufferException), requires F08.",
       "counted": false,
       "dependencies": [
         "MOD-01-F06"
@@ -272,8 +272,34 @@
       "parent_id": "MOD-01"
     },
     {
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Run 45913987375 attempt 1: 42 successful jobs, visual refused owned probe APK package before ART, final gate failed; CI24 and Android passed. F09 required.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F07"
+      ],
+      "id": "MOD-01-F08",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Vector DEX Buffer and Probe Window Insets Repair",
+      "parent_id": "MOD-01"
+    },
+    {
       "acceptance": "PENDING",
-      "blocker": "Prerequisite overlay not accepted",
+      "blocker": "Fresh exact-source hosted ART, visual, CI24 and Vector device qualification required.",
+      "counted": false,
+      "dependencies": [
+        "MOD-01-F08"
+      ],
+      "id": "MOD-01-F09",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "HOTFIX",
+      "name": "Owned Probe APK Verification Integration Repair",
+      "parent_id": "MOD-01"
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "MOD-01-P08 device transport gate failed; F08 plus successful physical transport sequence required; do not advance.",
       "counted": true,
       "dependencies": [
         "MOD-01"
@@ -419,5 +445,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-01-F07"
+  "version": "2.0-MOD-01-F09"
 }

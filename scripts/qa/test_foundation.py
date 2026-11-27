@@ -120,19 +120,25 @@ class FoundationTests(unittest.TestCase):
     def test_installed_apk_identity(self):
         from unittest.mock import patch
         from subprocess import CompletedProcess
-        pkg=native_smoke.PKG; path='/data/app/~~abc==/'+pkg+'-a_b==/base.apk'; h='a'*64
-        def response(rc=0,stdout='',stderr=''):return CompletedProcess([],rc,stdout,stderr)
-        p=response(stdout='package:'+path+'\n'); good=response(stdout=h+'  '+path+'\n')
-        with patch.object(native_smoke.subprocess,'run',side_effect=[p,good,p]) as call:
-            self.assertEqual(native_smoke.installed_digest(pkg,h),h)
-            self.assertEqual(call.call_args_list[1].args[0][-2:],['sha256sum',path])
-        with patch.object(native_smoke.subprocess,'run',side_effect=[p,response(1,stderr='Permission denied'),good,p]) as call:
-            self.assertEqual(native_smoke.installed_digest(pkg,h),h)
-            self.assertEqual(call.call_args_list[2].args[0][-4:],['run-as',pkg,'sha256sum',path])
-        for results in ([p,response(stdout='cat: Permission denied')], [p,response(1,stderr='transport offline')], [p,response(1,stderr='Permission denied'),response(1,stderr='run-as failed')], [p,response(stdout='b'*64+'  '+path),p], [p,good,response(stdout='package:'+path.replace('~~abc','~~xyz'))], [response(stdout='package:'+path+'\npackage:'+path.replace('base.apk','split.apk'))], [p,response(stdout=h+'  /wrong.apk')], [response(stdout='package:'+path.replace(pkg,'com.other.app'))], [response(stdout='package:'+path.replace('/base.apk','/../base.apk'))]):
-            with self.subTest(results=results),patch.object(native_smoke.subprocess,'run',side_effect=results) as call:
-                with self.assertRaises(ValueError):native_smoke.installed_digest(pkg,h)
-                self.assertEqual(call.call_count,len(results))
+        for pkg in (native_smoke.PKG,native_smoke.PKG+'.test','com.mikeyphw.hooklab.probetarget'):
+            path='/data/app/~~abc==/'+pkg+'-a_b==/base.apk'; h='a'*64
+            def response(rc=0,stdout='',stderr=''):return CompletedProcess([],rc,stdout,stderr)
+            p=response(stdout='package:'+path+'\n'); good=response(stdout=h+'  '+path+'\n')
+            with patch.object(native_smoke.subprocess,'run',side_effect=[p,good,p]) as call:
+                self.assertEqual(native_smoke.installed_digest(pkg,h),h)
+                self.assertEqual(call.call_args_list[1].args[0][-2:],['sha256sum',path])
+            with patch.object(native_smoke.subprocess,'run',side_effect=[p,response(1,stderr='Permission denied'),good,p]) as call:
+                self.assertEqual(native_smoke.installed_digest(pkg,h),h)
+                self.assertEqual(call.call_args_list[2].args[0][-4:],['run-as',pkg,'sha256sum',path])
+            for results in ([p,response(stdout='cat: Permission denied')], [p,response(1,stderr='transport offline')], [p,response(1,stderr='Permission denied'),response(1,stderr='run-as failed')], [p,response(stdout='b'*64+'  '+path),p], [p,good,response(stdout='package:'+path.replace('~~abc','~~xyz'))], [response(stdout='package:'+path+'\npackage:'+path.replace('base.apk','split.apk'))], [p,response(stdout=h+'  /wrong.apk')], [response(stdout='package:'+path.replace(pkg,'com.other.app'))], [response(stdout='package:'+path.replace('/base.apk','/../base.apk'))]):
+                with self.subTest(results=results),patch.object(native_smoke.subprocess,'run',side_effect=results) as call:
+                    with self.assertRaises(ValueError):native_smoke.installed_digest(pkg,h)
+                    self.assertEqual(call.call_count,len(results))
+        for bad in ('com.other.app','com.mikeyphw.hooklab.probetarget.extra', 'com.mikeyphw.hooklab.test.extra', 'com.mikeyphw.hooklab.probetarget;id'):
+            with self.subTest(package=bad),patch.object(native_smoke.subprocess,'run') as call:
+                with self.assertRaisesRegex(ValueError,'unexpected package identity'):
+                    native_smoke.installed_digest(bad,'a'*64)
+                call.assert_not_called()
     def test_sdk_package_metadata_without_emulator_process(self):
         from unittest.mock import patch
         with tempfile.TemporaryDirectory() as tmp:

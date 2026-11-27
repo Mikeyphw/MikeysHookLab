@@ -1,0 +1,7 @@
+# MOD-01-F09 — Owned Probe APK Verification Integration Repair
+
+Preimage PR #36 head `596627ce338512ed0b82e572231b38b382d052d7`, tree `4e2e0b578c41dc7fb2d0abbd113bdf2c0f1b19a8`. Hosted run 45913987375 attempt 1: 42 PASS, 2 FAIL, 3 excluded. First failure `NATIVE_SMOKE_REFUSED unexpected package identity` during the new owned-target installed APK verification; dependent aggregate refused. No evidence of ART or physical execution yet.
+
+- F09-P01: One exact owned APK roster used in native smoke preexisting-app checks and installed package verification; the owned probe target is admitted, arbitrary packages, split paths, mismatched bytes, wrong paths and drift remain refused. No broader scope or signing changes.
+- F09-P02: Exercise the real installed_digest command boundary for manager, instrumentation and owned target, including run-as fallback and negative cases. Execute real native smoke run through pre-capture installation/digest boundary with controlled ADB responses; this is a host-side regression, not real ART proof. Preserve the existing hosted instrumentation and independent receipt gate.
+- F09-P03: Retain exact PR #36 and native F08 history; independently observe its terminal failed attempt before one successor apply. Full hosted Android, visual, adaptive and CI24 gates remain required. Actual Vector marker and insets require physical device repetition; MOD-02 stays blocked.

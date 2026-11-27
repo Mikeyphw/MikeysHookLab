@@ -21,7 +21,7 @@ class ModularContractTest(unittest.TestCase):
 
 """Exercise the real verifier CLI with synthetic DEX tables, not Android evidence."""
 import hashlib,json,os,pathlib,struct,subprocess,sys,tempfile,unittest,zipfile
-from mod01_probe_apk import ASSET,ENTRY,SDK,ACTIVITY,TARGET,dex_classes
+from mod01_probe_apk import ASSET,ENTRY,SDK,ACTIVITY,LOADER,TARGET,dex_classes
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 def dex(names,refs=()):
     strings=list(names)+list(refs);sc=len(strings);cc=len(names);so=112;to=so+4*sc;co=to+4*sc;data=bytearray(co+32*cc)
@@ -35,7 +35,7 @@ class ProbeApkTest(unittest.TestCase):
     def setUp(self):
         self.t=tempfile.TemporaryDirectory();self.addCleanup(self.t.cleanup);self.p=pathlib.Path(self.t.name)
         self.d=self.p/'debug.apk';self.r=self.p/'release.apk';self.target=self.p/'target.apk';self.receipt=self.p/'receipt.json'
-        self.payload=dex([ENTRY],refs=[SDK]);self.apk(self.d,[SDK,ACTIVITY],self.payload,refs=[ENTRY]);self.apk(self.r,[SDK]);self.apk(self.target,[TARGET]);self.env={**os.environ,'GITHUB_REPOSITORY':'Mikeyphw/MikeysHookLab','SOURCE_SHA':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'GITHUB_RUN_ID':'1','GITHUB_RUN_ATTEMPT':'1'}
+        self.payload=dex([ENTRY],refs=[SDK]);self.apk(self.d,[SDK,ACTIVITY,LOADER],self.payload,refs=[ENTRY]);self.apk(self.r,[SDK]);self.apk(self.target,[TARGET]);self.env={**os.environ,'GITHUB_REPOSITORY':'Mikeyphw/MikeysHookLab','SOURCE_SHA':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'GITHUB_RUN_ID':'1','GITHUB_RUN_ATTEMPT':'1'}
     def apk(self,path,classes,payload=None,refs=()):
         with zipfile.ZipFile(path,'w') as z:
             z.writestr('classes.dex',dex(classes,refs))
@@ -46,13 +46,13 @@ class ProbeApkTest(unittest.TestCase):
     def test_exact_tables_not_string_presence(self):
         self.assertEqual(dex_classes(self.payload),{ENTRY});self.cli('publish');self.cli('verify');r=json.loads(self.receipt.read_text());self.assertFalse(r['device_qualified']);self.assertFalse(r['release_qualified'])
     def test_release_leak_rejected(self):
-        self.apk(self.r,[SDK,ACTIVITY]);self.cli('publish',False);self.apk(self.r,[SDK],self.payload);self.cli('publish',False)
+        self.apk(self.r,[SDK,ACTIVITY]);self.cli('publish',False);self.apk(self.r,[SDK,LOADER]);self.cli('publish',False);self.apk(self.r,[SDK],self.payload);self.cli('publish',False)
     def test_duplicate_sdk_or_executable_rejected(self):
-        self.apk(self.d,[SDK,ACTIVITY],dex([ENTRY,SDK]));self.cli('publish',False);self.apk(self.d,[SDK,ACTIVITY,ENTRY],self.payload);self.cli('publish',False)
+        self.apk(self.d,[SDK,ACTIVITY,LOADER],dex([ENTRY,SDK]));self.cli('publish',False);self.apk(self.d,[SDK,ACTIVITY,LOADER,ENTRY],self.payload);self.cli('publish',False)
     def test_receipt_tamper_and_attempt_refused(self):
         self.cli('publish');self.env['GITHUB_RUN_ATTEMPT']='2';self.cli('verify',False);self.env['GITHUB_RUN_ATTEMPT']='1';r=json.loads(self.receipt.read_text());r['device_qualified']=True;self.receipt.write_text(json.dumps(r));self.cli('verify',False)
     def test_malformed_dex_refused(self):
         b=bytearray(self.payload);struct.pack_into('<I',b,100,0xFFFFFFFF)
-        self.apk(self.d,[SDK,ACTIVITY],b);self.cli('publish',False)
+        self.apk(self.d,[SDK,ACTIVITY,LOADER],b);self.cli('publish',False)
 
 if __name__=="__main__":unittest.main()
