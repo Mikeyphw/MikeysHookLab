@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Exact host visibility and explicit Termux command integration. -->
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <queries>
         <package android:name="br.art.code.meucronogramacapilar" />
         <package android:name="com.machiav3lli.fdroid" />
@@ -13,7 +14,7 @@
     <application android:name=".HookLabApp" android:allowBackup="false"
         android:label="@string/app_name" android:description="@string/module_description"
         android:icon="@mipmap/ic_launcher" android:theme="@style/Theme.HookLab"
-        android:supportsRtl="true">
+        android:supportsRtl="true" android:usesCleartextTraffic="false">
         <activity android:name=".ui.MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -23,6 +24,7 @@
         <activity android:name=".packs.PackManagerActivity" android:label="@string/pack_title" android:exported="true">
             <intent-filter><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="application/vnd.hooklab.pack"/></intent-filter>
         </activity>
+        <activity android:name=".packs.RepositoryActivity" android:exported="false" />
         <activity android:name=".mcc.MccControlActivity" android:exported="true" />
         <activity android:name=".termux.TermuxBridgeActivity" android:exported="true" android:excludeFromRecents="true" />
         <receiver android:name=".termux.TermuxSessionReceipt" android:exported="false" />

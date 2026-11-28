@@ -300,6 +300,7 @@ public final class PackManagerActivity extends AppCompatActivity {
             }
         }
         action(R.string.pack_publish,this::publish);
+        action(R.string.mod04_title,()->startActivity(new Intent(this,RepositoryActivity.class)));
         action(R.string.pack_safe,()->confirm(R.string.pack_safe,R.string.pack_safe_prompt,()->execute(()->{PackPublication.stop(new FrameworkPackRemote(app));return null;},ignored->refresh())));
     }
 }

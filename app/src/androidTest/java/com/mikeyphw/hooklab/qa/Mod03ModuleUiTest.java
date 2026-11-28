@@ -74,6 +74,17 @@ public final class Mod03ModuleUiTest {
             assertEquals(module,admitted.moduleId);store.install(new ByteArrayInputStream(archive),admitted.archiveSha256);
             exercise(module);
         }
+        phase="REPOSITORY";
+        try(ActivityScenario<PackManagerActivity> activity=ActivityScenario.launch(PackManagerActivity.moduleIntent(APP,"chatgpt"))){
+            waitFor(R.string.mod04_title);tap(R.string.mod04_title);waitFor(R.string.mod04_token_set);
+            onView(withHint(R.string.mod04_repository)).check(matches(withText("Mikeyphw/MikeysHookLab")));
+            onView(withHint(R.string.mod04_token)).perform(scrollTo(),replaceText("github_pat_"+"a".repeat(30)),closeSoftKeyboard());
+            tap(R.string.mod04_token_set);onView(withText(R.string.mod04_token_set_done)).perform(scrollTo()).check(matches(isDisplayed()));
+            onView(withHint(R.string.mod04_token)).check(matches(withText("")));tap(R.string.mod04_token_remove);
+            onView(withText(R.string.mod04_token_removed)).perform(scrollTo()).check(matches(isDisplayed()));
+            tap(R.string.mod04_select_repository);onView(withText(android.R.string.cancel)).perform(click());
+            pressBack();activity.onActivity(a->assertFalse(a.isFinishing()));
+        }
         phase="RUNTIME_UNCHANGED";for(String id:java.util.List.of("wordmaster.night.filter","chatgpt.codeblock.copy.probe","chatgpt.codeblock.termux.handoff"))assertEquals("module navigation must not activate runtime","builtin",store.state().modes().get(id));
     }
     private void exercise(String module)throws Exception{

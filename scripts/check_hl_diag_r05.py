@@ -26,7 +26,7 @@ assert 'TermuxBridgeActivity.class' in get('ui/MainActivity.java')
 assert '(flags & IBinder.FLAG_ONEWAY)!=0' in s and 'flags != 0' not in s and 'flags!=0' not in s and 'Binder.getCallingUid()!=allowedUid' in s
 assert all(x in s for x in ('TRANSACTION_REFUSED','DESCRIPTOR_REFUSED','PAYLOAD_REFUSED','CALLER_REFUSED','CONTEXT_RETURNED'))
 assert all(x in c for x in ('ROOT_PLATFORM_IPC_VERDICT=','ROOT_PLATFORM_IPC_TRANSACT_REFUSED','ROOT_PLATFORM_IPC_SECURITY_REFUSED','ROOT_PLATFORM_IPC_REMOTE_FAILURE','ROOT_PLATFORM_IPC_BAD_RESPONSE','"RETURNED":state'))
-ns='{http://schemas.android.com/apk/res/android}';m=ET.parse(r/'app/src/main/AndroidManifest.xml').getroot();assert [x.get(ns+'name') for x in m.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND']
+ns='{http://schemas.android.com/apk/res/android}';m=ET.parse(r/'app/src/main/AndroidManifest.xml').getroot();assert [x.get(ns+'name') for x in m.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND','android.permission.INTERNET']
 assert len([x for x in m.findall('./application/activity') if x.get(ns+'name')=='.termux.TermuxBridgeActivity' and x.get(ns+'exported')=='true' and not x.findall('intent-filter')])==1
 assert 'com.termux' not in (r/'app/src/main/resources/META-INF/xposed/scope.list').read_text().splitlines()
 for x in ('chatgpt/TermuxOfferGateTest.java','termux/TermuxCommandPolicyTest.java','root/RootIpcVerdictTest.java'):assert (t/x).is_file(),x

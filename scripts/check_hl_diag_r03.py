@@ -22,7 +22,7 @@ for bad in ('nsenter','FLAG_MOUNT_MASTER','setenforce','/data/user/','/data/data
 assert 'ROOT_PLATFORM_RESULT_UNVERIFIED' in code and 'Pattern.compile' in code
 assert "implementation 'com.github.topjohnwu.libsu:core:6.0.0'" in read('app/build.gradle') and "implementation 'com.github.topjohnwu.libsu:service:6.0.0'" in read('app/build.gradle')
 assert "filter { includeGroup 'com.github.topjohnwu.libsu' }" in read('settings.gradle')
-assert [p.get('{http://schemas.android.com/apk/res/android}name') for p in ET.parse(r/'app/src/main/AndroidManifest.xml').getroot().findall('uses-permission')]==['com.termux.permission.RUN_COMMAND']
+assert [p.get('{http://schemas.android.com/apk/res/android}name') for p in ET.parse(r/'app/src/main/AndroidManifest.xml').getroot().findall('uses-permission')]==['com.termux.permission.RUN_COMMAND','android.permission.INTERNET']
 assert (r/'app/src/test/java/com/mikeyphw/hooklab/root/RootContextCodeTest.java').is_file()
 assert 'clipboardLabelCannotSubstituteForAnnotatedObject' in read('app/src/test/java/com/mikeyphw/hooklab/chatgpt/AsyncCopyTraceTest.java')
 assert (r/'app/src/test/java/com/mikeyphw/hooklab/root/RootStartupPhaseTest.java').is_file()

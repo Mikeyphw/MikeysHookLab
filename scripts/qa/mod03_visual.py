@@ -33,7 +33,7 @@ def validate_images(out, hosted=False):
                 require(any(lo!=hi for lo,hi in im.convert('RGB').getextrema()),'blank screenshot')
     return {name:sha(out/name) for name in sorted(expected)}
 
-MODULE_PHASES=frozenset(('SETUP','RUNTIME_UNCHANGED','CHATGPT_EDITOR')+tuple(module+'_'+phase for module in ('WORDMASTER','CHATGPT') for phase in ('ADMISSION','LAUNCH','OVERVIEW','CONFIGURE','CANCEL','ADMIT','CONTENT','CLOSE','READMIT','RECREATE','LOGS','VERSIONS')))
+MODULE_PHASES=frozenset(('SETUP','RUNTIME_UNCHANGED','CHATGPT_EDITOR','REPOSITORY')+tuple(module+'_'+phase for module in ('WORDMASTER','CHATGPT') for phase in ('ADMISSION','LAUNCH','OVERVIEW','CONFIGURE','CANCEL','ADMIT','CONTENT','CLOSE','READMIT','RECREATE','LOGS','VERSIONS')))
 
 def run_module_instrumentation(out,ident,app_hash,test_hash):
     output='';rc=None;reason='TRANSPORT_FAILED'

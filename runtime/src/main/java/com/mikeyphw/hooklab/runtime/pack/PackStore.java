@@ -40,12 +40,15 @@ public final class PackStore {
         private final Map<String,Version> versions=new TreeMap<>();
         private final Map<String,String[]> highWater=new TreeMap<>();
         private final Map<String,String> modes=new TreeMap<>();
+        private final Map<String,String> pins=new TreeMap<>();
         private final Set<String> revoked=new TreeSet<>();
         private State(){for(String id:PackPolicy.hooks().keySet())modes.put(id,PackSnapshot.BUILTIN);}
         public byte[] key(){return key==null?null:key.clone();}
         public String channel(){return channel;}
         public Map<String,Version> versions(){return Collections.unmodifiableMap(new TreeMap<>(versions));}
         public Map<String,String> modes(){return Collections.unmodifiableMap(new TreeMap<>(modes));}
+        public Map<String,String> pins(){return Collections.unmodifiableMap(new TreeMap<>(pins));}
+        public String reviewDigest()throws GeneralSecurityException{return HookPack.digest(encode(this));}
         public Set<String> revoked(){return Collections.unmodifiableSet(new TreeSet<>(revoked));}
         public PackSnapshot snapshot() throws GeneralSecurityException {
             Map<String,String> choices=new TreeMap<>();
@@ -100,6 +103,7 @@ public final class PackStore {
         for(Map.Entry<String,Version> e:s.versions.entrySet()){
             Version v=e.getValue();b.append("module ").append(e.getKey()).append(' ').append(v.current).append(' ').append(v.previous).append(' ').append(v.highestVersion).append(' ').append(v.highestDigest).append('\n');
         }
+        for(Map.Entry<String,String> e:s.pins.entrySet())b.append("pin ").append(e.getKey()).append(' ').append(e.getValue()).append('\n');
         for(Map.Entry<String,String> e:s.modes.entrySet())b.append("hook ").append(e.getKey()).append(' ').append(e.getValue()).append('\n');
         return b.toString().getBytes(StandardCharsets.US_ASCII);
     }
@@ -112,6 +116,7 @@ public final class PackStore {
             String[] p=lines[i].split(" ",-1);if(p.length==2&&"revoked".equals(p[0])){PackPolicy.requireHash(p[1]);if(!s.revoked.add(p[1]))throw new IOException("duplicate revoked key");}
             else if(p.length==4&&"highwater".equals(p[0])){PackPolicy.requireModule(p[1]);PackPolicy.compareVersions(p[2],p[2]);PackPolicy.requireHash(p[3]);if(s.highWater.put(p[1],new String[]{p[2],p[3]})!=null)throw new IOException("duplicate highwater");}
             else if(p.length==6&&"module".equals(p[0])){PackPolicy.requireModule(p[1]);if(s.versions.put(p[1],new Version(p[2],p[3],p[4],p[5]))!=null)throw new IOException("duplicate module");}
+            else if(p.length==3&&"pin".equals(p[0])){PackPolicy.requireModule(p[1]);PackPolicy.compareVersions(p[2],p[2]);if(s.pins.put(p[1],p[2])!=null)throw new IOException("duplicate pin");}
             else if(p.length==3&&"hook".equals(p[0])){PackPolicy.hook(p[1]);if(!java.util.Arrays.asList(PackSnapshot.BUILTIN,PackSnapshot.DISABLED,"pack").contains(p[2])||s.modes.put(p[1],p[2])!=null)throw new IOException("invalid hook mode");}
             else throw new IOException("store row");
         }
@@ -161,7 +166,7 @@ public final class PackStore {
     }
     /** Revoke first, then permit explicit enrollment of a different publisher. Retain trust revocation evidence; unused archive bytes are reclaimable. */
     public void revoke(String confirmedFingerprint)throws IOException,GeneralSecurityException {
-        locked(s->{if(s.key==null||!HookPack.signerFingerprint(s.key).equals(confirmedFingerprint)||s.revoked.size()>=MAX_REVOKED)throw new IllegalArgumentException("revocation refused");s.revoked.add(confirmedFingerprint);s.key=null;s.channel="-";s.versions.clear();s.highWater.clear();for(String id:s.modes.keySet())if("pack".equals(s.modes.get(id)))s.modes.put(id,PackSnapshot.DISABLED);save(s);return null;});
+        locked(s->{if(s.key==null||!HookPack.signerFingerprint(s.key).equals(confirmedFingerprint)||s.revoked.size()>=MAX_REVOKED)throw new IllegalArgumentException("revocation refused");s.revoked.add(confirmedFingerprint);s.key=null;s.channel="-";s.versions.clear();s.highWater.clear();s.pins.clear();for(String id:s.modes.keySet())if("pack".equals(s.modes.get(id)))s.modes.put(id,PackSnapshot.DISABLED);save(s);return null;});
     }
     private HookPack.Verified verify(State s,byte[] bytes)throws GeneralSecurityException {
         if(s.key==null)throw new IllegalArgumentException("no trusted publisher");HookPack.Verified pack=HookPack.verify(bytes,s.key);PackPolicy.verifyMigration(pack);if(!s.channel.equals(pack.channel))throw new IllegalArgumentException("pack trust channel mismatch");return pack;
@@ -194,7 +199,8 @@ public final class PackStore {
         }
         return keep;
     }
-    private void makeArchiveRoom(State state)throws IOException,GeneralSecurityException {
+    private void makeArchiveRoom(State state)throws IOException,GeneralSecurityException {makeArchiveRoom(state,Collections.emptySet());}
+    private void makeArchiveRoom(State state,Set<String> reserved)throws IOException,GeneralSecurityException {
         java.util.List<Path> files=new java.util.ArrayList<>();
         try(java.util.stream.Stream<Path> stream=Files.list(archives)){for(Path path:(Iterable<Path>)stream.sorted()::iterator){
             String name=path.getFileName().toString();
@@ -202,7 +208,7 @@ public final class PackStore {
             if(!name.matches("[0-9a-f]{64}\\.hookpack")||!Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS))throw new IOException("unsafe archive retention entry");files.add(path);
         }}
         if(files.size()<MAX_ARCHIVES)return;
-        Set<String> keep=protectedDigests(state);int required=files.size()-MAX_ARCHIVES+1;
+        Set<String> keep=protectedDigests(state);keep.addAll(reserved);int required=files.size()-MAX_ARCHIVES+1;
         java.util.List<Path> reclaim=new java.util.ArrayList<>();
         for(Path path:files){String sha=path.getFileName().toString().substring(0,64);if(keep.contains(sha))continue;
             // Only delete exact content-addressed store-owned bytes. Never follow links.
@@ -221,6 +227,28 @@ public final class PackStore {
             Path dst=archive(p.archiveSha256);if(Files.exists(dst,LinkOption.NOFOLLOW_LINKS)){if(!java.util.Arrays.equals(bytes,verifiedBytes(s,p.archiveSha256)))throw new IOException("archive collision");}
             else{makeArchiveRoom(s);atomic(dst,bytes,"ARCHIVE");}
             s.highWater.put(p.moduleId,new String[]{p.version,p.archiveSha256});s.versions.put(p.moduleId,new Version(p.archiveSha256,v==null?"-":v.current,p.version,p.archiveSha256));save(s);return p;});
+    }
+    /** Pin only a reviewed, installed version. A pin cannot grant trust or enable a hook. */
+    public void pin(String module,boolean enabled,String reviewDigest)throws IOException,GeneralSecurityException {
+        locked(s->{PackPolicy.requireModule(module);if(!s.reviewDigest().equals(reviewDigest))throw new IllegalArgumentException("stale review");
+            if(enabled){Version v=s.versions.get(module);if(v==null)throw new IllegalArgumentException("pin needs installed version");s.pins.put(module,metadata(s,module,v.current).version);}else s.pins.remove(module);save(s);return null;});
+    }
+    /** Verify the complete reviewed batch before staging; one state rename activates
+     * the local catalog transaction. Existing remote generation is unchanged. */
+    public Map<String,PackMetadata> installBatch(Map<String,byte[]> reviewed,String expectedState)throws IOException,GeneralSecurityException {
+        if(reviewed.isEmpty()||reviewed.size()>PackPolicy.MODULES.size())throw new IllegalArgumentException("update batch bound");
+        Map<String,byte[]> input=new TreeMap<>();for(Map.Entry<String,byte[]> e:reviewed.entrySet()){PackPolicy.requireHash(e.getKey());byte[] bytes=e.getValue();if(bytes==null||bytes.length>HookPack.MAX_ARCHIVE)throw new IllegalArgumentException("archive bound");input.put(e.getKey(),bytes.clone());}
+        return locked(s->{if(!s.reviewDigest().equals(expectedState))throw new IllegalArgumentException("stale update review");
+            Map<String,HookPack.Verified> candidates=new TreeMap<>();for(Map.Entry<String,byte[]> e:input.entrySet()){
+                HookPack.Verified p=verify(s,e.getValue());if(!p.archiveSha256.equals(e.getKey())||candidates.put(p.moduleId,p)!=null)throw new IllegalArgumentException("update identity");
+                String pin=s.pins.get(p.moduleId);if(pin!=null&&!pin.equals(p.version))throw new IllegalArgumentException("pinned version");String[] high=s.highWater.get(p.moduleId);
+                if(high!=null&&(PackPolicy.compareVersions(p.version,high[0])<0||PackPolicy.compareVersions(p.version,high[0])==0&&!p.archiveSha256.equals(high[1])))throw new IllegalArgumentException("stale or conflicting pack version");
+            }
+            for(HookPack.Verified p:candidates.values()){byte[] bytes=input.get(p.archiveSha256);Path dst=archive(p.archiveSha256);
+                if(Files.exists(dst,LinkOption.NOFOLLOW_LINKS)){if(!java.util.Arrays.equals(bytes,verifiedBytes(s,p.archiveSha256)))throw new IOException("archive collision");}
+                else{makeArchiveRoom(s,input.keySet());atomic(dst,bytes,"ARCHIVE");}}
+            Map<String,PackMetadata> result=new TreeMap<>();for(HookPack.Verified p:candidates.values()){Version old=s.versions.get(p.moduleId);if(old==null||!old.current.equals(p.archiveSha256)){s.highWater.put(p.moduleId,new String[]{p.version,p.archiveSha256});s.versions.put(p.moduleId,new Version(p.archiveSha256,old==null?"-":old.current,p.version,p.archiveSha256));}result.put(p.moduleId,new PackMetadata(p));}
+            save(s);return Collections.unmodifiableMap(result);});
     }
     public void select(String id,boolean scoped)throws IOException,GeneralSecurityException {
         locked(s->{if(!scoped)throw new IllegalArgumentException("scope not confirmed");Version v=s.versions.get(PackPolicy.hook(id).moduleId);if(v==null)throw new IllegalArgumentException("pack not installed");verifiedBytes(s,v.current);s.modes.put(id,"pack");save(s);return null;});

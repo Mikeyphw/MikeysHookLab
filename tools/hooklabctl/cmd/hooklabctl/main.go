@@ -264,6 +264,9 @@ func Validate(b []byte) (string, error) {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "index" {
+		return distributionCommand(args[1:], stdout, stderr)
+	}
 	if len(args) > 0 && args[0] == "module" {
 		return packCommand(args[1:], stdout, stderr)
 	}
@@ -272,7 +275,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	if len(args) != 2 || args[0] != "inspect" {
-		fmt.Fprintln(stderr, "usage: hooklabctl version | inspect <metadata.json> | module pack <manifest> <provenance> <dex> <private-key.der> <new.hookpack> [--ui-dex <dex>] [--ui-resources <json>] | module verify|inspect <pack> <trusted-public-key.der>")
+		fmt.Fprintln(stderr, "usage: hooklabctl version | inspect <metadata.json> | index sign|verify|inspect | module pack <manifest> <provenance> <dex> <private-key.der> <new.hookpack> [--ui-dex <dex>] [--ui-resources <json>] | module verify|inspect <pack> <trusted-public-key.der>")
 		return 2
 	}
 	before, e := os.Lstat(args[1])

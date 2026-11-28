@@ -32,7 +32,7 @@ class R06IntegrationTest(unittest.TestCase):
         for x in ('TermuxCommandPolicy.EXECUTABLE','"terminal-session"','"com.termux.RUN_COMMAND_BACKGROUND",false','"com.termux.RUN_COMMAND_SESSION_ACTION","0"','"com.termux.RUN_COMMAND_PENDING_INTENT",result'):
             self.assertIn(x,b)
         ns='{http://schemas.android.com/apk/res/android}';m=ET.parse(ROOT/'app/src/main/AndroidManifest.xml').getroot()
-        self.assertEqual([x.get(ns+'name') for x in m.findall('uses-permission')],['com.termux.permission.RUN_COMMAND'])
+        self.assertEqual([x.get(ns+'name') for x in m.findall('uses-permission')],['com.termux.permission.RUN_COMMAND','android.permission.INTERNET'])
         self.assertEqual([(x.get(ns+'name'),x.get(ns+'exported')) for x in m.findall('./application/receiver')],[('.termux.TermuxSessionReceipt','false')])
         result=(BASE/'termux/TermuxSessionReceipt.java').read_text()
         for x in ('PendingIntent.FLAG_ONE_SHOT|PendingIntent.FLAG_MUTABLE','new Intent(c,TermuxSessionReceipt.class)','active(p.getString(PREFIX+id,""))','b.getInt("exitCode",Integer.MIN_VALUE)','b.getInt("err",Integer.MIN_VALUE)','intent.replaceExtras((Bundle)null)','MAX_PENDING_AGE_MS'):

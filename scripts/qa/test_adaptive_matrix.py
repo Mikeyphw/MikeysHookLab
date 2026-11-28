@@ -57,10 +57,23 @@ class AdaptiveMatrixTests(unittest.TestCase):
  def test_cold_launch_is_distinct_from_native_frame_workload(self):
   from unittest.mock import patch
   from types import SimpleNamespace
-  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=['101','102','103','104','105']),patch.object(a,'launch',side_effect=['Status: ok\nTotalTime: '+str(x) for x in [100,200,300,400,500]]),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=1,stdout='')):
-   r=a.launch_performance({'native_frames':self.frames()});self.assertEqual(r['cold_launch_pids'],[101,102,103,104,105]);self.assertEqual(r['cold_launch_p95_ms'],500);self.assertEqual(r['frame_p95_ms'],19.);self.assertEqual(adb.call_count,5)
-  with patch.object(a.n,'adb'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='101')):
+  with patch.object(a.n,'adb') as adb,patch.object(a.n,'txt',side_effect=['101','102','103','104','105']),patch.object(a,'launch',side_effect=['Status: ok\nTotalTime: '+str(x) for x in [100,200,300,400,500]]),patch.object(a.time,'sleep'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=1,stdout='',stderr='')) as query:
+   r=a.launch_performance({'native_frames':self.frames()});self.assertEqual(r['cold_launch_pids'],[101,102,103,104,105]);self.assertEqual(r['cold_launch_p95_ms'],500);self.assertEqual(r['frame_p95_ms'],19.);self.assertEqual(adb.call_count,5);self.assertEqual(query.call_count,10)
+  with patch.object(a.n,'adb'),patch.object(a.time,'sleep'),patch.object(a.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='101',stderr='')):
    with self.assertRaisesRegex(ValueError,'preexisting process'):a.launch_performance({'native_frames':self.frames()})
+ def test_cold_launch_waits_for_two_clean_absence_samples_without_replay(self):
+  from unittest.mock import patch
+  from types import SimpleNamespace
+  absent=SimpleNamespace(returncode=1,stdout='',stderr='');present=SimpleNamespace(returncode=0,stdout='101 102',stderr='')
+  with patch.object(a.time,'sleep'),patch.object(a.subprocess,'run',side_effect=[present,absent,present,absent,absent]) as query,patch.object(a.n,'adb') as adb:
+   a.await_cold_process_absence();self.assertEqual(query.call_count,5);adb.assert_not_called()
+  for bad in (SimpleNamespace(returncode=1,stdout='',stderr='device offline'),SimpleNamespace(returncode=2,stdout='',stderr=''),SimpleNamespace(returncode=0,stdout='garbage',stderr=''),SimpleNamespace(returncode=1,stdout='101',stderr='')):
+   with patch.object(a.subprocess,'run',return_value=bad) as query,patch.object(a.time,'sleep'):
+    with self.assertRaisesRegex(ValueError,'process query'):a.await_cold_process_absence()
+    self.assertEqual(query.call_count,1)
+  with patch.object(a.time,'sleep'),patch.object(a.subprocess,'run',side_effect=[present,absent]*10),patch.object(a,'launch') as launch,patch.object(a.n,'adb') as adb:
+   with self.assertRaisesRegex(ValueError,'preexisting process'):a.launch_performance({'native_frames':self.frames()})
+   launch.assert_not_called();self.assertEqual(adb.call_count,1)
  def test_matrix_rotation_is_reasserted_at_every_instrumentation_boundary(self):
   from unittest.mock import patch
   from types import SimpleNamespace

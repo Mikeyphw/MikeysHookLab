@@ -20,7 +20,7 @@ Coverage: complete for the **proposed 11-overlay combined UX revamp + modular tr
 | MOD-01 | Modular Core & Internal SDK | PLANNED; NOT RUN | PENDING; UX-R03/R04 qualified and merged; design/roadmap adoption |
 | MOD-02 | Hook Pack Runtime & Migration | PLANNED; NOT RUN | PENDING; MOD-01 source/hosted gates and applicable physical proof |
 | MOD-03 | Native Module UI & Configuration | PLANNED; NOT RUN | PENDING; MOD-02 source/hosted gates and applicable physical proof |
-| MOD-04 | GitHub Distribution & Updates | PLANNED; NOT RUN | PENDING; MOD-03 source/hosted gates and applicable physical proof |
+| MOD-04 | GitHub Distribution & Updates | SOURCE IMPLEMENTATION; local fixtures and fresh hosted qualification required | PENDING; API29 repair, protected publication, device and release acceptance |
 | MOD-05 | Developer Tools & Full Qualification | PLANNED; NOT RUN | PENDING; MOD-04 source/hosted gates and applicable physical proof |
 | UX-R05 | Full Native Visual Acceptance & Regression Enforcement | PLANNED | PENDING; R00–R04 and MOD-01–05, approved references |
 
