@@ -1,0 +1,27 @@
+{
+  "approved_case_deltas": [],
+  "global_rules": [
+    {
+      "id": "system-insets",
+      "rule": "Only measured system bar/display-cutout insets may be cropped; exact content viewport, no arbitrary masks."
+    },
+    {
+      "id": "density",
+      "rule": "Native pixels to CSS viewport by exact integer density BOX downsample only; native golden raw pixels unchanged."
+    },
+    {
+      "id": "touch-target",
+      "rule": "Separate visual bounds from native touch bounds; actual native minimum 48dp."
+    },
+    {
+      "id": "demo-provenance",
+      "rule": "Demo-only text/data must not ship as runtime state. Every semantic exclusion or label mapping needs named case/component, exact expected values and independent review."
+    },
+    {
+      "id": "platform-text",
+      "rule": "Calibrate cross-renderer raster limits on independent font/platform fixture, never on mismatching production screenshot."
+    }
+  ],
+  "raster_limits": [],
+  "schema": "hooklab.uxm.platform-deltas.v1"
+}

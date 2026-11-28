@@ -1,0 +1,203 @@
+{
+  "pending": [
+    {
+      "id": "configuration-conflict",
+      "owner": "UX-M03",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "failed-save",
+      "owner": "UX-M03",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "loading-unknown",
+      "owner": "UX-M03",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "import-export-reset-undo",
+      "owner": "UX-M03",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "custom-ui-consent",
+      "owner": "UX-M03",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "process-death",
+      "owner": "UX-M03",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "publisher-trust-revoke",
+      "owner": "UX-M04",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "actual-session-credential",
+      "owner": "UX-M04",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "stable-testing",
+      "owner": "UX-M04",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "pin",
+      "owner": "UX-M04",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "publication-restart",
+      "owner": "UX-M04",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "safe-mode",
+      "owner": "UX-M04",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "signed-install-error",
+      "owner": "UX-M04",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "diagnostic-timeline",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "diagnostic-health",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "diagnostic-capture",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "diagnostic-event-report",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "diagnostic-filter-import-export",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "scope-permissions",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "MCC",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "Termux-bridge",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "privacy",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "help",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "about",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "recovery",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "dynamic-theme",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "amoled",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "large-font",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "keyboard",
+      "owner": "UX-M05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "developer-inspector",
+      "owner": "MOD-05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "developer-validator",
+      "owner": "MOD-05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "developer-evidence",
+      "owner": "MOD-05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    },
+    {
+      "id": "development-lane",
+      "owner": "MOD-05",
+      "reason": "No equivalent complete state in immutable HTML; independently review a versioned extension before admission.",
+      "state": "PENDING_REFERENCE"
+    }
+  ],
+  "schema": "hooklab.uxm.extensions.v1"
+}

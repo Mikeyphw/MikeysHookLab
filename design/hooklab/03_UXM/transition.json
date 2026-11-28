@@ -1,0 +1,46 @@
+{
+  "legacy_case_counts": {
+    "adaptive": 10,
+    "browser": 24,
+    "ci24_shards": 24,
+    "native_candidate": 14
+  },
+  "legacy_gates": [
+    "source",
+    "android",
+    "ci24",
+    "terminal",
+    "design",
+    "visual",
+    "functional",
+    "adaptive",
+    "go"
+  ],
+  "legacy_reference_hashes": {
+    "design/hooklab/01_REFERENCE/hooklab_ux_revamp.html": "8df26c67823ad29bae220ff18ae86d685f5ad27ed87d94ba6bc607d6e0cb3a2d",
+    "design/hooklab/01_REFERENCE/hooklab_ux_revamp.svg": "59ca31cb43ed09fdd10de3739837f85c3ab522e85e32474831e8285021e578af",
+    "design/hooklab/01_REFERENCE/mod03-chatgpt-reference.html": "90f68194da6b65d78ead8e2f63d4d08fdf17e5baa779d4127936e7434af0f944",
+    "design/hooklab/01_REFERENCE/mod03-module-reference.html": "03e4b8ec0622317e832465ec7898d9f9dd2251b7078c099668ad7e681895f226",
+    "design/hooklab/01_REFERENCE/reference-manifest.json": "692e90366afdc24ae4e5213a9376435503bab5d275d30a1eb51cff6a04421648",
+    "design/hooklab/02_CONTRACT/browser-semantic-roster.json": "b8e5016e9ebe0fd7026b5cb2ceeb72df7180b418db35226b885ca38cc448e96d",
+    "design/hooklab/02_CONTRACT/fixtures.json": "0171c3d9fbef5cecdf12eb2b785ab5cf238d10a4f85a502f37a7eb9d51d28429",
+    "design/hooklab/02_CONTRACT/mod03-chatgpt-contract.json": "5c087eb7e7c9e9159a2aa70b70ca0f61610e5f547d46efcf0d6cda9d02c7d6c7",
+    "design/hooklab/02_CONTRACT/mod03-module-contract.json": "76b7727d627c637a7285b3aaef26e7d7c5843cf2a3d9cb70547ade15ffdebca1",
+    "design/hooklab/02_CONTRACT/visual-contract.json": "c6affa56c329195f964bf60a2229dc867eef49644360e6ce1a0a465cf92e1c88"
+  },
+  "policy": "Additive UX-M qualification. Preserve predecessor reference, repeat threshold, prior source promises, native and adaptive tests. No candidate promotion.",
+  "predecessor_commit": "ac844f9c31d793cb59e613edc711785f5930b670",
+  "predecessor_tree": "ded6e76599d695ccce68e93fadfd715610fccdbd",
+  "prior_roadmap_files": {
+    "docs/roadmaps/hooklab-modular-roadmap.md": {
+      "sha256": "1d66be94fc5fd276333c3d307df02acd6bd7bd031864a5e6342cb086d6cbc3d7"
+    },
+    "docs/roadmaps/hooklab-modular.json": {
+      "sha256": "906499b5e4322899ef63d82bc82a90c8363a6034b2efb810642ccdb06f878662"
+    },
+    "docs/roadmaps/hooklab-ux-revamp.md": {
+      "sha256": "092469aa6df62b7b24ba4d3d38cd166b34a433ca9296ece08b1d6e47778fef41"
+    }
+  },
+  "schema": "hooklab.uxm.transition.v1"
+}

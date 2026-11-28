@@ -82,6 +82,7 @@ jobs:
           python -m playwright install --with-deps chromium
           python3 -B scripts/qa/reference.py repeat --out "$RUNNER_TEMP/hooklab-comparison-reference"
           python3 -B scripts/qa/visual.py bind --reference "$RUNNER_TEMP/hooklab-comparison-reference/first"
+          python3 -B scripts/qa/uxm_reference.py --repeat --out "$RUNNER_TEMP/hooklab-uxm-evidence/browser"
           python3 -B scripts/qa/visual_image_checks.py
           python3 -B scripts/qa/visual_report_checks.py --reference "$RUNNER_TEMP/hooklab-comparison-reference/first"
       - uses: actions/setup-go@v6
@@ -117,6 +118,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           script: >-
             python3 -B scripts/qa/native_smoke.py run --out "$RUNNER_TEMP/hooklab-native-smoke" --probe-dir "$RUNNER_TEMP/mod01-probe"
+            && python3 -B scripts/qa/uxm_native.py --out "$RUNNER_TEMP/hooklab-uxm-evidence/native"
             && python3 -B scripts/qa/mod02_hosted_packs.py art --out "$RUNNER_TEMP/mod02-packs" --evidence "$RUNNER_TEMP/mod02-art.json"
             && python3 -B scripts/qa/mod03_visual.py capture --out "$RUNNER_TEMP/mod03-visual" --fixture "$RUNNER_TEMP/mod03-private-fixture"
       - uses: actions/upload-artifact@v7.0.2
@@ -151,6 +153,19 @@ jobs:
           set -Eeuo pipefail
           python3 -B scripts/qa/visual.py compare --reference "$RUNNER_TEMP/hooklab-comparison-reference/first" --native "$RUNNER_TEMP/hooklab-native-smoke" --out "$RUNNER_TEMP/hooklab-visual-report"
           python3 -B scripts/qa/visual.py verify --reference "$RUNNER_TEMP/hooklab-comparison-reference/first" --native "$RUNNER_TEMP/hooklab-native-smoke" --out "$RUNNER_TEMP/hooklab-visual-report"
+      - name: Enforce all admitted UX-M fidelity and journey gates
+        run: |
+          set -Eeuo pipefail
+          for mode in compare verify; do
+            python3 -B scripts/qa/uxm_visual.py "$mode" --first "$RUNNER_TEMP/hooklab-uxm-evidence/browser/first" --second "$RUNNER_TEMP/hooklab-uxm-evidence/browser/second" --native "$RUNNER_TEMP/hooklab-native-smoke" --module "$RUNNER_TEMP/mod03-visual" --uxm "$RUNNER_TEMP/hooklab-uxm-evidence/native" --out "$RUNNER_TEMP/hooklab-uxm-evidence/report"
+          done
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: hooklab-uxm-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/hooklab-uxm-evidence/
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/upload-artifact@v7.0.2
         if: always() && steps.native_capture.outcome != 'skipped'
         with:

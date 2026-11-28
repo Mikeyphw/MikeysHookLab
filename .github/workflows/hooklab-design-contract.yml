@@ -38,11 +38,19 @@ jobs:
           python3 -B scripts/qa/visual_image_checks.py
           python3 -B scripts/qa/reference.py repeat --out "$RUNNER_TEMP/hooklab-reference"
           python3 -B scripts/qa/visual_report_checks.py --reference "$RUNNER_TEMP/hooklab-reference/first"
+          python3 -B scripts/qa/uxm_reference.py --repeat --out "$RUNNER_TEMP/hooklab-uxm-design"
           printf '%s\n' "$SOURCE_SHA" > "$RUNNER_TEMP/hooklab-reference/source-commit.txt"
       - uses: actions/upload-artifact@v7.0.2
         if: always() && steps.browser_reference.outcome != 'skipped'
         with:
           name: hooklab-browser-reference-${{ github.run_attempt }}
           path: ${{ runner.temp }}/hooklab-reference/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7.0.2
+        if: always() && steps.browser_reference.outcome != 'skipped'
+        with:
+          name: hooklab-uxm-design-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/hooklab-uxm-design/
           if-no-files-found: error
           retention-days: 14

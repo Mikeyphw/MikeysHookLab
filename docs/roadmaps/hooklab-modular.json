@@ -402,8 +402,8 @@
       "parent_id": "MOD-03"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh hosted CI/CI24, actual GitHub private/public access, physical update transaction, protected release environment and release approval pending. API29 cold-launch regression consolidated; no Word Master repair claim.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "PR 40 and merged main hosted qualification passed; physical-device and release gates remain pending.",
       "counted": true,
       "dependencies": [
         "MOD-03"
@@ -416,10 +416,102 @@
     },
     {
       "acceptance": "PENDING",
-      "blocker": "Prerequisite overlay not accepted",
+      "blocker": "Hosted UI/CI24 and native acceptance pending; no golden approved.",
       "counted": true,
       "dependencies": [
         "MOD-04"
+      ],
+      "id": "UX-M00",
+      "implementation": "SOURCE_COMPLETE",
+      "kind": "OVERLAY",
+      "name": "Binding Design and CI Infrastructure",
+      "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Not implemented; required reference extensions and native admission remain pending.",
+      "counted": true,
+      "dependencies": [
+        "UX-M00"
+      ],
+      "id": "UX-M01",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Unified Navigation and Catalog",
+      "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Not implemented; required reference extensions and native admission remain pending.",
+      "counted": true,
+      "dependencies": [
+        "UX-M01"
+      ],
+      "id": "UX-M02",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Module Workspace and Hook Semantics",
+      "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Not implemented; required reference extensions and native admission remain pending.",
+      "counted": true,
+      "dependencies": [
+        "UX-M02"
+      ],
+      "id": "UX-M03",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Configuration and Profiles",
+      "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Not implemented; required reference extensions and native admission remain pending.",
+      "counted": true,
+      "dependencies": [
+        "UX-M03"
+      ],
+      "id": "UX-M04",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Repository and Distribution",
+      "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Not implemented; required reference extensions and native admission remain pending.",
+      "counted": true,
+      "dependencies": [
+        "UX-M04"
+      ],
+      "id": "UX-M05",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Remaining Surfaces and Adaptive UX",
+      "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Not implemented; required reference extensions and native admission remain pending.",
+      "counted": true,
+      "dependencies": [
+        "UX-M05"
+      ],
+      "id": "UX-M06",
+      "implementation": "PLANNED",
+      "kind": "OVERLAY",
+      "name": "Redesigned Surface Qualification",
+      "parent_id": null
+    },
+    {
+      "acceptance": "PENDING",
+      "blocker": "Prerequisite overlay not accepted",
+      "counted": true,
+      "dependencies": [
+        "MOD-04",
+        "UX-M06"
       ],
       "id": "MOD-05",
       "implementation": "PLANNED",
@@ -433,7 +525,8 @@
       "counted": true,
       "dependencies": [
         "MOD-05",
-        "UX-R04"
+        "UX-R04",
+        "UX-M06"
       ],
       "id": "UX-R05",
       "implementation": "PLANNED",
@@ -522,6 +615,6 @@
     }
   ],
   "repository": "Mikeyphw/MikeysHookLab",
-  "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-04"
+  "scope": "19 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
+  "version": "2.1-UX-M00"
 }

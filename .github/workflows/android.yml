@@ -190,6 +190,8 @@ jobs:
           python3 -B scripts/check_hl_diag_r05.py
           python3 -B scripts/qa/reference.py verify
           python3 -B scripts/qa/visual.py contract
+          python3 -B scripts/qa/uxm_contract.py
+          python3 -B scripts/qa/uxm_image_checks.py
           python3 -B -m unittest discover -s scripts/qa -p 'test_*.py' -v
           python3 -B scripts/qa/ci24.py inventory > "$RUNNER_TEMP/jvm-inventory.json"
       - uses: actions/upload-artifact@v7.0.2
@@ -305,6 +307,35 @@ jobs:
         if: github.event_name == 'push'
         continue-on-error: true
         run: python3 -m pip install --user Pillow==11.3.0
+      - uses: actions/setup-python@v6
+        if: needs.visual.result == 'success'
+        with:
+          python-version: '3.12'
+      - name: Install mandatory UX-M independent verifier dependencies
+        if: needs.visual.result == 'success'
+        run: python3 -m pip install 'Pillow==11.3.0' 'numpy==2.3.5'
+      - uses: actions/download-artifact@v8
+        if: needs.visual.result == 'success'
+        with:
+          name: hooklab-uxm-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/uxm-independent/uxm
+      - uses: actions/download-artifact@v8
+        if: needs.visual.result == 'success'
+        with:
+          name: hooklab-native-baseline-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/uxm-independent/native
+      - uses: actions/download-artifact@v8
+        if: needs.visual.result == 'success'
+        with:
+          name: hooklab-mod03-visual-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/uxm-independent/module
+      - name: Independently recompute UX-M gate from original evidence
+        if: needs.visual.result == 'success'
+        run: |
+          set -Eeuo pipefail
+          root="$RUNNER_TEMP/uxm-independent"
+          python3 -B scripts/qa/uxm_visual.py verify --first "$root/uxm/browser/first" --second "$root/uxm/browser/second" --native "$root/native" --module "$root/module" --uxm "$root/uxm/native" --out "$root/uxm/report"
+          cp "$root/uxm/report/receipt.json" "$RUNNER_TEMP/qualification/uxm-receipt.json"
       - name: Recompute impact and verify every required or excluded gate
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
