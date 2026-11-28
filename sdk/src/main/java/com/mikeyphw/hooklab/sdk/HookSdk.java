@@ -37,9 +37,11 @@ public final class HookSdk {
     public static final class Settings {
         private final Map<String,Boolean> flags;
         private final ModuleConfig.Filter filter;
+        private final ChatGptConfig.Options chatGpt;
         public Settings(Map<String,Boolean> values){this(values,ModuleConfig.defaultsFilter());}
-        public Settings(Map<String,Boolean> values,ModuleConfig.Filter filter) {
-            this.filter=Objects.requireNonNull(filter);
+        public Settings(Map<String,Boolean> values,ModuleConfig.Filter filter) {this(values,filter,ChatGptConfig.defaultsOptions());}
+        public Settings(Map<String,Boolean> values,ModuleConfig.Filter filter,ChatGptConfig.Options chatGpt) {
+            this.filter=Objects.requireNonNull(filter);this.chatGpt=Objects.requireNonNull(chatGpt);
             Map<String,Boolean> copy = new LinkedHashMap<>();
             for (Map.Entry<String,Boolean> value : Objects.requireNonNull(values).entrySet()) {
                 copy.put(HookDescriptor.identifier(value.getKey()), Objects.requireNonNull(value.getValue()));
@@ -47,6 +49,7 @@ public final class HookSdk {
             flags = Collections.unmodifiableMap(copy);
         }
         public ModuleConfig.Filter wordMasterFilter(){if(!enabled(ModuleConfig.HOOK))throw new IllegalStateException("configuration scope refused");return filter;}
+        public ChatGptConfig.Options chatGptOptions(){if(!enabled(ChatGptConfig.HOOK))throw new IllegalStateException("configuration scope refused");return chatGpt;}
         public boolean enabled(String key) { return Boolean.TRUE.equals(flags.get(HookDescriptor.identifier(key))); }
     }
     public static final class Context {

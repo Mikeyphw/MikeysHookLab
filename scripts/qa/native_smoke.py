@@ -244,7 +244,7 @@ def failure_details(output,test_id,ordinal,completed,rc,reason,roster=None):
 
 FAILURE_CHECKS=frozenset(('TouchTargetSizeCheck','TextContrastCheck','DuplicateSpeakableTextCheck','SpeakableTextPresentCheck','RedundantDescriptionCheck','EditableContentDescCheck','ClickableSpanCheck','ImageContrastCheck','TraversalOrderCheck','AccessibilityViewCheckException'))
 FAILURE_CAUSE_CLASS=re.compile(r'(?:java\.lang|androidx\.test\.espresso(?:\.[a-z]+)*|com\.google\.android\.apps\.common\.testing\.accessibility\.framework(?:\.[a-z]+)*)\.[A-Za-z0-9_$]+')
-FAILURE_CAUSE_FRAME=re.compile(r'com\.mikeyphw\.hooklab\.(?:qa|ui)\.[A-Za-z0-9_$]+\.[A-Za-z0-9_$]+\([A-Za-z0-9_]+\.java:[1-9][0-9]{0,4}\)')
+FAILURE_CAUSE_FRAME=re.compile(r'com\.mikeyphw\.hooklab\.(?:(?:qa|ui)\.[A-Za-z0-9_$]+|packs\.ChatGptProfileFixture)\.[A-Za-z0-9_$]+\([A-Za-z0-9_]+\.java:[1-9][0-9]{0,4}\)')
 def clear_failure_checkpoint():
     adb('shell','run-as',PKG,'rm','-f','files/uxr04-adaptive/failure-detail.json','files/uxr04-adaptive/failure-detail.tmp')
 def failure_checkpoint(source,test_id,phases):

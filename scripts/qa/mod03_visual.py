@@ -1,5 +1,6 @@
 """Hosted candidate-only browser and native module evidence; not visual approval."""
-import argparse, hashlib, json, os, subprocess, sys
+import argparse, hashlib, json, os, re, subprocess, sys
+import native_smoke as n
 from pathlib import Path
 from mod02_hosted_packs import identity, sha, run
 from qualification import canonical, require, strict_json
@@ -9,15 +10,20 @@ REFERENCE=ROOT/'design/hooklab/01_REFERENCE/mod03-module-reference.html'
 CONTRACT=ROOT/'design/hooklab/02_CONTRACT/mod03-module-contract.json'
 TEST='com.mikeyphw.hooklab.qa.Mod03ModuleUiTest#realModuleScreensAndExplicitProvider'
 ROUTES=('overview','configure','logs','versions')
+REFERENCES={'':REFERENCE,'chatgpt-':ROOT/'design/hooklab/01_REFERENCE/mod03-chatgpt-reference.html'}
+CONTRACTS={'':CONTRACT,'chatgpt-':ROOT/'design/hooklab/02_CONTRACT/mod03-chatgpt-contract.json'}
 def contract():
-    value=strict_json(CONTRACT.read_bytes())
-    require(value=={'schema':'hooklab.mod03.visual-candidate.v1','status':'CANDIDATE_NOT_APPROVED','reference_sha256':sha(REFERENCE),'routes':list(ROUTES),'browser_widths':[320,390,840],'minimum_touch_dp':48,'native_dimensions':[780,1688],'historical_contract_unchanged':True},'module reference contract drift')
-    return value
+    values={}
+    for prefix,path in CONTRACTS.items():
+        value=strict_json(path.read_bytes())
+        require(value=={'schema':'hooklab.mod03.visual-candidate.v1','status':'CANDIDATE_NOT_APPROVED','reference_sha256':sha(REFERENCES[prefix]),'routes':list(ROUTES),'browser_widths':[320,390,840],'minimum_touch_dp':48,'native_dimensions':[780,1688],'historical_contract_unchanged':True},'module reference contract drift')
+        values[prefix or 'wordmaster']={'contract_sha256':sha(path),'reference_sha256':sha(REFERENCES[prefix])}
+    return values
 
 def validate_images(out, hosted=False):
     from verify_ui_artifacts import png
     if hosted:from PIL import Image
-    expected={f'native-{r}.png':(780,1688) for r in ROUTES}|{f'browser-{w}-{r}.png':(w,844) for w in (320,390,840) for r in ROUTES}
+    expected={f'native-{prefix}{r}.png':(780,1688) for prefix in REFERENCES for r in ROUTES}|{f'browser-{prefix}{w}-{r}.png':(w,844) for prefix in REFERENCES for w in (320,390,840) for r in ROUTES}
     require(set(p.name for p in out.glob('*.png'))==set(expected),'module screenshot roster')
     for name,dimensions in expected.items():
         p=out/name;require(p.is_file() and not p.is_symlink() and 0<p.stat().st_size<=12*1024*1024,'invalid screenshot')
@@ -27,39 +33,65 @@ def validate_images(out, hosted=False):
                 require(any(lo!=hi for lo,hi in im.convert('RGB').getextrema()),'blank screenshot')
     return {name:sha(out/name) for name in sorted(expected)}
 
+MODULE_PHASES=frozenset(('SETUP','RUNTIME_UNCHANGED','CHATGPT_EDITOR')+tuple(module+'_'+phase for module in ('WORDMASTER','CHATGPT') for phase in ('ADMISSION','LAUNCH','OVERVIEW','CONFIGURE','CANCEL','ADMIT','CONTENT','CLOSE','READMIT','RECREATE','LOGS','VERSIONS')))
+
+def run_module_instrumentation(out,ident,app_hash,test_hash):
+    output='';rc=None;reason='TRANSPORT_FAILED'
+    try:
+        n.clear_failure_checkpoint()
+        result=subprocess.run(['adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',TEST,PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=240)
+        rc=result.returncode;output=result.stdout
+        require(rc==0,'module instrumentation transport failed')
+        reason='TEST_FAILED';parse_instrumentation(output,TEST)
+        return
+    except (ValueError,OSError,subprocess.SubprocessError) as failure:
+        if isinstance(failure,subprocess.TimeoutExpired):reason='TIMEOUT';output=failure.stdout or ''
+        elif isinstance(failure,OSError):reason='SPAWN_FAILED'
+        if isinstance(output,bytes):output=output.decode('utf-8','replace')
+        codes=[]
+        for line in (output or '').splitlines():
+            match=re.fullmatch(r'INSTRUMENTATION_(STATUS_CODE|CODE): (-?\d{1,3})',line.strip())
+            if match and len(codes)<32:codes.append([match[1],int(match[2])])
+        cause=n.failure_checkpoint(ident['source_sha'],TEST,MODULE_PHASES)
+        report={'schema':'hooklab.mod03.instrumentation-failure.v1',**ident,'test':TEST,'status':'FAILED_NOT_APPROVAL','manager_apk_sha256':app_hash,'instrumentation_apk_sha256':test_hash,'reason':reason,'transport_exit':rc,'status_codes':codes,'cause_checkpoint':cause}
+        (out/'receipt.json').write_bytes(canonical(report)+b'\n')
+        print('MOD03_INSTRUMENTATION_FAILURE '+json.dumps(report,sort_keys=True),file=sys.stderr,flush=True)
+        raise ValueError('module instrumentation '+reason) from None
+
 def capture(out,fixture):
     ident=identity();contract();guard();require(not out.exists(),'fresh evidence directory required');out.mkdir(parents=True)
-    require({p.name for p in fixture.iterdir()}=={'publisher.der','wordmaster.hookpack'},'private fixture inventory')
+    require({p.name for p in fixture.iterdir()}=={'publisher.der','wordmaster.hookpack','chatgpt.hookpack'},'private fixture inventory')
     app_hash=sha(one('app/build/outputs/apk/debug/*.apk'));test_hash=sha(one('app/build/outputs/apk/androidTest/debug/*.apk'))
     installed_digest(PKG,app_hash);installed_digest(PKG+'.test',test_hash)
-    for name in ('publisher.der','wordmaster.hookpack'):
+    for name in ('publisher.der','wordmaster.hookpack','chatgpt.hookpack'):
         with (fixture/name).open('rb') as source:run('adb','-s',SERIAL,'shell','-T','run-as',PKG,'sh','-c',f"'mkdir -p files/mod03-test && cat > files/mod03-test/{name}'",stdin=source)
         require(hashlib.sha256(raw('exec-out','run-as',PKG,'cat','files/mod03-test/'+name)).hexdigest()==sha(fixture/name),'UI fixture digest mismatch')
-    result=run('adb','-s',SERIAL,'shell','am','instrument','-w','-r','-e','class',TEST,PKG+'.test/androidx.test.runner.AndroidJUnitRunner',capture_output=True,text=True)
-    parse_instrumentation(result.stdout,TEST)
-    for route in ROUTES:(out/f'native-{route}.png').write_bytes(raw('exec-out','run-as',PKG,'cat',f'files/mod03-test/{route}.png'))
+    run_module_instrumentation(out,ident,app_hash,test_hash)
+    for prefix in REFERENCES:
+        for route in ROUTES:(out/f'native-{prefix}{route}.png').write_bytes(raw('exec-out','run-as',PKG,'cat',f'files/mod03-test/{prefix}{route}.png'))
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser=p.chromium.launch()
-        for width in (320,390,840):
-            page=browser.new_page(viewport={'width':width,'height':844},device_scale_factor=1)
-            page.goto(REFERENCE.as_uri());page.evaluate('document.fonts.ready')
-            for route in ROUTES:
-                tab=page.get_by_role('tab',name=route.capitalize());tab.click();panel=page.locator('#'+route)
-                require(tab.get_attribute('aria-selected')=='true' and panel.is_visible(),'browser module navigation')
-                require(all(box['height']>=48 and box['width']>=48 for box in [item.bounding_box() for item in page.get_by_role('tab').all()]),'undersized browser touch target')
-                require(page.evaluate('document.documentElement.scrollWidth<=innerWidth'),'browser overflow')
-                page.screenshot(path=out/f'browser-{width}-{route}.png')
-            page.close()
+        for prefix,reference in REFERENCES.items():
+            for width in (320,390,840):
+                page=browser.new_page(viewport={'width':width,'height':844},device_scale_factor=1)
+                page.goto(reference.as_uri());page.evaluate('document.fonts.ready')
+                for route in ROUTES:
+                    tab=page.get_by_role('tab',name=route.capitalize());tab.click();panel=page.locator('#'+route)
+                    require(tab.get_attribute('aria-selected')=='true' and panel.is_visible(),'browser module navigation')
+                    require(all(box['height']>=48 and box['width']>=48 for box in [item.bounding_box() for item in page.get_by_role('tab').all()]),'undersized browser touch target')
+                    require(page.evaluate('document.documentElement.scrollWidth<=innerWidth'),'browser overflow')
+                    page.screenshot(path=out/f'browser-{prefix}{width}-{route}.png')
+                page.close()
         browser.close()
-    files=validate_images(out,hosted=True);receipt={'schema':'hooklab.mod03.visual-evidence.v1',**ident,'status':'CANDIDATE_PASS_NOT_APPROVAL','test':TEST,'contract_sha256':sha(CONTRACT),'reference_sha256':sha(REFERENCE),'manager_apk_sha256':app_hash,'instrumentation_apk_sha256':test_hash,'images':files}
+    files=validate_images(out,hosted=True);receipt={'schema':'hooklab.mod03.visual-evidence.v2',**ident,'status':'CANDIDATE_PASS_NOT_APPROVAL','test':TEST,'references':contract(),'manager_apk_sha256':app_hash,'instrumentation_apk_sha256':test_hash,'images':files}
     (out/'receipt.json').write_bytes(canonical(receipt)+b'\n');verify(out)
 
 def verify_artifacts(out,ident,app_hash,test_hash):
     contract();receipt=strict_json((out/'receipt.json').read_bytes())
-    require(set(receipt)=={'schema','source_sha','source_tree','run_id','run_attempt','status','test','contract_sha256','reference_sha256','manager_apk_sha256','instrumentation_apk_sha256','images'},'module evidence shape')
-    require(all(receipt[k]==v for k,v in ident.items()) and receipt['schema']=='hooklab.mod03.visual-evidence.v1' and receipt['status']=='CANDIDATE_PASS_NOT_APPROVAL' and receipt['test']==TEST,'module evidence identity')
-    require(receipt['contract_sha256']==sha(CONTRACT) and receipt['reference_sha256']==sha(REFERENCE) and receipt['images']==validate_images(out),'module evidence digest')
+    require(set(receipt)=={'schema','source_sha','source_tree','run_id','run_attempt','status','test','references','manager_apk_sha256','instrumentation_apk_sha256','images'},'module evidence shape')
+    require(all(receipt[k]==v for k,v in ident.items()) and receipt['schema']=='hooklab.mod03.visual-evidence.v2' and receipt['status']=='CANDIDATE_PASS_NOT_APPROVAL' and receipt['test']==TEST,'module evidence identity')
+    require(receipt['references']==contract() and receipt['images']==validate_images(out),'module evidence digest')
     require(receipt['manager_apk_sha256']==app_hash and receipt['instrumentation_apk_sha256']==test_hash,'module APK digest')
     require({p.name for p in out.iterdir()}==set(receipt['images'])|{'receipt.json'},'module evidence inventory')
     print('MOD03_MODULE_VISUAL_CANDIDATE_PASS_NOT_APPROVAL')

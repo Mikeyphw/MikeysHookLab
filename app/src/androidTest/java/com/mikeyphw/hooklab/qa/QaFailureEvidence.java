@@ -15,7 +15,7 @@ import java.util.Set;
 public final class QaFailureEvidence {
     private QaFailureEvidence() { }
     private static final String[] CHECKS={"TouchTargetSizeCheck","TextContrastCheck","DuplicateSpeakableTextCheck","SpeakableTextPresentCheck","RedundantDescriptionCheck","EditableContentDescCheck","ClickableSpanCheck","ImageContrastCheck","TraversalOrderCheck","AccessibilityViewCheckException"};
-    private static final Set<String> TESTS=new LinkedHashSet<>(java.util.Arrays.asList("adaptiveJourney","boundedTimelinePerformance","connectedCommandsStaleCallbackAndClock"));
+    private static final Set<String> TESTS=new LinkedHashSet<>(java.util.Arrays.asList("adaptiveJourney","boundedTimelinePerformance","connectedCommandsStaleCallbackAndClock","realModuleScreensAndExplicitProvider"));
     public static void record(Context context,String test,String phase,Throwable failure){
         try{
             if(!TESTS.contains(test)||!phase.matches("[A-Z0-9_]{1,64}"))return;
@@ -28,7 +28,7 @@ public final class QaFailureEvidence {
                 String message=cause.getMessage();if(message!=null)for(String check:CHECKS)if(message.contains(check))checks.add(check);
                 for(StackTraceElement frame:cause.getStackTrace()){
                     String c=frame.getClassName(),m=frame.getMethodName(),f=frame.getFileName();int line=frame.getLineNumber();
-                    if(frames.size()<32&&c.matches("com\\.mikeyphw\\.hooklab\\.(?:qa|ui)\\.[A-Za-z0-9_$]+")&&m.matches("[A-Za-z0-9_$]+")&&f!=null&&f.matches("[A-Za-z0-9_]+\\.java")&&line>0&&line<=10000)frames.add(c+"."+m+"("+f+":"+line+")");
+                    if(frames.size()<32&&(c.matches("com\\.mikeyphw\\.hooklab\\.(?:qa|ui)\\.[A-Za-z0-9_$]+")||c.equals("com.mikeyphw.hooklab.packs.ChatGptProfileFixture"))&&m.matches("[A-Za-z0-9_$]+")&&f!=null&&f.matches("[A-Za-z0-9_]+\\.java")&&line>0&&line<=10000)frames.add(c+"."+m+"("+f+":"+line+")");
                 }
                 if(cause.getCause()==cause)break;
             }

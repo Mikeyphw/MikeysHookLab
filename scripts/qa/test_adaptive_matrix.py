@@ -28,6 +28,24 @@ class AdaptiveMatrixTests(unittest.TestCase):
   raw='INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: ADAPTIVE_PHASE_SEARCH_CLOSE_IME\nCaused by: androidx.test.espresso.PerformException: PRIVATE VIEW DUMP\n  at com.mikeyphw.hooklab.qa.AdaptiveUiTest.adaptiveJourney(AdaptiveUiTest.java:147)\nINSTRUMENTATION_STATUS_CODE: -2\nADAPTIVE_PHASE_PRIVATE_PAYLOAD'
   report=a.failure_info(raw,a.JOURNEY,0)
   self.assertEqual(report['phases'],['SEARCH_CLOSE_IME']);self.assertEqual(report['exception_classes'],['java.lang.AssertionError','androidx.test.espresso.PerformException']);self.assertEqual(report['status_codes'],[['STATUS_CODE',-2]]);self.assertEqual(len(report['source_frames']),1);self.assertNotIn('PRIVATE',json.dumps(report))
+ def test_help_return_readiness_is_exact_source_and_fail_closed(self):
+  from unittest.mock import patch
+  row={'schema':'hooklab.uxr04.help-readiness.v1','source':'a'*40,'test':'adaptiveJourney','phase':'HELP_RETURN_SETTLE','stable_samples':1,'window_focused':True,'help_title':True,'mcc_action_attached':True,'mcc_action_ready':True}
+  with patch.object(a.n,'raw',side_effect=lambda *args:json.dumps(row).encode()):
+   self.assertEqual(a.help_readiness('a'*40,a.JOURNEY,'HELP_RETURN_SETTLE'),row)
+   self.assertIsNone(a.help_readiness('b'*40,a.JOURNEY,'HELP_RETURN_SETTLE'))
+   self.assertIsNone(a.help_readiness('a'*40,a.PERF,'HELP_RETURN_SETTLE'))
+   self.assertIsNone(a.help_readiness('a'*40,a.JOURNEY,'MCC_CANCEL'))
+   for field,value in [('stable_samples',2),('stable_samples',True),('help_title','private'),('phase','MCC_CANCEL'),('extra','private')]:
+    original=row.copy();row[field]=value
+    self.assertIsNone(a.help_readiness('a'*40,a.JOURNEY,'HELP_RETURN_SETTLE'));row.clear();row.update(original)
+ def test_help_back_requires_real_stable_route_and_owned_action(self):
+  source=(Path(__file__).resolve().parents[2]/'app/src/androidTest/java/com/mikeyphw/hooklab/qa/AdaptiveUiTest.java').read_text()
+  begin=source.index('phase("PRIVACY_RECREATE")');end=source.index('// Separate activity',begin);route=source[begin:end]
+  self.assertEqual(route.count('back();'),1);self.assertIn('awaitHelpReturn(s)',route);self.assertIn('withTagValue',route);self.assertIn('hasDescendant(withText(R.string.ui07_help_mcc_title))',route);self.assertIn('isClickable()',route);self.assertIn('withDecorView',route);self.assertIn('.perform(scrollTo(),click())',route)
+  gate=source[source.index('private View awaitHelpReturn('):source.index('private void awaitSearch(')]
+  for expected in ('root.hasWindowFocus()','R.string.r03_help_bar','target.isAttachedToWindow()','target.isClickable()','++stable>=2','help-readiness.json'):self.assertIn(expected,gate)
+  for forbidden in ('requestFocus(', 'performClick(', 'goTo(', 'pressBack(', 's.recreate('):self.assertNotIn(forbidden,gate)
  def test_checkpoint_phase_rejects_wrong_source_or_test(self):
   from unittest.mock import patch
   row={'schema':'hooklab.uxr04.phase.v1','phase':'VIEWPORT_READY','test':'adaptiveJourney','source':'a'*40}

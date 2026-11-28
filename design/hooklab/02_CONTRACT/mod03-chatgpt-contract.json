@@ -1,0 +1,22 @@
+{
+  "schema": "hooklab.mod03.visual-candidate.v1",
+  "status": "CANDIDATE_NOT_APPROVED",
+  "reference_sha256": "90f68194da6b65d78ead8e2f63d4d08fdf17e5baa779d4127936e7434af0f944",
+  "routes": [
+    "overview",
+    "configure",
+    "logs",
+    "versions"
+  ],
+  "browser_widths": [
+    320,
+    390,
+    840
+  ],
+  "minimum_touch_dp": 48,
+  "native_dimensions": [
+    780,
+    1688
+  ],
+  "historical_contract_unchanged": true
+}

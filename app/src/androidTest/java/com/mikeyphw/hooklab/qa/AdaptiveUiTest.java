@@ -313,6 +313,32 @@ public final class AdaptiveUiTest {
         }
         throw new AssertionError("Activity window focus not restored");
     }
+    private View awaitHelpReturn(ActivityScenario<MainActivity> scenario)throws Exception {
+        final String[] flags={"window_focused","help_title","mcc_action_attached","mcc_action_ready"};
+        final boolean[] sample=new boolean[flags.length];final View[] previous={null,null};int stable=0;
+        for(int i=0;i<50;i++){
+            ins.waitForIdleSync();final View[] observed={null,null};
+            scenario.onActivity(a->{
+                View root=a.getWindow().getDecorView();MaterialToolbar toolbar=find(root,MaterialToolbar.class);
+                View target=root.findViewWithTag("r04:action:"+R.string.ui07_help_mcc_title);
+                sample[0]=root.isAttachedToWindow()&&root.hasWindowFocus();
+                sample[1]=toolbar!=null&&a.getString(R.string.r03_help_bar).contentEquals(toolbar.getTitle()==null?"":toolbar.getTitle());
+                sample[2]=target!=null&&target.isAttachedToWindow()&&target.isShown();
+                int min=Math.round(48*a.getResources().getDisplayMetrics().density);
+                sample[3]=sample[2]&&target.isEnabled()&&target.isClickable()&&target.getWidth()>=min&&target.getHeight()>=min;
+                for(boolean ready:sample)if(!ready)return;
+                observed[0]=root;observed[1]=target;
+            });
+            if(observed[0]!=null&&observed[0]==previous[0]&&observed[1]==previous[1]){if(++stable>=2)return observed[0];}else stable=0;
+            previous[0]=observed[0];previous[1]=observed[1];SystemClock.sleep(200);
+        }
+        JSONObject evidence=new JSONObject().put("schema","hooklab.uxr04.help-readiness.v1")
+            .put("source",InstrumentationRegistry.getArguments().getString("uxr04_source", ""))
+            .put("test",activeTest).put("phase",phase).put("stable_samples",stable);
+        for(int i=0;i<flags.length;i++)evidence.put(flags[i],sample[i]);
+        Files.write(new File(folder,"help-readiness.json").toPath(),evidence.toString().getBytes(StandardCharsets.UTF_8));
+        throw new AssertionError("Help route and MCC action not stably restored after real Back");
+    }
     private void awaitSearch(ActivityScenario<MainActivity> scenario,boolean imeExpected,String query)throws Exception {
         // Insets and focus are asynchronous across real keyboard transitions.
         // Wait for all observable conditions, never manufacture focus in the test.
@@ -424,8 +450,11 @@ public final class AdaptiveUiTest {
             phase("OPEN_SCOPE");tap(R.string.r03_scope);capture(s,"scope",records);back();tap(R.string.about);capture(s,"about",records);
             phase("SOURCE_PROVENANCE");String expected=InstrumentationRegistry.getArguments().getString("uxr04_source","");assertTrue(expected.matches("[0-9a-f]{40}"));assertEquals(expected,app.getString(R.string.hooklab_build_source));
             phase("OPEN_HELP");tap(R.string.ui07_open_help);capture(s,"help",records);tap(R.string.r03_privacy);capture(s,"privacy",records);
-            phase("PRIVACY_RECREATE");s.recreate();onView(withText(R.string.r03_privacy_heading)).check(matches(isDisplayed()));back();
-            phase("MCC_CANCEL");tap(R.string.ui07_help_mcc_title);
+            phase("PRIVACY_RECREATE");s.recreate();View privacyRoot=awaitFocusedActivityRoot(s);
+            onView(withText(R.string.r03_privacy_heading)).inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.is(privacyRoot))).check(matches(isDisplayed()));back();
+            phase("HELP_RETURN_SETTLE");View helpRoot=awaitHelpReturn(s);
+            phase("MCC_CANCEL");onView(org.hamcrest.Matchers.allOf(withTagValue(org.hamcrest.Matchers.is((Object)("r04:action:"+R.string.ui07_help_mcc_title))),hasDescendant(withText(R.string.ui07_help_mcc_title)),isEnabled(),isClickable()))
+                .inRoot(androidx.test.espresso.matcher.RootMatchers.withDecorView(org.hamcrest.Matchers.is(helpRoot))).perform(scrollTo(),click());
             // Separate activity; do not inspect storage or request root in emulator.
             onView(withText(R.string.ui07_mcc_write)).perform(scrollTo(),click());onView(withText(android.R.string.cancel)).perform(click());
             onView(withText(R.string.ui07_mcc_idle)).perform(scrollTo()).check(matches(isDisplayed()));back();

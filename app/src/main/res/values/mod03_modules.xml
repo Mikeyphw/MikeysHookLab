@@ -56,4 +56,11 @@
     <string name="mod03_ui_close">Close custom UI</string>
     <string name="mod03_ui_test_refused">Test-channel executable UI is not admitted by the manager.</string>
     <string name="mod03_ui_failed">Custom UI failed. Core module controls remain available.</string>
+    <string name="mod03_chatgpt_app_override">ChatGPT app override</string>
+    <string name="mod03_chatgpt_show_run">Show Run in Termux</string>
+    <string name="mod03_chatgpt_layout_diagnostics">Optional layout diagnostics</string>
+    <string name="mod03_chatgpt_interval">Minimum tap interval (500–2000 ms)</string>
+    <string name="mod03_chatgpt_preview">Preview handoff preferences</string>
+    <string name="mod03_chatgpt_preview_message">Run in Termux visible: %1$s\nLayout diagnostics: %2$s\nMinimum tap interval: %3$d ms\nExisting execution consent is unchanged. Profiles cannot enable direct execution.</string>
+    <string name="mod03_chatgpt_restart_config">Restart ChatGPT to apply reviewed preferences. Existing execution consent is unchanged. Profiles cannot enable direct execution. This does not enable a hook or change scope.</string>
 </resources>

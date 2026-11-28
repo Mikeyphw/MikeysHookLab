@@ -34,7 +34,7 @@ def config(case):
  api,w,h,font,theme=CASES[case];return dict(api=api,width_px=w*2,height_px=h*2,density_dpi=DENSITY,font_scale=font,theme=theme)
 # Only fixed phase IDs, selected framework exception classes and source-frame
 # locations are exported. Raw Espresso view dumps and test output remain private.
-PHASES=frozenset(['SETUP','VIEWPORT_READY','LAUNCH_HOME','HOME_SCROLL','HOME_SHORTCUT_VISIBLE','OPEN_HOOKS','SEARCH_OPEN','SEARCH_TYPE','SEARCH_CLOSE_IME','SEARCH_RECREATE','SEARCH_ROTATE','SEARCH_ROTATE_REQUEST','SEARCH_ROTATE_SETTLE','SEARCH_ROTATE_RETURN','SEARCH_ROTATE_RETURN_SETTLE','SEARCH_CLEAR','CATALOG_HIT_TARGETS','OPEN_GROUP','OPEN_HOOK','OPEN_DIAGNOSTICS','IMPORT_OPEN','IMPORT_DIALOG_READY','IMPORT_CANCEL','IMPORT_DISMISSED','OPEN_SETTINGS','THEME_CANCEL','SETTINGS_KEYBOARD_FOCUS','OPEN_SCOPE','SOURCE_PROVENANCE','OPEN_HELP','PRIVACY_RECREATE','MCC_CANCEL','PERF_IMPORT','PERF_LAUNCH','PERF_PAGE','PERF_NATIVE_FRAMES','PERF_WRITE']+['CAPTURE_'+x.upper() for x in ROUTES])
+PHASES=frozenset(['SETUP','VIEWPORT_READY','LAUNCH_HOME','HOME_SCROLL','HOME_SHORTCUT_VISIBLE','OPEN_HOOKS','SEARCH_OPEN','SEARCH_TYPE','SEARCH_CLOSE_IME','SEARCH_RECREATE','SEARCH_ROTATE','SEARCH_ROTATE_REQUEST','SEARCH_ROTATE_SETTLE','SEARCH_ROTATE_RETURN','SEARCH_ROTATE_RETURN_SETTLE','SEARCH_CLEAR','CATALOG_HIT_TARGETS','OPEN_GROUP','OPEN_HOOK','OPEN_DIAGNOSTICS','IMPORT_OPEN','IMPORT_DIALOG_READY','IMPORT_CANCEL','IMPORT_DISMISSED','OPEN_SETTINGS','THEME_CANCEL','SETTINGS_KEYBOARD_FOCUS','OPEN_SCOPE','SOURCE_PROVENANCE','OPEN_HELP','PRIVACY_RECREATE','HELP_RETURN_SETTLE','MCC_CANCEL','PERF_IMPORT','PERF_LAUNCH','PERF_PAGE','PERF_NATIVE_FRAMES','PERF_WRITE']+['CAPTURE_'+x.upper() for x in ROUTES])
 EXCEPTIONS=frozenset(['java.lang.AssertionError','java.lang.IllegalStateException','androidx.test.espresso.PerformException','androidx.test.espresso.NoMatchingViewException','androidx.test.espresso.AmbiguousViewMatcherException','androidx.test.espresso.base.RootViewPicker$RootViewWithoutFocusException','androidx.test.espresso.base.DefaultFailureHandler$AssertionFailedWithCauseError','com.google.android.apps.common.testing.accessibility.framework.AccessibilityViewCheckException','androidx.test.espresso.accessibility.AccessibilityViewCheckException'])
 def failure_info(output,test,rc,reason=None):
  if isinstance(output,bytes):output=output.decode('utf-8','replace')
@@ -114,6 +114,16 @@ def rotation_readiness(source,phase):
   return row
  except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
 
+def help_readiness(source,test,phase):
+ if test!=JOURNEY or phase!='HELP_RETURN_SETTLE':return None
+ try:
+  raw=n.raw('exec-out','run-as',n.PKG,'cat','files/uxr04-adaptive/help-readiness.json');require(0<len(raw)<=4096,'help readiness size')
+  row=json.loads(raw);flags={'window_focused','help_title','mcc_action_attached','mcc_action_ready'}
+  if set(row)!=flags|{'schema','source','test','phase','stable_samples'} or row['schema']!='hooklab.uxr04.help-readiness.v1' or row['source']!=source or row['phase']!=phase or row['test']!='adaptiveJourney':return None
+  if not all(type(row[k]) is bool for k in flags) or type(row['stable_samples']) is not int or not 0<=row['stable_samples']<2:return None
+  return row
+ except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return None
+
 ROTATION_OBSERVATIONS=40
 ROTATION_REASSERT_AT=10
 ROTATION_POLL_SECONDS=.25
@@ -165,7 +175,7 @@ def instrument(test,cfg,source,out):
  lock_matrix_rotation(cfg)
  # A checkpoint from a different invocation must never be accepted as current.
  n.clear_failure_checkpoint()
- if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json','files/uxr04-adaptive/rotation-request.json','files/uxr04-adaptive/rotation-request.tmp','files/uxr04-adaptive/rotation-readiness.json')
+ if test in (JOURNEY,PERF):n.adb('shell','run-as',n.PKG,'rm','-f','files/uxr04-adaptive/phase.json','files/uxr04-adaptive/phase.tmp','files/uxr04-adaptive/home-targets.json','files/uxr04-adaptive/viewport-failure.json','files/uxr04-adaptive/catalog-readiness.json','files/uxr04-adaptive/rotation-request.json','files/uxr04-adaptive/rotation-request.tmp','files/uxr04-adaptive/rotation-readiness.json','files/uxr04-adaptive/help-readiness.json')
  output='';rc=None;reason=None;result=None
  try:
   result=run_instrumentation(test,cfg,source)
@@ -187,6 +197,7 @@ def instrument(test,cfg,source,out):
   if test==JOURNEY and failure['checkpoint_phase'] in ('SEARCH_ROTATE_SETTLE','SEARCH_ROTATE_RETURN_SETTLE'):
    failure['rotation_readiness']=rotation_readiness(source,failure['checkpoint_phase'])
   if test==JOURNEY and failure['checkpoint_phase']=='HOME_SCROLL':failure['home_target_geometry']=home_geometry_checkpoint(source)
+  if failure['checkpoint_phase']=='HELP_RETURN_SETTLE':failure['help_readiness']=help_readiness(source,test,failure['checkpoint_phase'])
   if failure['checkpoint_phase']=='VIEWPORT_READY':failure['viewport_geometry']=viewport_failure(source,test)
   if failure['checkpoint_phase'] in ('OPEN_HOOKS','SEARCH_OPEN'):failure['catalog_readiness']=catalog_readiness(source,test,failure['checkpoint_phase'])
   dump(out/'failure.json',failure)

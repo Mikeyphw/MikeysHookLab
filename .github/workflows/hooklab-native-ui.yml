@@ -119,6 +119,13 @@ jobs:
             python3 -B scripts/qa/native_smoke.py run --out "$RUNNER_TEMP/hooklab-native-smoke" --probe-dir "$RUNNER_TEMP/mod01-probe"
             && python3 -B scripts/qa/mod02_hosted_packs.py art --out "$RUNNER_TEMP/mod02-packs" --evidence "$RUNNER_TEMP/mod02-art.json"
             && python3 -B scripts/qa/mod03_visual.py capture --out "$RUNNER_TEMP/mod03-visual" --fixture "$RUNNER_TEMP/mod03-private-fixture"
+      - uses: actions/upload-artifact@v7.0.2
+        if: failure() && steps.native_capture.outcome == 'failure'
+        with:
+          name: hooklab-mod03-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mod03-visual/receipt.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Verify exact pack, unsigned inputs and ART receipt (independent Go reader)
         run: |
           go -C tools/hooklabctl build -o "$RUNNER_TEMP/hooklabctl-mod02-verify" ./cmd/hooklabctl

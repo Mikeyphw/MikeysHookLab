@@ -5,6 +5,8 @@ import android.os.ParcelFileDescriptor;
 import android.system.Os;
 import android.system.OsConstants;
 import com.mikeyphw.hooklab.HookLabApp;
+import com.mikeyphw.hooklab.sdk.ModuleConfig;
+import com.mikeyphw.hooklab.sdk.ChatGptConfig;
 import com.mikeyphw.hooklab.runtime.pack.HookPack;
 import com.mikeyphw.hooklab.runtime.pack.PackPublication;
 import com.mikeyphw.hooklab.runtime.pack.PackSnapshot;
@@ -38,16 +40,33 @@ final class FrameworkPackRemote implements PackPublication.Remote {
             flags.put(id,Boolean.TRUE.equals(value));
         }return flags;
     }
-    com.mikeyphw.hooklab.sdk.ModuleConfig.Frame configuration()throws IOException {
-        require();Map<String,?> state=service.getRemotePreferences(com.mikeyphw.hooklab.sdk.ModuleConfig.GROUP).getAll();require();return com.mikeyphw.hooklab.sdk.ModuleConfig.read(state);
+    private static final Object CONFIGURATION_LOCK=new Object();
+    static final class Configuration {
+        final XposedService service;final String module;final ModuleConfig.ProfileDocument<?,?> current,previous;
+        Configuration(XposedService service,String module,ModuleConfig.ProfileDocument<?,?> current,ModuleConfig.ProfileDocument<?,?> previous){this.service=service;this.module=module;this.current=current;this.previous=previous;}
+        boolean same(Configuration other){return other!=null&&service==other.service&&module.equals(other.module)&&current.canonical().equals(other.current.canonical())&&(previous==null?other.previous==null:other.previous!=null&&previous.canonical().equals(other.previous.canonical()));}
     }
-    void configuration(com.mikeyphw.hooklab.sdk.ModuleConfig.Frame expected,com.mikeyphw.hooklab.sdk.ModuleConfig.Document update)throws IOException {
-        if(!configuration().same(expected))throw new IOException("configuration changed; refresh first");
-        Map<String,String> values=com.mikeyphw.hooklab.sdk.ModuleConfig.replacement(expected,update);
-        require();SharedPreferences.Editor editor=service.getRemotePreferences(com.mikeyphw.hooklab.sdk.ModuleConfig.GROUP).edit();
-        for(Map.Entry<String,String> e:values.entrySet())editor.putString(e.getKey(),e.getValue());
-        if(!editor.commit())throw new IOException("configuration commit refused");require();
-        if(!configuration().same(com.mikeyphw.hooklab.sdk.ModuleConfig.read(values)))throw new IOException("configuration readback refused");
+    private static String configGroup(String module){if(ModuleConfig.MODULE.equals(module))return ModuleConfig.GROUP;if(ChatGptConfig.MODULE.equals(module))return ChatGptConfig.GROUP;throw new IllegalArgumentException("unknown configuration module");}
+    private Configuration frame(String module,Map<String,?> state){
+        if(ModuleConfig.MODULE.equals(module)){ModuleConfig.Frame f=ModuleConfig.read(state);return new Configuration(service,module,f.current,f.previous);}
+        if(ChatGptConfig.MODULE.equals(module)){ChatGptConfig.Frame f=ChatGptConfig.read(state);return new Configuration(service,module,f.current,f.previous);}
+        throw new IllegalArgumentException("unknown configuration module");
+    }
+    Configuration configuration(String module)throws IOException {
+        require();Map<String,?> state=service.getRemotePreferences(configGroup(module)).getAll();require();return frame(module,state);
+    }
+    void configuration(Configuration expected,ModuleConfig.ProfileDocument<?,?> update)throws IOException {
+        synchronized(CONFIGURATION_LOCK){
+            require();if(expected.service!=service||!expected.module.equals(update.module())||!configuration(expected.module).same(expected))throw new IOException("configuration changed; refresh first");
+            // Reparse the typed document at the transaction boundary before committing only the reviewed fields.
+            ModuleConfig.ProfileDocument<?,?> checked=ModuleConfig.parseForModule(expected.module,update.canonical().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            Map<String,String> values=new HashMap<>();values.put(ModuleConfig.CURRENT,checked.canonical());values.put(ModuleConfig.GENERATION,checked.digest());values.put(ModuleConfig.PREVIOUS,expected.current.canonical());
+            Configuration wanted=frame(expected.module,values);
+            require();SharedPreferences.Editor editor=service.getRemotePreferences(configGroup(expected.module)).edit();
+            for(Map.Entry<String,String> e:values.entrySet())editor.putString(e.getKey(),e.getValue());
+            if(!editor.commit())throw new IOException("configuration commit refused");require();
+            if(!configuration(expected.module).same(wanted))throw new IOException("configuration readback refused");
+        }
     }
     @Override public void write(String name,byte[] bytes)throws IOException{
         require();if(!name.matches("hookpack-[0-9a-f]{64}")||bytes.length>HookPack.MAX_ARCHIVE)throw new IOException("remote file identity");

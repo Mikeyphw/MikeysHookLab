@@ -4,6 +4,7 @@ import android.content.Context;
 import android.view.View;
 import com.mikeyphw.hooklab.sdk.ModuleUiResources;
 import com.mikeyphw.hooklab.sdk.ModuleConfig;
+import com.mikeyphw.hooklab.sdk.ChatGptConfig;
 
 /** Manager-side native custom UI ABI v1. Only explicitly approved self-authored
  * personal packs may be loaded. Same UID is NOT a security sandbox. Never add
@@ -16,6 +17,8 @@ public interface ModuleUiProvider {
         ModuleUiResources resources();
         ModuleConfig.Document wordMasterSettings();
         void reviewWordMasterSettings(ModuleConfig.Document draft);
+        ChatGptConfig.Document chatGptSettings();
+        void reviewChatGptSettings(ChatGptConfig.Document draft);
         android.widget.TextView heading(CharSequence text);
         android.widget.Button button(CharSequence text,Runnable action);
     }
