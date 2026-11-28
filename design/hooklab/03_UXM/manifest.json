@@ -1,0 +1,15 @@
+{
+  "case_count": 50,
+  "extension_count": 33,
+  "files": {
+    "cases.json": "207c5393c1ff9bd161cc3be732810c26fdcb458bc041960d2efc77e18fb4faaa",
+    "extensions.json": "db7770d50788ad166300b99b019188bb6ac21d0f42fa45f9a4e467a6cc094eb9",
+    "hooklab-ux-interactive.html": "2010fca484ad65f78f7a4cb688fb2fdba80aa8b119546762e6943e44aefc0b58",
+    "semantics.json": "83c747a54b695e60e8c6e1d6fa15b73c9cc6ac08d4ac4b26932286f337d9743a",
+    "tokens.json": "ffa2a111ce1677e3a280e72c3308806302b276122a56a9b0e97bf4a87b1061e3",
+    "transition.json": "125608bfe52beb265a54e39c6b2947c2b0ece132ede6214c4e5ddb74629375b5"
+  },
+  "native_approval": false,
+  "plan_sha256": "dedbe492469febbb63fb5893c4c3fb67c3eaf6effcb2d45f3ac62f088b97075f",
+  "schema": "hooklab.uxm.reference.v1"
+}

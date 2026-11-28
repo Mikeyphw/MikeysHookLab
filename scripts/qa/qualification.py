@@ -22,7 +22,7 @@ CASES = {'api29-compact':29, 'api29-standard':29, 'api36-compact':36, 'api36-360
 FUNCTIONS = ('diagnostics', 'framework', 'termux')
 HEX = re.compile(r'[a-f0-9]{40}\Z')
 DIGITS = re.compile(r'[1-9][0-9]*\Z')
-ID = re.compile(r'(?:MOD-0[0-5]|UX-R0[0-5])(?:-F[0-9]{2})?\Z')
+ID = re.compile(r'(?:MOD-0[0-5]|UX-R0[0-5]|UX-M0[0-6])(?:-F[0-9]{2})?\Z')
 
 def require(condition, reason):
     if not condition:
@@ -83,7 +83,7 @@ def load_policy(root, head):
             require(isinstance(row,dict) and set(row)=={'reason','tests','cases','terminal'} and isinstance(row['reason'],str) and row['reason'] and isinstance(row['tests'],list) and len(row['tests'])==len(set(row['tests'])) and set(row['tests'])<=set(FUNCTIONS) and isinstance(row['cases'],list) and len(row['cases'])==len(set(row['cases'])) and set(row['cases'])<=set(CASES) and type(row['terminal']) is bool,'invalid boundary row')
             if group=='runtime_only':require(not row['tests'] and not row['cases'] and not row['terminal'],'runtime-only boundary has UI obligations')
             else:require(row['tests'] or row['cases'],'functional boundary lacks selected tests')
-    require(isinstance(data['overlay_minimums'],dict) and set(data['overlay_minimums'])=={f'MOD-0{i}' for i in range(6)}|{f'UX-R0{i}' for i in range(6)},'overlay minimum roster incomplete')
+    require(isinstance(data['overlay_minimums'],dict) and set(data['overlay_minimums'])=={f'MOD-0{i}' for i in range(6)}|{f'UX-R0{i}' for i in range(6)}|{f'UX-M0{i}' for i in range(7)},'overlay minimum roster incomplete')
     for row in data['overlay_minimums'].values():require(isinstance(row,list) and len(row)==len(set(row)) and set(row)<=set(GATES) and 'source' in row,'unknown minimum gate')
     return data,sha(raw)
 
@@ -168,6 +168,8 @@ def plan(root,head,base,event,run_id,attempt):
             obj=strict_json(git(root,'show',head+':'+row['path'],raw=True))
             require(obj=={'schema':'hooklab.qualification.intent.v1','overlay':ident},'overlay intent identity mismatch')
             intents.append(ident)
+    import uxm_contract
+    uxm_contract.transition_guard(root,before,after,changes,intents)
     # New Go content must not be silently skipped even without a go.mod.
     go_present=any(is_go(p) for p in after) or any(is_go(r['path']) for r in changes)
     require(not any((p.endswith('.go') or PurePosixPath(p).name in ('go.mod','go.sum')) and not is_go(p) for p in after),'Unregistered Go module boundary; review required')

@@ -1,0 +1,1441 @@
+{
+  "cases": [
+    {
+      "id": "home",
+      "legacy_witness": "home",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"nav:home\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Home"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "modules",
+      "legacy_witness": "hooks",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Modules"
+        },
+        {
+          "op": "expect",
+          "selector": "[data-action=\"module:chatgpt\"]",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "modules-search",
+      "legacy_witness": "hooks",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "fill",
+          "selector": "#search",
+          "value": "Word Master"
+        },
+        {
+          "op": "expect",
+          "selector": "#results [data-action=\"module:wordmaster\"]",
+          "visible": true
+        },
+        {
+          "count": 0,
+          "op": "expect",
+          "selector": "#results [data-action=\"module:chatgpt\"]"
+        },
+        {
+          "focused": true,
+          "op": "expect",
+          "selector": "#search"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "modules-empty",
+      "legacy_witness": "hooks",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "fill",
+          "selector": "#search",
+          "value": "no-matching-module"
+        },
+        {
+          "contains": "No modules match this filter.",
+          "op": "expect",
+          "selector": "#results"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "modules-updates",
+      "legacy_witness": "hooks",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"filter:Updates\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#results [data-action=\"module:chatgpt\"]",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "modules-attention",
+      "legacy_witness": "hooks",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"filter:Needs attention\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#results [data-action=\"module:wordmaster\"]",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "modules-enabled",
+      "legacy_witness": "hooks",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"filter:Enabled\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#results [data-action=\"module:chatgpt\"]",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "apps",
+      "legacy_witness": "by-app",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"nav:apps\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Apps"
+        },
+        {
+          "op": "expect",
+          "selector": "[data-action=\"app:chatgpt\"]",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "apps-empty",
+      "legacy_witness": "by-app",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"nav:apps\"]:visible"
+        },
+        {
+          "op": "fill",
+          "selector": "#search",
+          "value": "no-matching-app"
+        },
+        {
+          "contains": "No matching apps",
+          "op": "expect",
+          "selector": "#results"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "chatgpt-tweaks",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "ChatGPT"
+        },
+        {
+          "checked": true,
+          "op": "expect",
+          "selector": "[data-change=\"flag:chatgpt:copy\"]"
+        },
+        {
+          "checked": true,
+          "op": "expect",
+          "selector": "[data-change=\"flag:chatgpt:termux\"]"
+        },
+        {
+          "attr": [
+            "aria-selected",
+            "true"
+          ],
+          "op": "expect",
+          "selector": "[data-action=\"tab:Tweaks\"]"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "chatgpt-hook-independent",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "check",
+          "selector": "[data-change=\"flag:chatgpt:termux\"]",
+          "value": false
+        },
+        {
+          "checked": true,
+          "op": "expect",
+          "selector": "[data-change=\"flag:chatgpt:copy\"]"
+        },
+        {
+          "checked": false,
+          "op": "expect",
+          "selector": "[data-change=\"flag:chatgpt:termux\"]"
+        },
+        {
+          "op": "expect",
+          "selector": "[data-action=\"hook:chatgpt:termux\"]",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "wordmaster-hook",
+      "legacy_witness": "hook-detail",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:wordmaster\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"hook:wordmaster:night\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Night filter"
+        },
+        {
+          "contains": "Effect not confirmed",
+          "op": "expect",
+          "selector": "#content"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "chatgpt-hook",
+      "legacy_witness": "hook-detail",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"hook:chatgpt:termux\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Run in Termux"
+        },
+        {
+          "checked": true,
+          "op": "expect",
+          "selector": "[data-change=\"flag:chatgpt:termux\"]"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "hook-safety",
+      "legacy_witness": "hook-detail",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"hook:chatgpt:termux\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"safety:chatgpt:termux\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Safety and compatibility"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "module-apps",
+      "legacy_witness": "module:chatgpt-overview",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:Apps\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "[data-action=\"app:chatgpt\"]",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "module-activity",
+      "legacy_witness": "module:chatgpt-logs",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:Activity\"]:visible"
+        },
+        {
+          "contains": "Runtime evidence",
+          "op": "expect",
+          "selector": "#content"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "obtainx-tweaks",
+      "legacy_witness": "group-detail",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:obtainx\"]:visible"
+        },
+        {
+          "contains": "No additional configuration",
+          "op": "expect",
+          "selector": "#content"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "module-more",
+      "legacy_witness": "module:chatgpt-overview",
+      "owner": "UX-M02",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"more\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "More actions"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "app-chatgpt",
+      "legacy_witness": "by-app",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"nav:apps\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"app:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "ChatGPT"
+        },
+        {
+          "contains": "Inherits Default",
+          "op": "expect",
+          "selector": "#content"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "app-scope-confirm",
+      "legacy_witness": "scope",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"nav:apps\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"app:droid\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-change=\"scope:droid\"]"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Change scope?"
+        },
+        {
+          "checked": false,
+          "op": "expect",
+          "selector": "[data-change=\"scope:droid\"]"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "chatgpt-draft",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#dirty",
+          "visible": false
+        },
+        {
+          "op": "check",
+          "selector": "[data-change=\"value:chatgpt:show\"]",
+          "value": false
+        },
+        {
+          "op": "expect",
+          "selector": "#dirty",
+          "visible": true
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:About\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:Tweaks\"]:visible"
+        },
+        {
+          "checked": false,
+          "op": "expect",
+          "selector": "[data-change=\"value:chatgpt:show\"]"
+        },
+        {
+          "count": 0,
+          "op": "expect",
+          "selector": "[data-range=\"chatgpt:interval: ms\"]"
+        },
+        {
+          "contains": "Hello",
+          "op": "expect",
+          "selector": ".preview .code"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "chatgpt-review",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "check",
+          "selector": "[data-change=\"value:chatgpt:show\"]",
+          "value": false
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:About\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:Tweaks\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"review:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Review configuration"
+        },
+        {
+          "contains": "true \u2192 false",
+          "op": "expect",
+          "selector": "dialog"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "chatgpt-save",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "check",
+          "selector": "[data-change=\"value:chatgpt:show\"]",
+          "value": false
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"review:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"save:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#dirty",
+          "visible": false
+        },
+        {
+          "checked": false,
+          "op": "expect",
+          "selector": "[data-change=\"value:chatgpt:show\"]"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "chatgpt-discard",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "check",
+          "selector": "[data-change=\"value:chatgpt:show\"]",
+          "value": false
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"discard:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Discard changes?"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "profiles",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"profiles:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Manage profiles"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "profiles-invalid",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"profiles:chatgpt\"]:visible"
+        },
+        {
+          "op": "fill",
+          "selector": "#newProfile",
+          "value": "Default"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"newProfile:chatgpt\"]:visible"
+        },
+        {
+          "contains": "unique name",
+          "op": "expect",
+          "selector": "#profileError"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "profiles-new",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"profiles:chatgpt\"]:visible"
+        },
+        {
+          "op": "fill",
+          "selector": "#newProfile",
+          "value": "Minimal"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"newProfile:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "[data-change=\"edit:chatgpt\"]",
+          "value": "Minimal"
+        },
+        {
+          "contains": "Active: Default",
+          "op": "expect",
+          "selector": ".profilebar"
+        },
+        {
+          "op": "expect",
+          "selector": "#dirty",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "profiles-remove",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"profiles:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"removeProfile:chatgpt:Quiet\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Remove profile?"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "app-override",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:Apps\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"app:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"override:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Application override"
+        },
+        {
+          "op": "select",
+          "selector": "#override",
+          "value": "Quiet"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "app-override-review",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:Apps\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"app:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"override:chatgpt\"]:visible"
+        },
+        {
+          "op": "select",
+          "selector": "#override",
+          "value": "Quiet"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"stageOverride:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"review:chatgpt\"]:visible"
+        },
+        {
+          "contains": "Inherit \u2192 Quiet",
+          "op": "expect",
+          "selector": "dialog"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "wordmaster-tweaks",
+      "legacy_witness": "module:configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:wordmaster\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Word Master"
+        },
+        {
+          "op": "expect",
+          "selector": "#filterPreview",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "wordmaster-preview",
+      "legacy_witness": "module:configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:wordmaster\"]:visible"
+        },
+        {
+          "op": "fill",
+          "selector": "[aria-label=\"Opacity\"]",
+          "value": "110"
+        },
+        {
+          "op": "select",
+          "selector": "[aria-label=\"Filter tone\"]",
+          "value": "warm"
+        },
+        {
+          "op": "expect",
+          "selector": "#out-opacity",
+          "text": "110"
+        },
+        {
+          "op": "expect",
+          "selector": "#dirty",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "module-about",
+      "legacy_witness": "module:chatgpt-versions",
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:About\"]:visible"
+        },
+        {
+          "contains": "Selected version",
+          "op": "expect",
+          "selector": "#content"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "module-technical",
+      "legacy_witness": "module:chatgpt-versions",
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:About\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "#content details summary"
+        },
+        {
+          "attr": [
+            "open",
+            ""
+          ],
+          "op": "expect",
+          "selector": "#content details"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "module-publisher",
+      "legacy_witness": "module:chatgpt-versions",
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:About\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"publisher:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Publisher and signature"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "repository",
+      "legacy_witness": null,
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"repository\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Repository"
+        },
+        {
+          "op": "expect",
+          "selector": "[data-action=\"repoAuth\"]",
+          "visible": true
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "repository-source",
+      "legacy_witness": null,
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"repository\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"repoSource\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Repository source"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "repository-session",
+      "legacy_witness": null,
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"repository\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"repoAuth\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Session access"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "repository-update",
+      "legacy_witness": null,
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"repository\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"update:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Review update"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "repository-empty",
+      "legacy_witness": null,
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"repository\"]:visible"
+        },
+        {
+          "op": "fill",
+          "selector": "#search",
+          "value": "no-matching-repo"
+        },
+        {
+          "contains": "No results.",
+          "op": "expect",
+          "selector": "#results"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "repository-rollback",
+      "legacy_witness": "module:chatgpt-versions",
+      "owner": "UX-M04",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"repository\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"update:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"confirmUpdate:chatgpt\"]:visible"
+        },
+        {
+          "count": 0,
+          "op": "expect",
+          "selector": "[data-action=\"update:chatgpt\"]"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"back\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"tab:About\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"versions:chatgpt\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"rollback:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "dialog h2",
+          "text": "Review rollback"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "settings",
+      "legacy_witness": "settings",
+      "owner": "UX-M05",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"nav:settings\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Settings"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "diagnostics",
+      "legacy_witness": "diagnostics",
+      "owner": "UX-M05",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"nav:settings\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"diagnostics\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Diagnostics"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "home-light",
+      "legacy_witness": "light-home",
+      "owner": "UX-M05",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"nav:home\"]:visible"
+        },
+        {
+          "op": "click",
+          "selector": "[data-action=\"theme\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Home"
+        }
+      ],
+      "theme": "light",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "id": "modules-compact",
+      "legacy_witness": "hooks",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Modules"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        320,
+        720
+      ]
+    },
+    {
+      "id": "modules-360",
+      "legacy_witness": "hooks",
+      "owner": "UX-M01",
+      "steps": [
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "Modules"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        360,
+        800
+      ]
+    },
+    {
+      "id": "chatgpt-393",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "ChatGPT"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        393,
+        852
+      ]
+    },
+    {
+      "id": "chatgpt-tablet",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "ChatGPT"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        840,
+        1000
+      ]
+    },
+    {
+      "id": "chatgpt-wide",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "ChatGPT"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        1366,
+        900
+      ]
+    },
+    {
+      "id": "chatgpt-landscape",
+      "legacy_witness": "module:chatgpt-configure",
+      "owner": "UX-M03",
+      "steps": [
+        {
+          "op": "click",
+          "selector": "[data-action=\"module:chatgpt\"]:visible"
+        },
+        {
+          "op": "expect",
+          "selector": "#content h1",
+          "text": "ChatGPT"
+        }
+      ],
+      "theme": "dark",
+      "viewport": [
+        844,
+        390
+      ]
+    }
+  ],
+  "schema": "hooklab.uxm.cases.v1"
+}

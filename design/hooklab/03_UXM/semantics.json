@@ -1,0 +1,7079 @@
+{
+  "cases": [
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Home#1",
+          "label": "Home",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Needs attention#1",
+          "label": "Needs attention",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "W Word Master Effect unconfirmed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:obtainx",
+          "id": "module:obtainx#1",
+          "label": "O ObtainX integration Scope required",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:mcc",
+          "id": "module:mcc#1",
+          "label": "M MCC Control Incompatible",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:MCC Control#1",
+          "label": "MCC Control",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Quick access#1",
+          "label": "Quick access",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "diagnostics",
+          "id": "diagnostics#1",
+          "label": "Diagnostics Runtime evidence and events",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Diagnostics#1",
+          "label": "Diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Repository Available updates and releases",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Repository#1",
+          "label": "Repository",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "home",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Modules#1",
+          "label": "Modules",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Browse",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search modules or hooks",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "Installed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Enabled",
+          "id": "filter:Enabled#1",
+          "label": "Enabled",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Needs attention",
+          "id": "filter:Needs attention#1",
+          "label": "Needs attention",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "module:chatgpt",
+          "id": "module:chatgpt#1",
+          "label": "C ChatGPT Code block actions · 2 hooks 2/2 enabled Update available",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "W Word Master Night filter · 1 hook Effect unconfirmed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:obtainx",
+          "id": "module:obtainx#1",
+          "label": "O ObtainX integration Manual download handoff · 2 hooks Scope required",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:mcc",
+          "id": "module:mcc#1",
+          "label": "M MCC Control Manual diamond control · 1 hook Incompatible",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:MCC Control#1",
+          "label": "MCC Control",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "modules",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Modules#1",
+          "label": "Modules",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Browse",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search modules or hooks",
+          "role": "textbox",
+          "state": {
+            "value": "Word Master"
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "Installed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Enabled",
+          "id": "filter:Enabled#1",
+          "label": "Enabled",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Needs attention",
+          "id": "filter:Needs attention#1",
+          "label": "Needs attention",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "W Word Master Night filter · 1 hook Effect unconfirmed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "modules-search",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Modules#1",
+          "label": "Modules",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Browse",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search modules or hooks",
+          "role": "textbox",
+          "state": {
+            "value": "no-matching-module"
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "Installed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Enabled",
+          "id": "filter:Enabled#1",
+          "label": "Enabled",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Needs attention",
+          "id": "filter:Needs attention#1",
+          "label": "Needs attention",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "modules-empty",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Modules#1",
+          "label": "Modules",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Browse",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search modules or hooks",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "Installed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Enabled",
+          "id": "filter:Enabled#1",
+          "label": "Enabled",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Needs attention",
+          "id": "filter:Needs attention#1",
+          "label": "Needs attention",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "module:chatgpt",
+          "id": "module:chatgpt#1",
+          "label": "C ChatGPT Code block actions · 2 hooks 2/2 enabled Update available",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "modules-updates",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Modules#1",
+          "label": "Modules",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Browse",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search modules or hooks",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "Installed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Enabled",
+          "id": "filter:Enabled#1",
+          "label": "Enabled",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Needs attention",
+          "id": "filter:Needs attention#1",
+          "label": "Needs attention",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "W Word Master Night filter · 1 hook Effect unconfirmed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:obtainx",
+          "id": "module:obtainx#1",
+          "label": "O ObtainX integration Manual download handoff · 2 hooks Scope required",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:mcc",
+          "id": "module:mcc#1",
+          "label": "M MCC Control Manual diamond control · 1 hook Incompatible",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:MCC Control#1",
+          "label": "MCC Control",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "modules-attention",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Modules#1",
+          "label": "Modules",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Browse",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search modules or hooks",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "Installed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Enabled",
+          "id": "filter:Enabled#1",
+          "label": "Enabled",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Needs attention",
+          "id": "filter:Needs attention#1",
+          "label": "Needs attention",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "module:chatgpt",
+          "id": "module:chatgpt#1",
+          "label": "C ChatGPT Code block actions · 2 hooks 2/2 enabled Update available",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "W Word Master Night filter · 1 hook Effect unconfirmed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:obtainx",
+          "id": "module:obtainx#1",
+          "label": "O ObtainX integration Manual download handoff · 2 hooks Scope required",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "modules-enabled",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Apps#1",
+          "label": "Apps",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search apps",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "app:chatgpt",
+          "id": "app:chatgpt#1",
+          "label": "C ChatGPT ChatGPT · Scope granted",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "app:wordmaster",
+          "id": "app:wordmaster#1",
+          "label": "W Word Master Word Master · Scope granted",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "app:neo",
+          "id": "app:neo#1",
+          "label": "O Neo Store ObtainX integration · Scope granted",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Neo Store#1",
+          "label": "Neo Store",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "app:droid",
+          "id": "app:droid#1",
+          "label": "O Droid-ify ObtainX integration · Scope required",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Droid-ify#1",
+          "label": "Droid-ify",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "app:mcc",
+          "id": "app:mcc#1",
+          "label": "M MCC MCC Control · Incompatible",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:MCC#1",
+          "label": "MCC",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "apps",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Apps#1",
+          "label": "Apps",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search apps",
+          "role": "textbox",
+          "state": {
+            "value": "no-matching-app"
+          }
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "apps-empty",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nEnabled preference · Details#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet#1",
+          "label": "Editing profile Active: Default Default Quiet",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Repeat-tap protection#1",
+          "label": "Repeat-tap protection",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-interval#1",
+          "label": "1200 ms",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "chatgpt:interval: ms",
+          "id": "chatgpt:interval: ms#1",
+          "label": "Repeat-tap protection",
+          "role": "slider",
+          "state": {
+            "value": "1200"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"\n Run in Termux#1",
+          "label": "Preview · simulated echo \"Hello\" Run in Termux",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Advanced#1",
+          "label": "Advanced",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Layout diagnostics\n\nCollect additional layout events.#1",
+          "label": "Layout diagnostics Collect additional layout events.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Layout diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:diagnostics",
+          "id": "value:chatgpt:diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "chatgpt-tweaks",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nDisabled preference · Details#1",
+          "label": "Run in Termux Disabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Disabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet#1",
+          "label": "Editing profile Active: Default Default Quiet",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Repeat-tap protection#1",
+          "label": "Repeat-tap protection",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-interval#1",
+          "label": "1200 ms",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "chatgpt:interval: ms",
+          "id": "chatgpt:interval: ms#1",
+          "label": "Repeat-tap protection",
+          "role": "slider",
+          "state": {
+            "value": "1200"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"\n Run in Termux#1",
+          "label": "Preview · simulated echo \"Hello\" Run in Termux",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Advanced#1",
+          "label": "Advanced",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Layout diagnostics\n\nCollect additional layout events.#1",
+          "label": "Layout diagnostics Collect additional layout events.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Layout diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:diagnostics",
+          "id": "value:chatgpt:diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "chatgpt-hook-independent",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Night filter#1",
+          "label": "Night filter",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Activation#1",
+          "label": "Activation",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Enable hook\n\nThis does not prove runtime execution.#1",
+          "label": "Enable hook This does not prove runtime execution.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Enable hook#1",
+          "label": "Enable hook",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:wordmaster:night",
+          "id": "flag:wordmaster:night#1",
+          "label": "Enable hook",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Manage#1",
+          "label": "Manage",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "Module tweaks Configure shared profile and options",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Module tweaks#1",
+          "label": "Module tweaks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "activity:wordmaster",
+          "id": "activity:wordmaster#1",
+          "label": "Runtime evidence View module-specific activity",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Runtime evidence#1",
+          "label": "Runtime evidence",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "safety:wordmaster:night",
+          "id": "safety:wordmaster:night#1",
+          "label": "Safety and compatibility Inspect simulated state",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Safety and compatibility#1",
+          "label": "Safety and compatibility",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "summary:Technical details#1",
+          "label": "Technical details",
+          "role": "disclosure",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "wordmaster-hook",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Activation#1",
+          "label": "Activation",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Enable hook\n\nThis does not prove runtime execution.#1",
+          "label": "Enable hook This does not prove runtime execution.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Enable hook#1",
+          "label": "Enable hook",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable hook",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Manage#1",
+          "label": "Manage",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:chatgpt",
+          "id": "module:chatgpt#1",
+          "label": "Module tweaks Configure shared profile and options",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Module tweaks#1",
+          "label": "Module tweaks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "activity:chatgpt",
+          "id": "activity:chatgpt#1",
+          "label": "Runtime evidence View module-specific activity",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Runtime evidence#1",
+          "label": "Runtime evidence",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "safety:chatgpt:termux",
+          "id": "safety:chatgpt:termux#1",
+          "label": "Safety and compatibility Inspect simulated state",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Safety and compatibility#1",
+          "label": "Safety and compatibility",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "summary:Technical details#1",
+          "label": "Technical details",
+          "role": "disclosure",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "chatgpt-hook",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Safety and compatibility#1",
+          "label": "Safety and compatibility",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "hook-safety",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Target applications#1",
+          "label": "Target applications",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "app:chatgpt",
+          "id": "app:chatgpt#1",
+          "label": "C ChatGPT Scope granted · Inherits Default",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "module-apps",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Runtime evidence#1",
+          "label": "Runtime evidence",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Registration observed\n\nIllustrative runtime event · not live evidence#1",
+          "label": "Registration observed Illustrative runtime event · not live evidence",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Registration observed#1",
+          "label": "Registration observed",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "diagnostics",
+          "id": "diagnostics#1",
+          "label": "All diagnostics",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "module-activity",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Neo Store integration\n\nEnabled preference · Details#1",
+          "label": "Neo Store integration Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:obtainx:neo",
+          "id": "hook:obtainx:neo#1",
+          "label": "Neo Store integration Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Neo Store integration#1",
+          "label": "Neo Store integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:obtainx:neo",
+          "id": "flag:obtainx:neo#1",
+          "label": "Enable Neo Store integration",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Droid-ify integration\n\nDisabled preference · Details#1",
+          "label": "Droid-ify integration Disabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:obtainx:droid",
+          "id": "hook:obtainx:droid#1",
+          "label": "Droid-ify integration Disabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Droid-ify integration#1",
+          "label": "Droid-ify integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:obtainx:droid",
+          "id": "flag:obtainx:droid#1",
+          "label": "Enable Droid-ify integration",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "obtainx-tweaks",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:More actions#1",
+          "label": "More actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "menuProfiles:chatgpt",
+          "id": "menuProfiles:chatgpt#1",
+          "label": "Manage profiles Active profile and named profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Manage profiles#1",
+          "label": "Manage profiles",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "menuVersions:chatgpt",
+          "id": "menuVersions:chatgpt#1",
+          "label": "Version history Installed and previous versions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Version history#1",
+          "label": "Version history",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "menuPublisher:chatgpt",
+          "id": "menuPublisher:chatgpt#1",
+          "label": "Technical information Publisher and signature",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Technical information#1",
+          "label": "Technical information",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "module-more",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:LSPosed scope#1",
+          "label": "LSPosed scope",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Allow module scope\n\nSimulates an explicit framework authorization.#1",
+          "label": "Allow module scope Simulates an explicit framework authorization.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Allow module scope#1",
+          "label": "Allow module scope",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "scope:chatgpt",
+          "id": "scope:chatgpt#1",
+          "label": "Allow module scope",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Configuration profile#1",
+          "label": "Configuration profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "override:chatgpt",
+          "id": "override:chatgpt#1",
+          "label": "Application override Inherits Default",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Application override#1",
+          "label": "Application override",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Overrides are staged with the module configuration and require review.#1",
+          "label": "Overrides are staged with the module configuration and require review.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Module#1",
+          "label": "Module",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:chatgpt",
+          "id": "module:chatgpt#1",
+          "label": "C ChatGPT Open shared module workspace",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "app-chatgpt",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Change scope?#1",
+          "label": "Change scope?",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "scopeConfirm:droid:on",
+          "id": "scopeConfirm:droid:on#1",
+          "label": "Confirm",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "app-scope-confirm",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nEnabled preference · Details#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet#1",
+          "label": "Editing profile Active: Default Default Quiet",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"#1",
+          "label": "Preview · simulated echo \"Hello\"",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Unsaved changes#1",
+          "label": "Unsaved changes",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "discard:chatgpt",
+          "id": "discard:chatgpt#1",
+          "label": "Discard",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "review:chatgpt",
+          "id": "review:chatgpt#1",
+          "label": "Review changes",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "chatgpt-draft",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Review configuration#1",
+          "label": "Review configuration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "save:chatgpt",
+          "id": "save:chatgpt#1",
+          "label": "Save changes",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "chatgpt-review",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nEnabled preference · Details#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet#1",
+          "label": "Editing profile Active: Default Default Quiet",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"#1",
+          "label": "Preview · simulated echo \"Hello\"",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "chatgpt-save",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Discard changes?#1",
+          "label": "Discard changes?",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "confirmDiscard:chatgpt",
+          "id": "confirmDiscard:chatgpt#1",
+          "label": "Discard",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "chatgpt-discard",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Manage profiles#1",
+          "label": "Manage profiles",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Default\nActive#1",
+          "label": "Default Active",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Default#1",
+          "label": "Default",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Quiet\nInactive\nActivate#1",
+          "label": "Quiet Inactive Activate",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Quiet#1",
+          "label": "Quiet",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "activate:chatgpt:Quiet",
+          "id": "activate:chatgpt:Quiet#1",
+          "label": "Activate",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "removeProfile:chatgpt:Quiet",
+          "id": "removeProfile:chatgpt:Quiet#1",
+          "label": "Remove Quiet",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "newProfile#1",
+          "label": "e.g. Minimal",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "newProfile:chatgpt",
+          "id": "newProfile:chatgpt#1",
+          "label": "Create profile",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "profiles",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Manage profiles#1",
+          "label": "Manage profiles",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Default\nActive#1",
+          "label": "Default Active",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Default#1",
+          "label": "Default",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Quiet\nInactive\nActivate#1",
+          "label": "Quiet Inactive Activate",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Quiet#1",
+          "label": "Quiet",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "activate:chatgpt:Quiet",
+          "id": "activate:chatgpt:Quiet#1",
+          "label": "Activate",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "removeProfile:chatgpt:Quiet",
+          "id": "removeProfile:chatgpt:Quiet#1",
+          "label": "Remove Quiet",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "newProfile#1",
+          "label": "e.g. Minimal",
+          "role": "textbox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "newProfile:chatgpt",
+          "id": "newProfile:chatgpt#1",
+          "label": "Create profile",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "profiles-invalid",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nEnabled preference · Details#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet\nMinimal#1",
+          "label": "Editing profile Active: Default Default Quiet Minimal",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Minimal"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Repeat-tap protection#1",
+          "label": "Repeat-tap protection",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-interval#1",
+          "label": "1200 ms",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "chatgpt:interval: ms",
+          "id": "chatgpt:interval: ms#1",
+          "label": "Repeat-tap protection",
+          "role": "slider",
+          "state": {
+            "value": "1200"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"\n Run in Termux#1",
+          "label": "Preview · simulated echo \"Hello\" Run in Termux",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Advanced#1",
+          "label": "Advanced",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Layout diagnostics\n\nCollect additional layout events.#1",
+          "label": "Layout diagnostics Collect additional layout events.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Layout diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:diagnostics",
+          "id": "value:chatgpt:diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Unsaved changes#1",
+          "label": "Unsaved changes",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "discard:chatgpt",
+          "id": "discard:chatgpt#1",
+          "label": "Discard",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "review:chatgpt",
+          "id": "review:chatgpt#1",
+          "label": "Review changes",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "profiles-new",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Remove profile?#1",
+          "label": "Remove profile?",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "confirmRemove:chatgpt:Quiet",
+          "id": "confirmRemove:chatgpt:Quiet#1",
+          "label": "Remove",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "profiles-remove",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Application override#1",
+          "label": "Application override",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "override#1",
+          "label": "Override profile",
+          "role": "combobox",
+          "state": {
+            "value": "Quiet"
+          }
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "stageOverride:chatgpt",
+          "id": "stageOverride:chatgpt#1",
+          "label": "Stage override",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "app-override",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Review configuration#1",
+          "label": "Review configuration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "save:chatgpt",
+          "id": "save:chatgpt#1",
+          "label": "Save changes",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "app-override-review",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Night filter\n\nEnabled preference · Details#1",
+          "label": "Night filter Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:wordmaster:night",
+          "id": "hook:wordmaster:night#1",
+          "label": "Night filter Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Night filter#1",
+          "label": "Night filter",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:wordmaster:night",
+          "id": "flag:wordmaster:night#1",
+          "label": "Enable Night filter",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault#1",
+          "label": "Editing profile Active: Default Default",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:wordmaster",
+          "id": "edit:wordmaster#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:wordmaster",
+          "id": "profiles:wordmaster#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Night filter#1",
+          "label": "Night filter",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Custom filter\n\nUse your configured color and opacity.#1",
+          "label": "Custom filter Use your configured color and opacity.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Custom filter#1",
+          "label": "Custom filter",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:wordmaster:custom",
+          "id": "value:wordmaster:custom#1",
+          "label": "Custom filter",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Opacity#1",
+          "label": "Opacity",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-opacity#1",
+          "label": "84",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "wordmaster:opacity:",
+          "id": "wordmaster:opacity:#1",
+          "label": "Opacity",
+          "role": "slider",
+          "state": {
+            "value": "84"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Tone\nFilter color\nnavy\nneutral\nwarm#1",
+          "label": "Tone Filter color navy neutral warm",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Tone#1",
+          "label": "Tone",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:wordmaster:tone",
+          "id": "value:wordmaster:tone#1",
+          "label": "Filter tone",
+          "role": "combobox",
+          "state": {
+            "value": "navy"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Illustrative filter preview\nWord Master\nW O R D S#1",
+          "label": "Illustrative filter preview Word Master W O R D S",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "wordmaster-tweaks",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Night filter\n\nEnabled preference · Details#1",
+          "label": "Night filter Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:wordmaster:night",
+          "id": "hook:wordmaster:night#1",
+          "label": "Night filter Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Night filter#1",
+          "label": "Night filter",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:wordmaster:night",
+          "id": "flag:wordmaster:night#1",
+          "label": "Enable Night filter",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault#1",
+          "label": "Editing profile Active: Default Default",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:wordmaster",
+          "id": "edit:wordmaster#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:wordmaster",
+          "id": "profiles:wordmaster#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Night filter#1",
+          "label": "Night filter",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Custom filter\n\nUse your configured color and opacity.#1",
+          "label": "Custom filter Use your configured color and opacity.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Custom filter#1",
+          "label": "Custom filter",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:wordmaster:custom",
+          "id": "value:wordmaster:custom#1",
+          "label": "Custom filter",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Opacity#1",
+          "label": "Opacity",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-opacity#1",
+          "label": "110",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "wordmaster:opacity:",
+          "id": "wordmaster:opacity:#1",
+          "label": "Opacity",
+          "role": "slider",
+          "state": {
+            "value": "110"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Tone\nFilter color\nnavy\nneutral\nwarm#1",
+          "label": "Tone Filter color navy neutral warm",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Tone#1",
+          "label": "Tone",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:wordmaster:tone",
+          "id": "value:wordmaster:tone#1",
+          "label": "Filter tone",
+          "role": "combobox",
+          "state": {
+            "value": "warm"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Illustrative filter preview\nWord Master\nW O R D S#1",
+          "label": "Illustrative filter preview Word Master W O R D S",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Unsaved changes#1",
+          "label": "Unsaved changes",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "discard:wordmaster",
+          "id": "discard:wordmaster#1",
+          "label": "Discard",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "review:wordmaster",
+          "id": "review:wordmaster#1",
+          "label": "Review changes",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "wordmaster-preview",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Module information#1",
+          "label": "Module information",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Selected version\n1.1.0 · Personal#1",
+          "label": "Selected version 1.1.0 · Personal",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Selected version#1",
+          "label": "Selected version",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "versions:chatgpt",
+          "id": "versions:chatgpt#1",
+          "label": "Version history Installed and previous versions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Version history#1",
+          "label": "Version history",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "publisher:chatgpt",
+          "id": "publisher:chatgpt#1",
+          "label": "Publisher and signature Review archive identity",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Publisher and signature#1",
+          "label": "Publisher and signature",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "summary:Technical information#1",
+          "label": "Technical information",
+          "role": "disclosure",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "module-about",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Module information#1",
+          "label": "Module information",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Selected version\n1.1.0 · Personal#1",
+          "label": "Selected version 1.1.0 · Personal",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Selected version#1",
+          "label": "Selected version",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "versions:chatgpt",
+          "id": "versions:chatgpt#1",
+          "label": "Version history Installed and previous versions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Version history#1",
+          "label": "Version history",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "publisher:chatgpt",
+          "id": "publisher:chatgpt#1",
+          "label": "Publisher and signature Review archive identity",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Publisher and signature#1",
+          "label": "Publisher and signature",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "summary:Technical information#1",
+          "label": "Technical information",
+          "role": "disclosure",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "module-technical",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Publisher and signature#1",
+          "label": "Publisher and signature",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "module-publisher",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Repository#1",
+          "label": "Repository",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "refresh",
+          "id": "refresh#1",
+          "label": "Refresh catalog",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Source#1",
+          "label": "Source",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repoSource",
+          "id": "repoSource#1",
+          "label": "Official repository Mikeyphw / MikeysHookLab · offline demo",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Official repository#1",
+          "label": "Official repository",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repoAuth",
+          "id": "repoAuth#1",
+          "label": "Private access Session-only access · disabled in prototype",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Private access#1",
+          "label": "Private access",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search repository",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "All modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:C\nChatGPT\n\n1.1.0 → 1.2.0\n\nReview#1",
+          "label": "C ChatGPT 1.1.0 → 1.2.0 Review",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "update:chatgpt",
+          "id": "update:chatgpt#1",
+          "label": "Review",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:W\nWord Master\n\n1.1.0\n\nCurrent#1",
+          "label": "W Word Master 1.1.0 Current",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:O\nObtainX integration\n\nBuilt-in\n\nCurrent#1",
+          "label": "O ObtainX integration Built-in Current",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:M\nMCC Control\n\nBuilt-in\n\nCurrent#1",
+          "label": "M MCC Control Built-in Current",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:MCC Control#1",
+          "label": "MCC Control",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "repository",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Repository source#1",
+          "label": "Repository source",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "repository-source",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Session access#1",
+          "label": "Session access",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "repository-session",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Review update#1",
+          "label": "Review update",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "confirmUpdate:chatgpt",
+          "id": "confirmUpdate:chatgpt#1",
+          "label": "Simulate selection",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "repository-update",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Repository#1",
+          "label": "Repository",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "refresh",
+          "id": "refresh#1",
+          "label": "Refresh catalog",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Source#1",
+          "label": "Source",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repoSource",
+          "id": "repoSource#1",
+          "label": "Official repository Mikeyphw / MikeysHookLab · offline demo",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Official repository#1",
+          "label": "Official repository",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repoAuth",
+          "id": "repoAuth#1",
+          "label": "Private access Session-only access · disabled in prototype",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Private access#1",
+          "label": "Private access",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search repository",
+          "role": "textbox",
+          "state": {
+            "value": "no-matching-repo"
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "All modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "repository-empty",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": null,
+          "id": "h2:Review rollback#1",
+          "label": "Review rollback",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "close",
+          "id": "close#1",
+          "label": "Close",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "confirmRollback:chatgpt",
+          "id": "confirmRollback:chatgpt#1",
+          "label": "Rollback",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "repository-rollback",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Settings#1",
+          "label": "Settings",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Appearance#1",
+          "label": "Appearance",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#2",
+          "label": "Theme Dark",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Theme#1",
+          "label": "Theme",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Administration#1",
+          "label": "Administration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Repository settings Sources and session access",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Repository settings#1",
+          "label": "Repository settings",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "diagnostics",
+          "id": "diagnostics#1",
+          "label": "Diagnostics View example runtime activity",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Diagnostics#1",
+          "label": "Diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "reset",
+          "id": "reset#1",
+          "label": "Reset prototype Restore all simulated data",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Reset prototype#1",
+          "label": "Reset prototype",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        }
+      ],
+      "id": "settings",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Diagnostics#1",
+          "label": "Diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Recent activity#1",
+          "label": "Recent activity",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "activity:chatgpt",
+          "id": "activity:chatgpt#1",
+          "label": "Registration observed Illustrative runtime event · not live evidence",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Registration observed#1",
+          "label": "Registration observed",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "activity:wordmaster",
+          "id": "activity:wordmaster#1",
+          "label": "Effect unconfirmed Illustrative warning · enabled preference is not execution proof",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Effect unconfirmed#1",
+          "label": "Effect unconfirmed",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "diagnostics",
+      "theme": "dark",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Home#1",
+          "label": "Home",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Needs attention#1",
+          "label": "Needs attention",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "W Word Master Effect unconfirmed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:obtainx",
+          "id": "module:obtainx#1",
+          "label": "O ObtainX integration Scope required",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:mcc",
+          "id": "module:mcc#1",
+          "label": "M MCC Control Incompatible",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:MCC Control#1",
+          "label": "MCC Control",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Quick access#1",
+          "label": "Quick access",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "diagnostics",
+          "id": "diagnostics#1",
+          "label": "Diagnostics Runtime evidence and events",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Diagnostics#1",
+          "label": "Diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Repository Available updates and releases",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Repository#1",
+          "label": "Repository",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "home-light",
+      "theme": "light",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Modules#1",
+          "label": "Modules",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Browse",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search modules or hooks",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "Installed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Enabled",
+          "id": "filter:Enabled#1",
+          "label": "Enabled",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Needs attention",
+          "id": "filter:Needs attention#1",
+          "label": "Needs attention",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "module:chatgpt",
+          "id": "module:chatgpt#1",
+          "label": "C ChatGPT Code block actions · 2 hooks 2/2 enabled Update available",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "W Word Master Night filter · 1 hook Effect unconfirmed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:obtainx",
+          "id": "module:obtainx#1",
+          "label": "O ObtainX integration Manual download handoff · 2 hooks Scope required",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:mcc",
+          "id": "module:mcc#1",
+          "label": "M MCC Control Manual diamond control · 1 hook Incompatible",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:MCC Control#1",
+          "label": "MCC Control",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "modules-compact",
+      "theme": "dark",
+      "viewport": [
+        320,
+        720
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:Modules#1",
+          "label": "Modules",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "repository",
+          "id": "repository#1",
+          "label": "Browse",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "search#1",
+          "label": "Search modules or hooks",
+          "role": "textbox",
+          "state": {
+            "value": ""
+          }
+        },
+        {
+          "action": "filter:Installed",
+          "id": "filter:Installed#1",
+          "label": "Installed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Enabled",
+          "id": "filter:Enabled#1",
+          "label": "Enabled",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Needs attention",
+          "id": "filter:Needs attention#1",
+          "label": "Needs attention",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "filter:Updates",
+          "id": "filter:Updates#1",
+          "label": "Updates",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "module:chatgpt",
+          "id": "module:chatgpt#1",
+          "label": "C ChatGPT Code block actions · 2 hooks 2/2 enabled Update available",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:wordmaster",
+          "id": "module:wordmaster#1",
+          "label": "W Word Master Night filter · 1 hook Effect unconfirmed",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Word Master#1",
+          "label": "Word Master",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:obtainx",
+          "id": "module:obtainx#1",
+          "label": "O ObtainX integration Manual download handoff · 2 hooks Scope required",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:ObtainX integration#1",
+          "label": "ObtainX integration",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "module:mcc",
+          "id": "module:mcc#1",
+          "label": "M MCC Control Manual diamond control · 1 hook Incompatible",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:MCC Control#1",
+          "label": "MCC Control",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "modules-360",
+      "theme": "dark",
+      "viewport": [
+        360,
+        800
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nEnabled preference · Details#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet#1",
+          "label": "Editing profile Active: Default Default Quiet",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Repeat-tap protection#1",
+          "label": "Repeat-tap protection",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-interval#1",
+          "label": "1200 ms",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "chatgpt:interval: ms",
+          "id": "chatgpt:interval: ms#1",
+          "label": "Repeat-tap protection",
+          "role": "slider",
+          "state": {
+            "value": "1200"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"\n Run in Termux#1",
+          "label": "Preview · simulated echo \"Hello\" Run in Termux",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Advanced#1",
+          "label": "Advanced",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Layout diagnostics\n\nCollect additional layout events.#1",
+          "label": "Layout diagnostics Collect additional layout events.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Layout diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:diagnostics",
+          "id": "value:chatgpt:diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        },
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        }
+      ],
+      "id": "chatgpt-393",
+      "theme": "dark",
+      "viewport": [
+        393,
+        852
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nEnabled preference · Details#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet#1",
+          "label": "Editing profile Active: Default Default Quiet",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Repeat-tap protection#1",
+          "label": "Repeat-tap protection",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-interval#1",
+          "label": "1200 ms",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "chatgpt:interval: ms",
+          "id": "chatgpt:interval: ms#1",
+          "label": "Repeat-tap protection",
+          "role": "slider",
+          "state": {
+            "value": "1200"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"\n Run in Termux#1",
+          "label": "Preview · simulated echo \"Hello\" Run in Termux",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Advanced#1",
+          "label": "Advanced",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Layout diagnostics\n\nCollect additional layout events.#1",
+          "label": "Layout diagnostics Collect additional layout events.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Layout diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:diagnostics",
+          "id": "value:chatgpt:diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        }
+      ],
+      "id": "chatgpt-tablet",
+      "theme": "dark",
+      "viewport": [
+        840,
+        1000
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nEnabled preference · Details#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet#1",
+          "label": "Editing profile Active: Default Default Quiet",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Repeat-tap protection#1",
+          "label": "Repeat-tap protection",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-interval#1",
+          "label": "1200 ms",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "chatgpt:interval: ms",
+          "id": "chatgpt:interval: ms#1",
+          "label": "Repeat-tap protection",
+          "role": "slider",
+          "state": {
+            "value": "1200"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"\n Run in Termux#1",
+          "label": "Preview · simulated echo \"Hello\" Run in Termux",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Advanced#1",
+          "label": "Advanced",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Layout diagnostics\n\nCollect additional layout events.#1",
+          "label": "Layout diagnostics Collect additional layout events.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Layout diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:diagnostics",
+          "id": "value:chatgpt:diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        }
+      ],
+      "id": "chatgpt-wide",
+      "theme": "dark",
+      "viewport": [
+        1366,
+        900
+      ]
+    },
+    {
+      "components": [
+        {
+          "action": "nav:home",
+          "id": "nav:home#1",
+          "label": "Home",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:modules",
+          "id": "nav:modules#1",
+          "label": "Modules",
+          "role": "button",
+          "state": {
+            "aria-current": "page"
+          }
+        },
+        {
+          "action": "nav:apps",
+          "id": "nav:apps#1",
+          "label": "Apps",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "nav:settings",
+          "id": "nav:settings#1",
+          "label": "Settings",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "back",
+          "id": "back#1",
+          "label": "Back",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "theme",
+          "id": "theme#1",
+          "label": "Toggle theme",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": "more",
+          "id": "more#1",
+          "label": "More actions",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h1:ChatGPT#1",
+          "label": "ChatGPT",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "Module sections#1",
+          "label": "Module sections",
+          "role": "tablist",
+          "state": {}
+        },
+        {
+          "action": "tab:Tweaks",
+          "id": "tab:Tweaks#1",
+          "label": "Tweaks",
+          "role": "tab",
+          "state": {
+            "aria-selected": "true"
+          }
+        },
+        {
+          "action": "tab:Apps",
+          "id": "tab:Apps#1",
+          "label": "Apps",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:Activity",
+          "id": "tab:Activity#1",
+          "label": "Activity",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": "tab:About",
+          "id": "tab:About#1",
+          "label": "About",
+          "role": "tab",
+          "state": {
+            "aria-selected": "false"
+          }
+        },
+        {
+          "action": null,
+          "id": "h2:Hooks#1",
+          "label": "Hooks",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "div:Copy diagnostics\n\nEnabled preference · Details#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:copy",
+          "id": "hook:chatgpt:copy#1",
+          "label": "Copy diagnostics Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Copy diagnostics#1",
+          "label": "Copy diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:copy",
+          "id": "flag:chatgpt:copy#1",
+          "label": "Enable Copy diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Run in Termux\n\nEnabled preference · Details#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": "hook:chatgpt:termux",
+          "id": "hook:chatgpt:termux#1",
+          "label": "Run in Termux Enabled preference · Details",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Run in Termux#1",
+          "label": "Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "flag:chatgpt:termux",
+          "id": "flag:chatgpt:termux#1",
+          "label": "Enable Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Editing profile\nActive: Default\nDefault\nQuiet#1",
+          "label": "Editing profile Active: Default Default Quiet",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Editing profile#1",
+          "label": "Editing profile",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "edit:chatgpt",
+          "id": "edit:chatgpt#1",
+          "label": "Editing profile",
+          "role": "combobox",
+          "state": {
+            "value": "Default"
+          }
+        },
+        {
+          "action": "profiles:chatgpt",
+          "id": "profiles:chatgpt#1",
+          "label": "Manage profiles",
+          "role": "button",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Code block actions#1",
+          "label": "Code block actions",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Show Run in Termux\n\nDisplay the action below supported code blocks.#1",
+          "label": "Show Run in Termux Display the action below supported code blocks.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Show Run in Termux#1",
+          "label": "Show Run in Termux",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:show",
+          "id": "value:chatgpt:show#1",
+          "label": "Show Run in Termux",
+          "role": "switch",
+          "state": {
+            "checked": true
+          }
+        },
+        {
+          "action": null,
+          "id": "h3:Repeat-tap protection#1",
+          "label": "Repeat-tap protection",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "out-interval#1",
+          "label": "1200 ms",
+          "role": "status",
+          "state": {}
+        },
+        {
+          "action": "chatgpt:interval: ms",
+          "id": "chatgpt:interval: ms#1",
+          "label": "Repeat-tap protection",
+          "role": "slider",
+          "state": {
+            "value": "1200"
+          }
+        },
+        {
+          "action": null,
+          "id": "div:Preview · simulated\necho \"Hello\"\n Run in Termux#1",
+          "label": "Preview · simulated echo \"Hello\" Run in Termux",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h2:Advanced#1",
+          "label": "Advanced",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "label:Layout diagnostics\n\nCollect additional layout events.#1",
+          "label": "Layout diagnostics Collect additional layout events.",
+          "role": "group",
+          "state": {}
+        },
+        {
+          "action": null,
+          "id": "h3:Layout diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "heading",
+          "state": {}
+        },
+        {
+          "action": "value:chatgpt:diagnostics",
+          "id": "value:chatgpt:diagnostics#1",
+          "label": "Layout diagnostics",
+          "role": "switch",
+          "state": {
+            "checked": false
+          }
+        }
+      ],
+      "id": "chatgpt-landscape",
+      "theme": "dark",
+      "viewport": [
+        844,
+        390
+      ]
+    }
+  ],
+  "schema": "hooklab.uxm.semantics.v1"
+}
