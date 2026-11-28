@@ -1,0 +1,69 @@
+name: HookLab signed module distribution
+on:
+  workflow_dispatch:
+    inputs:
+      qualified_run:
+        description: Exact successful fresh main qualification run ID
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: hooklab-module-release
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: ${{ github.ref == 'refs/heads/main' && github.repository == 'Mikeyphw/MikeysHookLab' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/hooklabctl/go.mod
+      - name: Verify complete qualified source and independent module artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUALIFIED_RUN: ${{ inputs.qualified_run }}
+          GOTOOLCHAIN: local
+        run: python3 -B scripts/qa/module_release.py verify --run "$QUALIFIED_RUN"
+  publish:
+    needs: verify
+    if: ${{ needs.verify.result == 'success' && github.ref == 'refs/heads/main' && github.repository == 'Mikeyphw/MikeysHookLab' }}
+    environment: hooklab-module-signing
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/hooklabctl/go.mod
+      - name: Reverify exact inputs, sign and publish modules before signed index
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUALIFIED_RUN: ${{ inputs.qualified_run }}
+          HOOKLAB_MODULE_SIGNING_APPROVED: 'true'
+          HOOKLAB_MODULE_SIGNING_KEY_B64: ${{ secrets.HOOKLAB_MODULE_SIGNING_KEY_B64 }}
+          HOOKLAB_MODULE_SIGNER_SHA256: ${{ secrets.HOOKLAB_MODULE_SIGNER_SHA256 }}
+          GOTOOLCHAIN: local
+        run: python3 -B scripts/qa/module_release.py publish --run "$QUALIFIED_RUN"

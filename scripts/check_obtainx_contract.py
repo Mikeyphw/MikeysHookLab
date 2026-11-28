@@ -23,8 +23,8 @@ queries=manifest.findall('./queries/package')
 assert [x.get(ns+'name') for x in queries]==[
     'br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
     'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx','com.termux']
-assert [p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND']
-assert {a.get(ns+'name') for a in manifest.findall('./application/activity')}=={'.ui.MainActivity','.mcc.MccControlActivity','.termux.TermuxBridgeActivity','.packs.PackManagerActivity'}
+assert [p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND','android.permission.INTERNET']
+assert {a.get(ns+'name') for a in manifest.findall('./application/activity')}=={'.ui.MainActivity','.mcc.MccControlActivity','.termux.TermuxBridgeActivity','.packs.PackManagerActivity','.packs.RepositoryActivity'}
 for required in ['NEO_CODE = 1304L','DROIDIFY_CODE = 780L',
     'NEO_VERSION = "1.3.3"','DROIDIFY_VERSION = "0.7.8"',
     'neostore.obtainx.manual','droidify.obtainx.manual']:
@@ -69,8 +69,8 @@ for required in ['obtainium://app/','Uri.encode(json)','setPackage(ObtainXIds.OB
     'resolveActivity','activityInfo.exported','activity.startActivity(intent)']:
     assert required in bridge, required
 assert 'dev.bikram.obtainx' not in cat # never scope destination
-assert 'versionCode 10' in (ROOT/'app/build.gradle').read_text()
-assert "versionName '0.7.1'" in (ROOT/'app/build.gradle').read_text()
+assert 'versionCode 11' in (ROOT/'app/build.gradle').read_text()
+assert "versionName '0.8.0'" in (ROOT/'app/build.gradle').read_text()
 scope=(ROOT/'app/src/main/resources/META-INF/xposed/scope.list').read_text(encoding='utf-8').splitlines()
 assert scope==['br.art.code.meucronogramacapilar','com.machiav3lli.fdroid',
                'com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt']

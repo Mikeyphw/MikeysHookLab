@@ -351,7 +351,7 @@
     },
     {
       "acceptance": "PARTIALLY_VERIFIED",
-      "blocker": "PR #38 merged at 38d62247bfa66083fb507b050bbcd1ab31dc176d; exact PR run 46033866316 and main run 46036865570 succeeded. Word Master 0.6.10 registers but user reports no visible effect; user authorized ChatGPT as configuration acceptance subject. Word Master defect, device/release/visual approval remain open.",
+      "blocker": "ChatGPT configuration acceptance user-confirmed after PR #39; Word Master rendering defect remains open; overall release/visual and exact main hosted repair pending. See MOD-04 evidence.",
       "counted": true,
       "dependencies": [
         "MOD-02"
@@ -389,8 +389,8 @@
       "parent_id": "MOD-03"
     },
     {
-      "acceptance": "PENDING",
-      "blocker": "Fresh exact-head native module visual, complete adaptive matrix and CI24 qualification; physical ChatGPT configuration and remaining Word Master defect pending.",
+      "acceptance": "PARTIALLY_VERIFIED",
+      "blocker": "Merged PR #39; exact PR run 46084664024 passed; user confirmed all ChatGPT configuration checks including signed runtime/custom UI. Main 46102361941 API29 cold launch failure consolidated into MOD-04; Word Master, release and visual approval remain open.",
       "counted": false,
       "dependencies": [
         "MOD-03-F02"
@@ -403,13 +403,13 @@
     },
     {
       "acceptance": "PENDING",
-      "blocker": "Prerequisite overlay not accepted",
+      "blocker": "Fresh hosted CI/CI24, actual GitHub private/public access, physical update transaction, protected release environment and release approval pending. API29 cold-launch regression consolidated; no Word Master repair claim.",
       "counted": true,
       "dependencies": [
         "MOD-03"
       ],
       "id": "MOD-04",
-      "implementation": "PLANNED",
+      "implementation": "SOURCE_COMPLETE",
       "kind": "OVERLAY",
       "name": "GitHub Distribution & Updates",
       "parent_id": null
@@ -523,5 +523,5 @@
   ],
   "repository": "Mikeyphw/MikeysHookLab",
   "scope": "12 combined UX + modular overlays only; noncounted historical references retained; project-wide denominator unknown",
-  "version": "2.0-MOD-03-F03"
+  "version": "2.0-MOD-04"
 }

@@ -46,7 +46,7 @@ registry=read('runtime/src/main/resources/META-INF/hooklab/builtin-registry.json
 assert 'Night filter' in registry and 'Unity' in registry
 assert 'dev.bikram.obtainx' not in catalog
 assert 'staticScope=false' in read("app/src/main/resources/META-INF/xposed/module.prop")
-assert [p.get(ns+"name") for p in root.findall("uses-permission")]==["com.termux.permission.RUN_COMMAND"]
+assert [p.get(ns+"name") for p in root.findall("uses-permission")]==["com.termux.permission.RUN_COMMAND","android.permission.INTERNET"]
 test = read("app/src/test/java/com/mikeyphw/hooklab/wordmaster/WordMasterNightHookTest.java")
 assert test.count("@Test") >= 3 and 'acceptsExactApk' in test and 'refusesNewerOrOlderBuilds' in test
 print("HOOKLAB_WM01_SOURCE_CONTRACT_PASS", flush=True)

@@ -17,7 +17,7 @@ check(True, 'Android XML syntax')
 root = ET.parse(r/'app/src/main/AndroidManifest.xml').getroot()
 ns = '{http://schemas.android.com/apk/res/android}'
 app = root.find('application')
-check([p.get(ns+'name') for p in root.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND'], 'only explicit Termux command permission')
+check([p.get(ns+'name') for p in root.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND','android.permission.INTERNET'], 'only explicit Termux command and manager network permissions')
 query_list = root.findall('queries')
 check(len(query_list)==1 and all(x.tag=='package' for x in query_list[0])
       and [x.get(ns+'name') for x in query_list[0]]==[
@@ -26,8 +26,10 @@ check(len(query_list)==1 and all(x.tag=='package' for x in query_list[0])
       'exact MCC/Neo Store/Droid-ify/Word Master/ChatGPT/ObtainX visibility only')
 check(app.get(ns+'allowBackup')=='false' and app.get(ns+'name')=='.HookLabApp', 'lifecycle application')
 act = {a.get(ns+'name'):a for a in app.findall('activity')}
-check(len(app.findall('activity'))==4 and set(act)=={'.ui.MainActivity','.mcc.MccControlActivity','.termux.TermuxBridgeActivity','.packs.PackManagerActivity'}
-      and all(a.get(ns+'exported')=='true' for a in act.values())
+check(len(app.findall('activity'))==5 and set(act)=={'.ui.MainActivity','.mcc.MccControlActivity','.termux.TermuxBridgeActivity','.packs.PackManagerActivity','.packs.RepositoryActivity'}
+      and all(a.get(ns+'exported')==('false' if name=='.packs.RepositoryActivity' else 'true') for name,a in act.items())
+      and not act['.packs.RepositoryActivity'].findall('intent-filter')
+      and app.get(ns+'usesCleartextTraffic')=='false'
       and len(act['.ui.MainActivity'].findall('intent-filter'))==1
       and not act['.mcc.MccControlActivity'].findall('intent-filter')
       and not act['.termux.TermuxBridgeActivity'].findall('intent-filter'), 'one launcher and exact reviewed activity roster')
@@ -227,7 +229,7 @@ check('MCC_AUTO_' not in catalog and 'MccDiamondUi.requestAutomatic()' not in ca
       'legacy automatic process cannot install or navigate')
 check('MccControlActivity.class' in ui and 'R.string.mcc_version_warning' in ui,
       'module companion control and unverified-version notice')
-check('versionCode 10' in build and "versionName '0.7.1'" in build,
+check('versionCode 11' in build and "versionName '0.8.0'" in build,
       'bump versionCode for stable signing updates')
 check((r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccDiamondPlacementTest.java').is_file()
       and (r/'app/src/test/java/com/mikeyphw/hooklab/mcc/MccRefillCommandTest.java').is_file(),

@@ -341,12 +341,30 @@ def frame_durations(evidence):
   frames.append(duration/1_000_000);previous=stamp
  return frames
 
+def await_cold_process_absence():
+ # am force-stop may return while the old PID is still observable on API29.
+ # Poll only for absence: do not issue another force-stop or launch attempt.
+ # Two consecutive clean negative samples are required; malformed output and
+ # transport errors fail immediately instead of being treated as absence.
+ stable=0
+ for _ in range(20):
+  q=subprocess.run(['adb','-s',n.SERIAL,'shell','pidof',n.PKG],capture_output=True,text=True,timeout=10)
+  value=q.stdout.strip()
+  require(not q.stderr.strip(),'cold launch process query transport failure')
+  if q.returncode==1 and not value:
+   stable+=1
+   if stable==2:return
+  else:
+   require(q.returncode==0 and re.fullmatch(r'[1-9][0-9]*(?:\s+[1-9][0-9]*)*',value) is not None,'cold launch process query invalid')
+   stable=0
+  time.sleep(.25)
+ raise ValueError('cold launch preexisting process')
+
 def launch_performance(perf):
  starts=[];pids=[];frames=frame_durations(perf['native_frames'])
  for _ in range(5):
   n.adb('shell','am','force-stop',n.PKG)
-  q=subprocess.run(['adb','-s',n.SERIAL,'shell','pidof',n.PKG],capture_output=True,text=True,timeout=10)
-  require(q.returncode==1 and not q.stdout.strip(),'cold launch preexisting process')
+  await_cold_process_absence()
   text=launch();m=re.search(r'(?m)^TotalTime: ([1-9][0-9]*)$',text);require(m is not None,'cold launch duration missing');starts.append(int(m[1]))
   pid=n.txt('shell','pidof',n.PKG);require(re.fullmatch('[1-9][0-9]*',pid) is not None and int(pid) not in pids,'cold launch process identity drift');pids.append(int(pid))
  return {'cold_launch_ms':starts,'cold_launch_pids':pids,'cold_launch_p95_ms':p95(starts),'frame_ms':frames,'frame_p95_ms':p95(frames),'frame_workload':perf['native_frames']['workload'],'budget_enforced':False}

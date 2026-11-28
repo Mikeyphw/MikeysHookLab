@@ -12,7 +12,7 @@ ns='{http://schemas.android.com/apk/res/android}'
 manifest=ET.parse(root/'app/src/main/AndroidManifest.xml').getroot()
 queries=[p.get(ns+'name') for p in manifest.findall('./queries/package')]
 assert queries==['br.art.code.meucronogramacapilar','com.machiav3lli.fdroid','com.looker.droidify','com.fugo.wowsolitaire','com.openai.chatgpt','dev.bikram.obtainx','com.termux']
-assert [p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND']
+assert [p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND','android.permission.INTERNET']
 assert read('app/src/main/resources/META-INF/xposed/scope.list').splitlines()==queries[:-2]
 assert read('app/src/main/resources/META-INF/xposed/module.prop').splitlines()==['minApiVersion=102','targetApiVersion=102','staticScope=false','exceptionMode=protective','autoHotReload=false']
 assert catalog.count('ChatGptCodeProbe::install')==1 and 'ChatGptCodeProbe.VERSION_CODE, ChatGptCodeProbe.VERSION_CODE' in catalog and 'ChatGptCodeProbe.TWEAK_ID' in catalog
@@ -32,7 +32,7 @@ for token in ('new SecureRandom().nextBytes(secret)','HmacSHA256','getBytes(Stan
 for forbidden in ('getPrimaryClip(','termux.RUN_COMMAND','com.termux','startActivity(','startService(','FileOutputStream','getExternalFilesDir(','su -c','Runtime.getRuntime(','de.robv.android.xposed'):
     assert forbidden not in probe+tracker,'FORBIDDEN:'+forbidden
 assert not re.search(r'xp\.log\([^;]*(?:chain\.getArg|text\.toString|\+copied)',probe)
-assert "versionCode 10" in read('app/build.gradle') and "versionName '0.7.1'" in read('app/build.gradle')
+assert "versionCode 11" in read('app/build.gradle') and "versionName '0.8.0'" in read('app/build.gradle')
 assert 'com.openai.chatgpt' in read('scripts/check_apk.py')
 assert 'test_missing_chatgpt_refused' in read('scripts/test_apk_scope.py')
 for name in ('CodeBlockProbeMatcherTest','CodeBlockActionMatcherTest','CopyButtonCausalityTrackerTest','AsyncCopyTraceTest'):

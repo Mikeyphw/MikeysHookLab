@@ -15,7 +15,7 @@ road=read('docs/roadmaps/hooklab-flat-ux.md')
 gate=read('docs/qa/hooklab-flat-ux-acceptance.md')
 manifest=ET.parse(r/'app/src/main/AndroidManifest.xml').getroot()
 ns='{http://schemas.android.com/apk/res/android}'
-must([p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND'],'only explicit Termux command permission')
+must([p.get(ns+'name') for p in manifest.findall('uses-permission')]==['com.termux.permission.RUN_COMMAND','android.permission.INTERNET'],'only explicit Termux command and manager network permissions')
 must('private void appCard(' not in main and 'hooksCatalog();' in main,
      'retired unused legacy cards; catalog remains the only hooks view')
 must('Ui08LegacySelection.resolveUnique(environment.all(),oldPackage)' in main
